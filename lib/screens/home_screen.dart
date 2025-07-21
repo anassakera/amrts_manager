@@ -1,4 +1,5 @@
-import '../../core/imports.dart';
+import '../../../core/imports.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,11 +18,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // قائمة بأسماء الشاشات
   final List<String> _screenTitles = [
-    'نقطة البيع',
-    'إدارة المنتجات',
-    'فواتير المبيعات',
-    'فواتير الشراء',
-    'التقارير والإحصائيات',
+    'المشتريات',
+    'المبيعات',
+    'المخزون',
+    'الإنتاج',
+    'المعاملات المالية',
   ];
 
   @override
@@ -166,6 +167,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white, size: 24),
+            tooltip: 'الإعدادات',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(
               Icons.people_alt_rounded,
               color: Colors.white,
@@ -253,20 +264,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     //   ),
                     // );
                   },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: Image.asset(
-                      'assets/images/photo.jpg',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.person_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        );
-                      },
-                    ),
-                  ),
+                  // child: ClipRRect(
+                  //   borderRadius: BorderRadius.circular(18),
+                  //   child: Image.asset(
+                  //     'assets/images/photo.jpg',
+                  //     fit: BoxFit.cover,
+                  //     errorBuilder: (context, error, stackTrace) {
+                  //       return const Icon(
+                  //         Icons.person_rounded,
+                  //         color: Colors.white,
+                  //         size: 24,
+                  //       );
+                  //     },
+                  //   ),
+                  // ),
                 ),
               ),
             ),
@@ -294,20 +305,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
-      body: Column(children: [
-        // Expanded(child: _screens[_selectedIndex])
-        
-        ]),
+      body: Column(
+        children: [
+          // Expanded(child: _screens[_selectedIndex])
+        ],
+      ),
     );
   }
 
   Widget _buildTabBar() {
     return HomeScreenWidgets.buildCustomTabBar(_tabController, [
-      HomeScreenWidgets.buildCustomTab(Icons.shopping_cart, 'نقطة البيع'),
-      HomeScreenWidgets.buildCustomTab(Icons.inventory, 'المنتجات'),
-      HomeScreenWidgets.buildCustomTab(Icons.receipt, 'فواتير المبيعات'),
-      HomeScreenWidgets.buildCustomTab(Icons.receipt_long, 'فواتير الشراء'),
-      HomeScreenWidgets.buildCustomTab(Icons.bar_chart, 'التقارير'),
+      HomeScreenWidgets.buildCustomTab(Icons.shopping_cart, 'المشتريات'),
+      HomeScreenWidgets.buildCustomTab(Icons.point_of_sale, 'المبيعات'),
+      HomeScreenWidgets.buildCustomTab(Icons.inventory, 'المخزون'),
+      HomeScreenWidgets.buildCustomTab(Icons.factory, 'الإنتاج'),
+      HomeScreenWidgets.buildCustomTab(
+        Icons.account_balance_wallet,
+        'المعاملات المالية',
+      ),
     ]);
   }
 }

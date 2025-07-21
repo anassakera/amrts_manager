@@ -1,8 +1,15 @@
-import 'package:amrts_manager/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'provider/language_provider.dart';
+import 'screens/home_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => LanguageProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -12,7 +19,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       home: const HomeScreen(),
     );
   }
