@@ -1,5 +1,8 @@
 import '../../../core/imports.dart';
 import 'settings_screen.dart';
+import 'package:provider/provider.dart';
+import '../../provider/language_provider.dart';
+import '../../core/language.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,13 +20,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // late List<Widget> _screens;
 
   // قائمة بأسماء الشاشات
-  final List<String> _screenTitles = [
-    'المشتريات',
-    'المبيعات',
-    'المخزون',
-    'الإنتاج',
-    'المعاملات المالية',
-  ];
+  List<String> _screenTitles(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context).currentLanguage;
+    return [
+      AppTranslations.get('purchases', lang),
+      AppTranslations.get('sales', lang),
+      AppTranslations.get('inventory', lang),
+      AppTranslations.get('production', lang),
+      AppTranslations.get('financial_transactions', lang),
+    ];
+  }
 
   @override
   void initState() {
@@ -52,8 +58,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   // دالة للحصول على عنوان الشاشة الحالية
-  String _getCurrentScreenTitle() {
-    return _screenTitles[_selectedIndex];
+  String _getCurrentScreenTitle(BuildContext context) {
+    return _screenTitles(context)[_selectedIndex];
   }
 
   @override
@@ -123,16 +129,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              _getCurrentScreenTitle(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
+            Builder(
+              builder: (context) => Text(
+                _getCurrentScreenTitle(context),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -144,7 +152,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               color: Colors.white,
               size: 24,
             ),
-            tooltip: 'مساعدة',
+            tooltip: AppTranslations.get(
+              'help',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: false,
+              ).currentLanguage,
+            ),
             onPressed: () {
               // if (_selectedIndex == 0 &&
               //     _salesInterfaceKey.currentState != null) {
@@ -168,7 +182,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white, size: 24),
-            tooltip: 'الإعدادات',
+            tooltip: AppTranslations.get(
+              'settings',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: false,
+              ).currentLanguage,
+            ),
             onPressed: () {
               Navigator.push(
                 context,
@@ -182,7 +202,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               color: Colors.white,
               size: 24,
             ),
-            tooltip: 'العملاء',
+            tooltip: AppTranslations.get(
+              'customers',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: false,
+              ).currentLanguage,
+            ),
             onPressed: () {
               // Navigator.push(
               //   context,
@@ -314,14 +340,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildTabBar() {
+    final lang = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    ).currentLanguage;
     return HomeScreenWidgets.buildCustomTabBar(_tabController, [
-      HomeScreenWidgets.buildCustomTab(Icons.shopping_cart, 'المشتريات'),
-      HomeScreenWidgets.buildCustomTab(Icons.point_of_sale, 'المبيعات'),
-      HomeScreenWidgets.buildCustomTab(Icons.inventory, 'المخزون'),
-      HomeScreenWidgets.buildCustomTab(Icons.factory, 'الإنتاج'),
+      HomeScreenWidgets.buildCustomTab(
+        Icons.shopping_cart,
+        AppTranslations.get('purchases', lang),
+      ),
+      HomeScreenWidgets.buildCustomTab(
+        Icons.point_of_sale,
+        AppTranslations.get('sales', lang),
+      ),
+      HomeScreenWidgets.buildCustomTab(
+        Icons.inventory,
+        AppTranslations.get('inventory', lang),
+      ),
+      HomeScreenWidgets.buildCustomTab(
+        Icons.factory,
+        AppTranslations.get('production', lang),
+      ),
       HomeScreenWidgets.buildCustomTab(
         Icons.account_balance_wallet,
-        'المعاملات المالية',
+        AppTranslations.get('financial_transactions', lang),
       ),
     ]);
   }
