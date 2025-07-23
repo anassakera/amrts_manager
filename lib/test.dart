@@ -4,13 +4,16 @@ import 'package:provider/provider.dart';
 import 'models/document_model.dart';
 import 'services/calculation_service.dart';
 import 'provider/document_provider.dart';
+import 'package:flutter/services.dart';
 
 class SmartDocumentScreen extends StatefulWidget {
+  const SmartDocumentScreen({super.key});
+
   @override
-  _SmartDocumentScreenState createState() => _SmartDocumentScreenState();
+  SmartDocumentScreenState createState() => SmartDocumentScreenState();
 }
 
-class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
+class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   final Map<String, TextEditingController> _controllers = {};
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final CalculationService _calculationService = CalculationService();
@@ -113,23 +116,84 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
     );
   }
 
+  // دالة لبناء زر أيقونة مربع مع Tooltip ودعم خاصية الإظهار/الإخفاء
+  Widget _buildSquareAction({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    required String tooltip,
+    bool visible = true,
+  }) {
+    if (!visible) return SizedBox.shrink();
+
+    return Tooltip(
+      message: tooltip,
+      preferBelow: false,
+      verticalOffset: 20,
+      decoration: BoxDecoration(
+        color: Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      textStyle: TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          splashColor: color.withValues(alpha: 0.2),
+          highlightColor: color.withValues(alpha: 0.1),
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: color.withValues(alpha: 0.15),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: Duration(milliseconds: 300),
+                child: Icon(icon, key: ValueKey(icon), color: color, size: 24),
+                transitionBuilder: (child, animation) {
+                  return ScaleTransition(scale: animation, child: child);
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSmartHeader(
     DocumentProvider provider,
     Map<String, double> totals,
   ) {
     return Container(
-      margin: EdgeInsets.all(16),
-      padding: EdgeInsets.all(20),
+      margin: EdgeInsets.all(5),
+      padding: EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF60A5FA).withOpacity(0.10), // ظل أزرق فاتح
+            color: Color(0xFF60A5FA).withValues(alpha: 0.10),
             blurRadius: 20,
             offset: Offset(0, 8),
           ),
         ],
+
+        border: Border.all(
+          width: 1,
+          color: Colors.black.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         children: [
@@ -140,10 +204,7 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Color(0xFF1E3A8A),
-                      Color(0xFF3B82F6),
-                    ], // تدرج أزرق داكن إلى متوسط
+                    colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -153,24 +214,90 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-
                   children: [
                     Text(
                       'Facture',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E3A8A), // أزرق داكن عميق
+                        color: Color(0xFF1E3A8A),
                       ),
                     ),
                     Text(
                       'Facture N° : ${provider.summary.factureNumber}',
-                      style: TextStyle(
-                        color: Color(0xFF3B82F6), // أزرق متوسط
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Color(0xFF3B82F6), fontSize: 14),
                     ),
                   ],
+                ),
+              ),
+
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  // تطبيق radius على 3 زوايا فقط (تاركين الزاوية اليمنى السفلى مربعة)
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(18),
+                    bottomLeft: Radius.circular(18),
+                    bottomRight: Radius.circular(4), // زاوية مربعة
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xFF60A5FA).withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: Offset(0, 6),
+                      spreadRadius: 0,
+                    ),
+                    BoxShadow(
+                      color: Color(0xFF60A5FA).withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                      spreadRadius: 0,
+                    ),
+                  ],
+                  border: Border.all(color: Color(0xFFF1F5F9), width: 1),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(6),
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 3,
+                    crossAxisSpacing: 3,
+                    physics: NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildSquareAction(
+                        icon: Icons.checklist_rtl_rounded,
+                        color: Color(0xFF8B5CF6),
+                        onTap: () => provider.selectAll(),
+                        tooltip: 'تحديد الكل',
+                      ),
+                      _buildSquareAction(
+                        icon: Icons.add_circle_outline_rounded,
+                        color: Color(0xFF10B981),
+                        onTap: () {
+                          provider.addItem();
+                          _clearControllers();
+                        },
+                        tooltip: 'إضافة جديد',
+                      ),
+                      _buildSquareAction(
+                        icon: Icons.delete_sweep_rounded,
+                        color: Color(0xFFEF4444),
+                        onTap: () => _showDeleteConfirmation(context, provider),
+                        tooltip: 'حذف المحدد',
+                        visible: provider.hasSelection,
+                      ),
+                      _buildSquareAction(
+                        icon: Icons.clear_all_rounded,
+                        color: Color(0xFF6B7280),
+                        onTap: () => provider.clearSelection(),
+                        tooltip: 'إلغاء التحديد',
+                        visible: provider.hasSelection,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -178,73 +305,34 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
 
           SizedBox(height: 20),
 
-          // شريط الأدوات الذكي
+          // شريط الأدوات الذكي الجديد (أيقونة + نص داخل Container)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // معلومات سريعة
-              // Row(
-              //   children: [
-
-              //   ],
-              // ),
-
-              // أزرار التحكم
-              Row(
-                children: [
-                  _buildQuickStat(
-                    'العناصر',
-                    provider.items.length.toString(),
-                    Icons.inventory,
-                  ),
-                  SizedBox(width: 5),
-                  _buildQuickStat(
-                    'الوزن الكلي',
-                    '${totals['poidsTotal']?.toStringAsFixed(0)} كغ',
-                    Icons.scale,
-                  ),
-                  SizedBox(width: 5),
-                  _buildQuickStat(
-                    'القيمة',
-                    '${totals['total']?.toStringAsFixed(2)}',
-                    Icons.attach_money,
-                  ),
-                  SizedBox(width: 5),
-
-                  if (provider.hasSelection) ...[
-                    _buildActionButton(
-                      'حذف المحدد (${provider.selectedIndices.length})',
-                      Icons.delete_sweep_rounded, // أيقونة أفضل للحذف
-                      Color(0xFFEF4444), // أحمر حديث
-                      () => _showDeleteConfirmation(context, provider),
-                    ),
-                    SizedBox(width: 8),
-                    _buildActionButton(
-                      'إلغاء التحديد',
-                      Icons.clear_all_rounded, // أيقونة أوضح
-                      Color(0xFF6B7280), // رمادي متوسط أنيق
-                      () => provider.clearSelection(),
-                    ),
-                    SizedBox(width: 8),
-                  ],
-                  _buildActionButton(
-                    'تحديد الكل',
-                    Icons.checklist_rtl_rounded, // أيقونة أنسب للتحديد
-                    Color(0xFF8B5CF6), // بنفسجي جميل
-                    () => provider.selectAll(),
-                  ),
-                  SizedBox(width: 8),
-                  _buildActionButton(
-                    'إضافة جديد',
-                    Icons.add_circle_outline_rounded, // أيقونة إضافة أنيقة
-                    Color(0xFF10B981), // أخضر زمردي حديث
-                    () {
-                      provider.addItem();
-                      _clearControllers();
-                    },
-                  ),
-                ],
+              _buildQuickStat(
+                'العناصر',
+                provider.items.length.toString(),
+                Icons.inventory,
               ),
+              SizedBox(width: 5),
+              _buildQuickStat(
+                'الوزن الكلي',
+                '${totals['poidsTotal']?.toStringAsFixed(0)} كغ',
+                Icons.scale,
+              ),
+              SizedBox(width: 5),
+              _buildQuickStat(
+                'مجموع المصاريف',
+                '${totals['total']?.toStringAsFixed(2)}',
+                Icons.attach_money,
+              ),
+              SizedBox(width: 5),
+              _buildQuickStat(
+                'إجمالي البضائع',
+                _calculationService.formatCurrency(totals['totalMt'] ?? 0),
+                Icons.inventory,
+              ),
+              Spacer(),
             ],
           ),
         ],
@@ -265,12 +353,15 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF60A5FA).withOpacity(0.10),
+            color: Color(0xFF60A5FA).withValues(alpha: 0.10),
             blurRadius: 10,
             offset: Offset(0, 3),
           ),
         ],
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.2),
+          width: 1,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -279,10 +370,10 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
           Container(
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 width: 1,
               ),
             ),
@@ -306,10 +397,10 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.13),
+              color: Colors.white.withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: Colors.white.withOpacity(0.18),
+                color: Colors.white.withValues(alpha: 0.18),
                 width: 1,
               ),
             ),
@@ -323,7 +414,7 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
                 letterSpacing: 0.2,
                 shadows: [
                   Shadow(
-                    color: Colors.black.withOpacity(0.18),
+                    color: Colors.black.withValues(alpha: 0.18),
                     offset: Offset(0, 1),
                     blurRadius: 1,
                   ),
@@ -336,41 +427,18 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
     );
   }
 
-  Widget _buildActionButton(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18), // زيادة حجم الأيقونة قليلاً
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600, // خط أقوى قليلاً
-        ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color.withOpacity(0.12),
-        foregroundColor: color,
-        elevation: 0,
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18), // حشو أكبر
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15), // زوايا أكثر انحناءً
-          side: BorderSide(color: color.withOpacity(0.25), width: 1.2),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSmartTable(DocumentProvider provider) {
+    final isAddingNew = provider.editingIndex == provider.items.length;
+    final itemCount = provider.items.length + (isAddingNew ? 1 : 0);
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16),
+      margin: EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          width: 1,
+          color: Colors.black.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         children: [
@@ -381,19 +449,35 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.zero,
-              itemCount:
-                  provider.items.length +
-                  (provider.editingIndex == provider.items.length ? 1 : 0),
+              itemCount: itemCount,
               itemBuilder: (context, index) {
-                if (index < provider.items.length) {
-                  return _buildTableRow(provider, provider.items[index], index);
+                if (isAddingNew) {
+                  if (index == 0) {
+                    // صف التحرير في الأعلى عند الإضافة
+                    return _buildEditRow(provider, provider.items.length);
+                  } else {
+                    // بقية العناصر
+                    return _buildTableRow(
+                      provider,
+                      provider.items[index - 1],
+                      index - 1,
+                    );
+                  }
                 } else {
-                  // صف جديد للتحرير
-                  return _buildEditRow(provider, index);
+                  if (index < provider.items.length) {
+                    return _buildTableRow(
+                      provider,
+                      provider.items[index],
+                      index,
+                    );
+                  } else {
+                    // احتياطي، لا يجب أن يصل هنا
+                    return SizedBox.shrink();
+                  }
                 }
               },
             ),
-          ),
+          ), // ← هنا الفاصلة المطلوبة
         ],
       ),
     );
@@ -428,7 +512,42 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
           _buildHeaderCell('سعر الشراء', flex: 2),
           _buildHeaderCell('مصاريف أخرى', flex: 2),
           _buildHeaderCell('تكلفة القطعة', flex: 2),
-          SizedBox(width: 60), // مساحة للأزرار
+          // SizedBox(width: 16), // مساحة للأزرار
+          // زر الإضافة في رأس الجدول
+          InkWell(
+            onTap: () {
+              final provider = Provider.of<DocumentProvider>(
+                context,
+                listen: false,
+              );
+              provider.addItem();
+              _clearControllers();
+            },
+            child: Container(
+              padding: EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Color(0xFF3B82F6), width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'إضافة',
+                    style: TextStyle(
+                      color: Color(0xFF1E3A8A),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -466,7 +585,7 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: isSelected
-            ? Color(0xFF60A5FA).withOpacity(0.13)
+            ? Color(0xFF60A5FA).withValues(alpha: 0.13)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: isSelected
@@ -578,7 +697,11 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
       flex: flex,
       child: Text(
         text,
-        style: TextStyle(fontSize: 11, color: Color(0xFF1E3A8A)),
+        style: TextStyle(
+          fontSize: 14,
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.bold,
+        ), //anass
         textAlign: TextAlign.center,
       ),
     );
@@ -589,7 +712,7 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Color(0xFF60A5FA).withOpacity(0.10),
+        color: Color(0xFF60A5FA).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Color(0xFF3B82F6), width: 2),
       ),
@@ -600,7 +723,13 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
             SizedBox(width: 40),
             _buildEditField('refFournisseur', 'مرجع المورد', flex: 2),
             _buildEditField('articles', 'المادة', flex: 3),
-            _buildEditField('qte', 'الكمية', flex: 1, isNumber: true),
+            _buildEditField(
+              'qte',
+              'الكمية',
+              flex: 1,
+              isNumber: true,
+              isDecimal: false,
+            ),
             _buildEditField(
               'poids',
               'الوزن',
@@ -710,6 +839,16 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
             color: Color(0xFF1E3A8A),
             fontWeight: FontWeight.bold,
           ),
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          inputFormatters: isNumber
+              ? [
+                  isDecimal
+                      ? FilteringTextInputFormatter.allow(
+                          RegExp(r'^[0-9]*\.?[0-9]*'),
+                        )
+                      : FilteringTextInputFormatter.digitsOnly,
+                ]
+              : [],
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(fontSize: 9, color: Color(0xFF60A5FA)),
@@ -739,8 +878,11 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
             return null;
           },
           onChanged: (value) {
-            if (key == 'qte' || key == 'puPieces') {
-              _updateCalculatedFields();
+            if (key == 'qte' ||
+                key == 'puPieces' ||
+                key == 'prixAchat' ||
+                key == 'autresCharges') {
+              _updateCalculatedFieldsWithService();
             }
           },
         ),
@@ -748,19 +890,22 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
     );
   }
 
-  void _updateCalculatedFields() {
-    final qte = int.tryParse(_controllers['qte']?.text ?? '0') ?? 0;
-    final puPieces =
-        double.tryParse(_controllers['puPieces']?.text ?? '0') ?? 0.0;
-    final prixAchat =
-        double.tryParse(_controllers['prixAchat']?.text ?? '0') ?? 0.0;
-    final autresCharges =
-        double.tryParse(_controllers['autresCharges']?.text ?? '0') ?? 0.0;
-
-    // تحديث الحقول المحسوبة
-    _controllers['poids']?.text = (qte * 13.0).toString();
-    _controllers['mt']?.text = (qte * puPieces).toString();
-    _controllers['cuHt']?.text = (prixAchat + autresCharges).toString();
+  // أضف دالة جديدة تستخدم CalculationService
+  void _updateCalculatedFieldsWithService() {
+    final data = {
+      'qte': int.tryParse(_controllers['qte']?.text ?? '0') ?? 0,
+      'puPieces': double.tryParse(_controllers['puPieces']?.text ?? '0') ?? 0.0,
+      'prixAchat':
+          double.tryParse(_controllers['prixAchat']?.text ?? '0') ?? 0.0,
+      'autresCharges':
+          double.tryParse(_controllers['autresCharges']?.text ?? '0') ?? 0.0,
+      'refFournisseur': _controllers['refFournisseur']?.text ?? '',
+      'articles': _controllers['articles']?.text ?? '',
+    };
+    final calculated = _calculationService.calculateItemValues(data);
+    _controllers['poids']?.text = calculated['poids'].toString();
+    _controllers['mt']?.text = calculated['mt'].toString();
+    _controllers['cuHt']?.text = calculated['cuHt'].toString();
   }
 
   Widget _buildSummaryFooter(
@@ -768,60 +913,25 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
     Map<String, double> totals,
   ) {
     return Container(
-      margin: EdgeInsets.all(16),
-      padding: EdgeInsets.all(20),
+      margin: EdgeInsets.all(5),
+      padding: EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.white,
+        border: Border.all(
+          width: 1,
+          color: Colors.black.withValues(alpha: 0.2),
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF60A5FA).withOpacity(0.10),
+            color: Color(0xFF60A5FA).withValues(alpha: 0.10),
             blurRadius: 15,
             offset: Offset(0, 5),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // ملخص المصاريف
-          Row(children: [Expanded(child: _buildSummaryGrid(provider.summary))]),
-
-          SizedBox(height: 16),
-
-          // صف جديد: إجمالي البضائع، الوزن الكلي، إجمالي الفاتورة
-          Row(
-            children: [
-              Expanded(
-                child: buildSummaryCard(
-                  icon: Icons.inventory,
-                  iconColor: Color(0xFF3B82F6),
-                  label: 'إجمالي البضائع',
-                  value: _calculationService.formatCurrency(
-                    totals['totalMt'] ?? 0,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: buildSummaryCard(
-                  icon: Icons.scale,
-                  iconColor: Color(0xFF60A5FA),
-                  label: 'الوزن الكلي',
-                  value:
-                      '${_calculationService.formatWeight(totals['poidsTotal'] ?? 0)} كغ',
-                ),
-              ),
-              Expanded(
-                child: buildSummaryCard(
-                  icon: Icons.attach_money,
-                  iconColor: Color(0xFF22C55E),
-                  label: 'إجمالي الفاتورة',
-                  value:
-                      '${_calculationService.formatCurrency(totals['total'] ?? 0)} درهم',
-                ),
-              ),
-            ],
-          ),
-        ],
+      child: Row(
+        children: [Expanded(child: _buildSummaryGrid(provider.summary))],
       ),
     );
   }
@@ -958,55 +1068,6 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
     );
   }
 
-  Widget _buildTotalsGrid(Map<String, double> totals) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'الإجماليات',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-          ),
-        ),
-        SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _buildSummaryItem('إجمالي البضائع', totals['totalMt'] ?? 0),
-            _buildSummaryItem(
-              'الوزن الكلي',
-              totals['poidsTotal'] ?? 0,
-              unit: 'كغ',
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryItem(
-    String label,
-    double value, {
-    bool isCurrency = true,
-    String unit = '',
-    IconData? icon,
-  }) {
-    return EditableSummaryItem(
-      label: label,
-      value: value,
-      isCurrency: isCurrency,
-      unit: unit,
-      icon: icon,
-      calculationService: _calculationService,
-      onValueChanged: (newValue) {
-        // يمكنك هنا تحديث القيمة في provider أو summary
-      },
-    );
-  }
-
   Widget buildSummaryCard({
     required IconData icon,
     required Color iconColor,
@@ -1021,12 +1082,12 @@ class _SmartDocumentScreenState extends State<SmartDocumentScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF60A5FA).withOpacity(0.10),
+            color: Color(0xFF60A5FA).withValues(alpha: 0.10),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
         ],
-        border: Border.all(color: iconColor.withOpacity(0.13), width: 1),
+        border: Border.all(color: iconColor.withValues(alpha: 0.13), width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
@@ -1138,7 +1199,7 @@ class EditableSummaryItem extends StatefulWidget {
   final VoidCallback? onCancel;
 
   const EditableSummaryItem({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     required this.calculationService,
@@ -1149,7 +1210,7 @@ class EditableSummaryItem extends StatefulWidget {
     this.isEditing = false,
     this.onEdit,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   State<EditableSummaryItem> createState() => _EditableSummaryItemState();
@@ -1193,12 +1254,15 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF60A5FA).withOpacity(0.10),
+              color: Color(0xFF60A5FA).withValues(alpha: 0.10),
               blurRadius: 12,
               offset: Offset(0, 4),
             ),
           ],
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
+            width: 1,
+          ),
         ),
         child: Column(
           children: [
@@ -1210,10 +1274,10 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                   Container(
                     padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -1227,7 +1291,7 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
                     height: 1.2,
@@ -1320,10 +1384,10 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
@@ -1333,10 +1397,7 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                                 widget.value,
                               )
                             : widget.unit.isNotEmpty
-                            ? widget.calculationService.formatWeight(
-                                    widget.value,
-                                  ) +
-                                  ' ${widget.unit}'
+                            ? '${widget.calculationService.formatWeight(widget.value)} ${widget.unit}'
                             : widget.value.toString(),
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -1346,7 +1407,7 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                           letterSpacing: 0.3,
                           shadows: [
                             Shadow(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                               offset: Offset(0, 1),
                               blurRadius: 2,
                             ),

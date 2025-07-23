@@ -78,21 +78,7 @@ class DocumentProvider with ChangeNotifier {
 
   // إضافة عنصر جديد
   void addItem() {
-    final newItem = DocumentItem(
-      refFournisseur: '',
-      articles: '',
-      qte: 0,
-      poids: 0.0,
-      puPieces: 0.0,
-      mt: 0.0,
-      prixAchat: 0.0,
-      autresCharges: 0.0,
-      cuHt: 0.0,
-      isEditing: true,
-    );
-
-    _items.add(newItem);
-    _editingIndex = _items.length - 1;
+    _editingIndex = _items.length;
     notifyListeners();
   }
 
@@ -106,7 +92,16 @@ class DocumentProvider with ChangeNotifier {
 
   // حفظ التحرير
   void saveItem(int index, Map<String, dynamic> data) {
-    if (index < _items.length) {
+    if (index == _items.length) {
+      // إضافة عنصر جديد
+      final calculatedData = _calculationService.calculateItemValues(data);
+      _items.add(
+        DocumentItem.fromJson(calculatedData).copyWith(isEditing: false),
+      );
+      _editingIndex = null;
+      _recalculateSummary();
+      notifyListeners();
+    } else if (index < _items.length) {
       final calculatedData = _calculationService.calculateItemValues(data);
       _items[index] = DocumentItem.fromJson(
         calculatedData,
@@ -119,7 +114,11 @@ class DocumentProvider with ChangeNotifier {
 
   // إلغاء التحرير
   void cancelEditing(int index) {
-    if (index < _items.length) {
+    if (index == _items.length) {
+      // إلغاء إضافة جديد فقط
+      _editingIndex = null;
+      notifyListeners();
+    } else if (index < _items.length) {
       if (_items[index].refFournisseur.isEmpty) {
         // إذا كان عنصر جديد، احذفه
         _items.removeAt(index);
