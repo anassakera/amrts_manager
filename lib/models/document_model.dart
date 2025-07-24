@@ -9,6 +9,7 @@ class DocumentItem {
   final double prixAchat;
   final double autresCharges;
   final double cuHt;
+  final double exchangeRate;
   bool isEditing;
   bool isSelected;
 
@@ -22,6 +23,7 @@ class DocumentItem {
     required this.prixAchat,
     required this.autresCharges,
     required this.cuHt,
+    this.exchangeRate = 1.0,
     this.isEditing = false,
     this.isSelected = false,
   });
@@ -37,6 +39,7 @@ class DocumentItem {
     double? prixAchat,
     double? autresCharges,
     double? cuHt,
+    double? exchangeRate,
     bool? isEditing,
     bool? isSelected,
   }) {
@@ -50,6 +53,7 @@ class DocumentItem {
       prixAchat: prixAchat ?? this.prixAchat,
       autresCharges: autresCharges ?? this.autresCharges,
       cuHt: cuHt ?? this.cuHt,
+      exchangeRate: exchangeRate ?? this.exchangeRate,
       isEditing: isEditing ?? this.isEditing,
       isSelected: isSelected ?? this.isSelected,
     );
@@ -67,6 +71,7 @@ class DocumentItem {
       'prixAchat': prixAchat,
       'autresCharges': autresCharges,
       'cuHt': cuHt,
+      'exchangeRate': exchangeRate,
     };
   }
 
@@ -82,6 +87,7 @@ class DocumentItem {
       prixAchat: json['prixAchat']?.toDouble() ?? 0.0,
       autresCharges: json['autresCharges']?.toDouble() ?? 0.0,
       cuHt: json['cuHt']?.toDouble() ?? 0.0,
+      exchangeRate: json['exchangeRate']?.toDouble() ?? 1.0,
     );
   }
 }

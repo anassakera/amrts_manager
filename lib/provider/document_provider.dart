@@ -10,14 +10,14 @@ class DocumentProvider with ChangeNotifier {
   List<DocumentItem> _items = [];
   DocumentSummary _summary = DocumentSummary(
     factureNumber: 'CI-SSA240103002,1',
-    transit: 2740.00,
-    droitDouane: 135350.00,
-    chequeChange: 6553.92,
-    freiht: 48279.84,
-    autres: 10000.00,
-    total: 202923.76,
-    txChange: 10.0583,
-    poidsTotal: 52000.00,
+    transit: 0,
+    droitDouane: 0,
+    chequeChange: 0,
+    freiht: 0,
+    autres: 0,
+    total: 0,
+    txChange: 0,
+    poidsTotal: 0.0,
   );
 
   // حالة التحكم
@@ -35,41 +35,7 @@ class DocumentProvider with ChangeNotifier {
 
   // تحميل البيانات التجريبية
   void loadSampleData() {
-    _items = [
-      DocumentItem(
-        refFournisseur: '9901G',
-        articles: 'TOLA BLANC',
-        qte: 2001,
-        poids: 26013.00,
-        puPieces: 13.30,
-        mt: 26613.30,
-        prixAchat: 133.78,
-        autresCharges: 50.73,
-        cuHt: 184.51,
-      ),
-      DocumentItem(
-        refFournisseur: '88003V',
-        articles: 'TOLA BEIGE',
-        qte: 498,
-        poids: 6474.00,
-        puPieces: 13.30,
-        mt: 6623.40,
-        prixAchat: 133.78,
-        autresCharges: 50.73,
-        cuHt: 184.51,
-      ),
-      DocumentItem(
-        refFournisseur: '9906',
-        articles: 'TOLA GRIS',
-        qte: 500,
-        poids: 6500.00,
-        puPieces: 13.30,
-        mt: 6650.00,
-        prixAchat: 133.78,
-        autresCharges: 50.73,
-        cuHt: 184.51,
-      ),
-    ];
+    _items = [];
 
     // تحديث الملخص بناء على البيانات الجديدة
     _recalculateSummary();
@@ -92,9 +58,16 @@ class DocumentProvider with ChangeNotifier {
 
   // حفظ التحرير
   void saveItem(int index, Map<String, dynamic> data) {
+    final totals = _calculationService.calculateTotals(_items, _summary);
+    final totalMt = totals['totalMt'] ?? 0.0;
+    final poidsTotal = totals['poidsTotal'] ?? 0.0;
     if (index == _items.length) {
       // إضافة عنصر جديد
-      final calculatedData = _calculationService.calculateItemValues(data);
+      final calculatedData = _calculationService.calculateItemValues(
+        data,
+        totalMt: totalMt,
+        poidsTotal: poidsTotal,
+      );
       _items.add(
         DocumentItem.fromJson(calculatedData).copyWith(isEditing: false),
       );
@@ -102,7 +75,11 @@ class DocumentProvider with ChangeNotifier {
       _recalculateSummary();
       notifyListeners();
     } else if (index < _items.length) {
-      final calculatedData = _calculationService.calculateItemValues(data);
+      final calculatedData = _calculationService.calculateItemValues(
+        data,
+        totalMt: totalMt,
+        poidsTotal: poidsTotal,
+      );
       _items[index] = DocumentItem.fromJson(
         calculatedData,
       ).copyWith(isEditing: false);

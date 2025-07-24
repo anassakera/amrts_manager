@@ -35,6 +35,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       'prixAchat',
       'autresCharges',
       'cuHt',
+      'exchangeRate',
     ];
 
     for (String field in fields) {
@@ -52,6 +53,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     _controllers['prixAchat']?.text = item.prixAchat.toString();
     _controllers['autresCharges']?.text = item.autresCharges.toString();
     _controllers['cuHt']?.text = item.cuHt.toString();
+    _controllers['exchangeRate']?.text = item.exchangeRate.toString();
   }
 
   void _clearControllers() {
@@ -67,12 +69,8 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       'qte': int.tryParse(_controllers['qte']?.text ?? '0') ?? 0,
       'poids': double.tryParse(_controllers['poids']?.text ?? '0') ?? 0.0,
       'puPieces': double.tryParse(_controllers['puPieces']?.text ?? '0') ?? 0.0,
-      'mt': double.tryParse(_controllers['mt']?.text ?? '0') ?? 0.0,
-      'prixAchat':
-          double.tryParse(_controllers['prixAchat']?.text ?? '0') ?? 0.0,
-      'autresCharges':
-          double.tryParse(_controllers['autresCharges']?.text ?? '0') ?? 0.0,
-      'cuHt': double.tryParse(_controllers['cuHt']?.text ?? '0') ?? 0.0,
+      'exchangeRate':
+          double.tryParse(_controllers['exchangeRate']?.text ?? '1') ?? 1.0,
     };
   }
 
@@ -736,7 +734,6 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               flex: 2,
               isNumber: true,
               isDecimal: true,
-              readOnly: false,
             ),
             _buildEditField(
               'puPieces',
@@ -759,6 +756,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               flex: 2,
               isNumber: true,
               isDecimal: true,
+              readOnly: true,
             ),
             _buildEditField(
               'autresCharges',
@@ -766,6 +764,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               flex: 2,
               isNumber: true,
               isDecimal: true,
+              readOnly: true,
             ),
             _buildEditField(
               'cuHt',
@@ -775,7 +774,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               isDecimal: true,
               readOnly: true,
             ),
-
+            _buildEditField(
+              'exchangeRate',
+              'سعر الصرف',
+              flex: 2,
+              isNumber: true,
+              isDecimal: true,
+            ),
             // أزرار الحفظ والإلغاء
             SizedBox(
               width: 60,
@@ -825,66 +830,79 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     return Expanded(
       flex: flex,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 2),
-        child: TextFormField(
-          controller: _controllers[key],
-          readOnly: readOnly,
-          keyboardType: isNumber
-              ? (isDecimal
-                    ? TextInputType.numberWithOptions(decimal: true)
-                    : TextInputType.number)
-              : TextInputType.text,
-          style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF1E3A8A),
-            fontWeight: FontWeight.bold,
+        padding: EdgeInsets.symmetric(horizontal: 5),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blueAccent.withOpacity(0.2),
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          inputFormatters: isNumber
-              ? [
-                  isDecimal
-                      ? FilteringTextInputFormatter.allow(
-                          RegExp(r'^[0-9]*\.?[0-9]*'),
-                        )
-                      : FilteringTextInputFormatter.digitsOnly,
-                ]
-              : [],
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(fontSize: 9, color: Color(0xFF60A5FA)),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: BorderSide(color: Color(0xFF60A5FA)),
+          child: TextFormField(
+            controller: _controllers[key],
+            readOnly: readOnly,
+            keyboardType: isNumber
+                ? (isDecimal
+                      ? TextInputType.numberWithOptions(decimal: true)
+                      : TextInputType.number)
+                : TextInputType.text,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: BorderSide(color: Color(0xFF3B82F6)),
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            inputFormatters: isNumber
+                ? [
+                    isDecimal
+                        ? FilteringTextInputFormatter.allow(
+                            RegExp(r'^[0-9]*\.?[0-9]*'),
+                          )
+                        : FilteringTextInputFormatter.digitsOnly,
+                  ]
+                : [],
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.blueAccent),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.blueAccent),
+              ),
+              contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+              filled: true,
+              fillColor: Colors.white,
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            filled: readOnly,
-            fillColor: readOnly ? Color(0xFFF1F5F9) : null,
-          ),
-          validator: (value) {
-            if (!readOnly && (value == null || value.isEmpty)) {
-              return 'مطلوب';
-            }
-            if (isNumber && value != null && value.isNotEmpty) {
-              if (isDecimal) {
-                if (double.tryParse(value) == null) return 'رقم غير صحيح';
-              } else {
-                if (int.tryParse(value) == null) return 'رقم صحيح فقط';
+            validator: (value) {
+              if (!readOnly && (value == null || value.isEmpty)) {
+                return 'مطلوب';
               }
-            }
-            return null;
-          },
-          onChanged: (value) {
-            if (key == 'qte' ||
-                key == 'puPieces' ||
-                key == 'prixAchat' ||
-                key == 'autresCharges') {
-              _updateCalculatedFieldsWithService();
-            }
-          },
+              if (isNumber && value != null && value.isNotEmpty) {
+                if (isDecimal) {
+                  if (double.tryParse(value) == null) return 'رقم غير صحيح';
+                } else {
+                  if (int.tryParse(value) == null) return 'رقم صحيح فقط';
+                }
+              }
+              return null;
+            },
+            onChanged: (value) {
+              if (key == 'qte' ||
+                  key == 'puPieces' ||
+                  key == 'autresCharges' ||
+                  key == 'exchangeRate') {
+                _updateCalculatedFieldsWithService();
+              }
+            },
+          ),
         ),
       ),
     );
@@ -892,19 +910,23 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
 
   // أضف دالة جديدة تستخدم CalculationService
   void _updateCalculatedFieldsWithService() {
-    final data = {
-      'qte': int.tryParse(_controllers['qte']?.text ?? '0') ?? 0,
-      'puPieces': double.tryParse(_controllers['puPieces']?.text ?? '0') ?? 0.0,
-      'prixAchat':
-          double.tryParse(_controllers['prixAchat']?.text ?? '0') ?? 0.0,
-      'autresCharges':
-          double.tryParse(_controllers['autresCharges']?.text ?? '0') ?? 0.0,
-      'refFournisseur': _controllers['refFournisseur']?.text ?? '',
-      'articles': _controllers['articles']?.text ?? '',
-    };
-    final calculated = _calculationService.calculateItemValues(data);
-    _controllers['poids']?.text = calculated['poids'].toString();
+    final data = _getFormData();
+    final provider = Provider.of<DocumentProvider>(context, listen: false);
+    final totals = _calculationService.calculateTotals(
+      provider.items,
+      provider.summary,
+    );
+    final totalMt = totals['totalMt'] ?? 0.0;
+    final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final calculated = _calculationService.calculateItemValues(
+      data,
+      totalMt: totalMt,
+      poidsTotal: poidsTotal,
+    );
     _controllers['mt']?.text = calculated['mt'].toString();
+    _controllers['prixAchat']?.text = calculated['prixAchat'].toString();
+    _controllers['autresCharges']?.text = calculated['autresCharges']
+        .toString();
     _controllers['cuHt']?.text = calculated['cuHt'].toString();
   }
 

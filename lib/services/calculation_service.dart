@@ -3,19 +3,23 @@ import '../models/document_model.dart';
 
 class CalculationService {
   // حساب قيم العنصر الواحد
-  Map<String, dynamic> calculateItemValues(Map<String, dynamic> data) {
+  Map<String, dynamic> calculateItemValues(
+    Map<String, dynamic> data, {
+    required double totalMt,
+    required double poidsTotal,
+  }) {
     final qte = (data['qte'] ?? 0).toInt();
     final puPieces = (data['puPieces'] ?? 0.0).toDouble();
-    final prixAchat = (data['prixAchat'] ?? 0.0).toDouble();
-    final autresCharges = (data['autresCharges'] ?? 0.0).toDouble();
+    final exchangeRate = (data['exchangeRate'] ?? 1.0).toDouble();
+    final poids = (data['poids'] ?? 0.0).toDouble();
 
-    // حساب الوزن بناء على الكمية (افتراض: كل قطعة = 13 كيلو)
-    final poids = qte * 13.0;
-
-    // حساب MT (المبلغ الإجمالي)
+    // الحسابات الجديدة
     final mt = qte * puPieces;
-
-    // حساب التكلفة الإجمالية
+    final prixAchat = puPieces * exchangeRate;
+    double autresCharges = 0.0;
+    if (qte > 0 && poids > 0 && poidsTotal > 0 && totalMt > 0) {
+      autresCharges = (poids / qte) * (totalMt / poidsTotal);
+    }
     final cuHt = prixAchat + autresCharges;
 
     return {
@@ -28,6 +32,7 @@ class CalculationService {
       'prixAchat': prixAchat,
       'autresCharges': autresCharges,
       'cuHt': cuHt,
+      'exchangeRate': exchangeRate,
     };
   }
 
@@ -46,7 +51,6 @@ class CalculationService {
 
     // حساب المجموع الكلي (بضائع + مصاريف إضافية)
     final grandTotal =
-        totalMt +
         summary.transit +
         summary.droitDouane +
         summary.chequeChange +
@@ -168,3 +172,25 @@ class CalculationService {
     };
   }
 }
+
+// بالنسبة ل
+// refFournisseur: مرجع المورد.
+// articles: اسم المادة.
+// qte: الكمية.
+// poids: الوزن.
+// puPieces: سعر القطعة.
+
+// يقوم المستخدم بإدخالها يدويا
+
+// أما بالنسبة ل
+
+// mt: المبلغ الإجمالي.
+// prixAchat: سعر الشراء.
+// autresCharges: الرسوم الأخرى.
+// cuHt: التكلفة الإجمالية.
+
+// فيتم حسابها كلها تلقائيا
+// mt: المبلغ الإجمالي.(qte*puPieces)
+// prixAchat: سعر الشراء.(puPieces*exchangeRate)
+// autresCharges: الرسوم الأخرى.((poids/qte)*(totalMt/poidsTotal))
+// cuHt: التكلفة الإجمالية.(prixAchat+autresCharges)
