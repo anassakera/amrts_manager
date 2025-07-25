@@ -85,7 +85,7 @@ class DocumentItem {
       puPieces: json['puPieces']?.toDouble() ?? 0.0,
       mt: json['mt']?.toDouble() ?? 0.0,
       prixAchat: json['prixAchat']?.toDouble() ?? 0.0,
-      autresCharges: json['autresCharges']?.toDouble() ?? 0.0,
+      autresCharges: json['autresCharges']?.toDouble() ?? 0.0, // فقط من الحساب
       cuHt: json['cuHt']?.toDouble() ?? 0.0,
       exchangeRate: json['exchangeRate']?.toDouble() ?? 1.0,
     );

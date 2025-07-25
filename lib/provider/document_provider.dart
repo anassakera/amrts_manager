@@ -58,15 +58,27 @@ class DocumentProvider with ChangeNotifier {
 
   // حفظ التحرير
   void saveItem(int index, Map<String, dynamic> data) {
+    // تأكد أن data لا تحتوي إلا على الحقول المدخلة يدوياً
+    final filteredData = {
+      'refFournisseur': data['refFournisseur'],
+      'articles': data['articles'],
+      'qte': data['qte'],
+      'poids': data['poids'],
+      'puPieces': data['puPieces'],
+      'exchangeRate': data['exchangeRate'],
+      // لا تمرر autresCharges أبداً
+    };
     final totals = _calculationService.calculateTotals(_items, _summary);
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final grandTotal = totals['total'] ?? 0.0;
     if (index == _items.length) {
       // إضافة عنصر جديد
       final calculatedData = _calculationService.calculateItemValues(
-        data,
+        filteredData,
         totalMt: totalMt,
         poidsTotal: poidsTotal,
+        grandTotal: grandTotal,
       );
       _items.add(
         DocumentItem.fromJson(calculatedData).copyWith(isEditing: false),
@@ -76,9 +88,10 @@ class DocumentProvider with ChangeNotifier {
       notifyListeners();
     } else if (index < _items.length) {
       final calculatedData = _calculationService.calculateItemValues(
-        data,
+        filteredData,
         totalMt: totalMt,
         poidsTotal: poidsTotal,
+        grandTotal: grandTotal,
       );
       _items[index] = DocumentItem.fromJson(
         calculatedData,
@@ -184,6 +197,8 @@ class DocumentProvider with ChangeNotifier {
         break;
       case 'سعر الصرف':
         _summary = _summary.copyWith(txChange: value);
+        // إعادة حساب جميع العناصر بقيمة exchangeRate الجديدة
+        _recalculateAllItemsWithExchangeRate(value);
         break;
       // أضف المزيد إذا لزم الأمر
     }
@@ -191,7 +206,31 @@ class DocumentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // إيقاف جميع عمليات التحرير
+  // دالة لإعادة حساب جميع العناصر عند تغيير سعر الصرف الرئيسي
+  void _recalculateAllItemsWithExchangeRate(double newExchangeRate) {
+    final totals = _calculationService.calculateTotals(_items, _summary);
+    final totalMt = totals['totalMt'] ?? 0.0;
+    final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final grandTotal = totals['total'] ?? 0.0;
+    _items = _items.map((item) {
+      final recalculated = _calculationService.calculateItemValues(
+        {
+          'refFournisseur': item.refFournisseur,
+          'articles': item.articles,
+          'qte': item.qte,
+          'poids': item.poids,
+          'puPieces': item.puPieces,
+          'exchangeRate': newExchangeRate,
+        },
+        totalMt: totalMt,
+        poidsTotal: poidsTotal,
+        grandTotal: grandTotal,
+      );
+      return DocumentItem.fromJson(recalculated);
+    }).toList();
+  }
+
+  // إعادة جميع عمليات التحرير
   void _stopAllEditing() {
     _editingIndex = null;
     for (int i = 0; i < _items.length; i++) {

@@ -43,7 +43,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     }
   }
 
-  void _populateControllers(DocumentItem item) {
+  void _populateControllers(DocumentItem item, {double? defaultExchangeRate}) {
     _controllers['refFournisseur']?.text = item.refFournisseur;
     _controllers['articles']?.text = item.articles;
     _controllers['qte']?.text = item.qte.toString();
@@ -53,7 +53,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     _controllers['prixAchat']?.text = item.prixAchat.toString();
     _controllers['autresCharges']?.text = item.autresCharges.toString();
     _controllers['cuHt']?.text = item.cuHt.toString();
-    _controllers['exchangeRate']?.text = item.exchangeRate.toString();
+    // إذا كان exchangeRate فارغاً أو 1، استخدم القيمة الافتراضية من ملخص الفاتورة
+    if ((item.exchangeRate == 1.0 || item.exchangeRate == 0.0) &&
+        defaultExchangeRate != null) {
+      _controllers['exchangeRate']?.text = defaultExchangeRate.toString();
+    } else {
+      _controllers['exchangeRate']?.text = item.exchangeRate.toString();
+    }
   }
 
   void _clearControllers() {
@@ -70,7 +76,8 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       'poids': double.tryParse(_controllers['poids']?.text ?? '0') ?? 0.0,
       'puPieces': double.tryParse(_controllers['puPieces']?.text ?? '0') ?? 0.0,
       'exchangeRate':
-          double.tryParse(_controllers['exchangeRate']?.text ?? '1') ?? 1.0,
+          double.tryParse(_controllers['exchangeRate']?.text.trim() ?? '') ??
+          1.0,
     };
   }
 
@@ -319,6 +326,12 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                 Icons.scale,
               ),
               SizedBox(width: 5),
+              // _buildQuickStat(
+              //   'كلفة 1 كغ',
+              //   'منطق',
+              //   Icons.attach_money,
+              // ),
+              SizedBox(width: 5),
               _buildQuickStat(
                 'مجموع المصاريف',
                 '${totals['total']?.toStringAsFixed(2)}',
@@ -340,84 +353,123 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
 
   Widget _buildQuickStat(String label, String value, IconData icon) {
     return Container(
-      // margin: EdgeInsets.symmetric(horizontal: 5),
-      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+          colors: [
+            Color(0xFF1E3A8A), // أزرق داكن
+            Color(0xFF3B82F6), // أزرق متوسط
+            // Color(0xFFEFF6FF), // أزرق فاتح جداً (قريب من الأبيض)
+          ],
+          // stops: [0.0, 0.6, 1.0],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF60A5FA).withValues(alpha: 0.10),
-            blurRadius: 10,
-            offset: Offset(0, 3),
+            color: Color(0xFF1E3A8A).withOpacity(0.25),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
         ],
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.5),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // الأيقونة في اليسار
+          // الأيقونة المحسنة
           Container(
-            padding: EdgeInsets.all(8),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: Colors.white.withOpacity(0.25),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.25),
-                width: 1,
+                color: Colors.white.withOpacity(0.35),
+                width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-            child: Icon(icon, size: 20, color: Colors.white),
+            child: Icon(
+              icon,
+              size: 22,
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.3),
+                  offset: Offset(0, 1),
+                  blurRadius: 2,
+                ),
+              ],
+            ),
           ),
 
-          SizedBox(width: 5),
-          // العنوان في الوسط
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
-          ),
-          SizedBox(width: 5),
-          // القيمة في اليمين
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.18),
-                width: 1,
-              ),
-            ),
-            child: Text(
-              value,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 0.2,
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    offset: Offset(0, 1),
-                    blurRadius: 1,
+          SizedBox(width: 10),
+
+          // المحتوى النصي
+          Flexible(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // العنوان
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                    height: 1.2,
                   ),
-                ],
-              ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                SizedBox(height: 2),
+
+                // القيمة
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.25),
+                          offset: Offset(0, 1),
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -502,7 +554,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
         children: [
           SizedBox(width: 40), // مساحة للتحديد
           _buildHeaderCell('مرجع المورد', flex: 2),
-          _buildHeaderCell('المادة', flex: 3),
+          _buildHeaderCell('المادة', flex: 2),
           _buildHeaderCell('الكمية', flex: 1),
           _buildHeaderCell('الوزن', flex: 2),
           _buildHeaderCell('سعر القطعة', flex: 2),
@@ -706,21 +758,29 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   }
 
   Widget _buildEditRow(DocumentProvider provider, int index) {
+    final exchangeRateFromSummary = provider.summary.txChange;
+    final isNew = index == provider.items.length;
+    // عند بناء صف التحرير، إذا كان عنصر جديد أو exchangeRate فارغ، عبئ exchangeRate من ملخص الفاتورة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isNew || (_controllers['exchangeRate']?.text.isEmpty ?? true)) {
+        _controllers['exchangeRate']?.text = exchangeRateFromSummary.toString();
+      }
+    });
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
         color: Color(0xFF60A5FA).withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Color(0xFF3B82F6), width: 2),
       ),
       child: Form(
         key: _formKey,
         child: Row(
           children: [
-            SizedBox(width: 40),
+            SizedBox(width: 20),
             _buildEditField('refFournisseur', 'مرجع المورد', flex: 2),
-            _buildEditField('articles', 'المادة', flex: 3),
+            _buildEditField('articles', 'المادة', flex: 2),
             _buildEditField(
               'qte',
               'الكمية',
@@ -773,13 +833,6 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               isNumber: true,
               isDecimal: true,
               readOnly: true,
-            ),
-            _buildEditField(
-              'exchangeRate',
-              'سعر الصرف',
-              flex: 2,
-              isNumber: true,
-              isDecimal: true,
             ),
             // أزرار الحفظ والإلغاء
             SizedBox(
@@ -918,10 +971,12 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     );
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final grandTotal = totals['total'] ?? 0.0;
     final calculated = _calculationService.calculateItemValues(
       data,
       totalMt: totalMt,
       poidsTotal: poidsTotal,
+      grandTotal: grandTotal,
     );
     _controllers['mt']?.text = calculated['mt'].toString();
     _controllers['prixAchat']?.text = calculated['prixAchat'].toString();
@@ -1076,6 +1131,10 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       },
                       onValueChanged: (v) {
                         provider.updateSummaryField('سعر الصرف', v);
+                        // تحديث exchangeRate في الحقول المفتوحة للتحرير
+                        if (_controllers['exchangeRate'] != null) {
+                          _controllers['exchangeRate']?.text = v.toString();
+                        }
                         setState(() => editingField.value = null);
                       },
                       onCancel: () => setState(() => editingField.value = null),
@@ -1294,7 +1353,7 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
               children: [
                 if (widget.icon != null) ...[
                   Container(
-                    padding: EdgeInsets.all(8),
+                    padding: EdgeInsets.all(5),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -1331,49 +1390,70 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                       key: ValueKey('edit'),
                       children: [
                         Expanded(
-                          child: TextField(
-                            controller: controller,
-                            autofocus: true,
-                            keyboardType: TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF1E3A8A),
-                            ),
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintText: 'أدخل القيمة',
-                              hintStyle: TextStyle(color: Color(0xFF60A5FA)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF3B82F6),
+                          child: Stack(
+                            alignment: Alignment.centerRight,
+                            children: [
+                              TextField(
+                                controller: controller,
+                                autofocus: true,
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true,
                                 ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
+                                style: TextStyle(
+                                  fontSize: 16,
                                   color: Color(0xFF1E3A8A),
-                                  width: 2,
                                 ),
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  hintText: 'أدخل القيمة',
+                                  hintStyle: TextStyle(
+                                    color: Color(0xFF60A5FA),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: Color(0xFF3B82F6),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: Color(0xFF1E3A8A),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  // إضافة أيقونة الحذف داخل الحقل
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      Icons.clear,
+                                      color: Color(0xFF3B82F6),
+                                    ),
+                                    onPressed: () {
+                                      controller.clear();
+                                      setState(
+                                        () {},
+                                      ); // لتحديث الحقل إذا لزم الأمر
+                                    },
+                                    tooltip: 'مسح القيمة',
+                                  ),
+                                ),
+                                onSubmitted: (val) {
+                                  double? newValue = double.tryParse(val);
+                                  if (newValue != null &&
+                                      widget.onValueChanged != null) {
+                                    widget.onValueChanged!(newValue);
+                                  }
+                                  if (widget.onCancel != null) {
+                                    widget.onCancel!();
+                                  }
+                                },
                               ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                            ),
-                            onSubmitted: (val) {
-                              double? newValue = double.tryParse(val);
-                              if (newValue != null &&
-                                  widget.onValueChanged != null) {
-                                widget.onValueChanged!(newValue);
-                              }
-                              if (widget.onCancel != null) {
-                                widget.onCancel!();
-                              }
-                            },
+                            ],
                           ),
                         ),
                         IconButton(
