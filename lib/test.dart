@@ -182,169 +182,437 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     Map<String, double> totals,
   ) {
     return Container(
-      margin: EdgeInsets.all(5),
-      padding: EdgeInsets.all(5),
+      margin: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF60A5FA).withValues(alpha: 0.10),
+            color: const Color(0xFF1E3A8A).withOpacity(0.15),
             blurRadius: 20,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withOpacity(0.08),
+            blurRadius: 40,
+            offset: const Offset(0, 16),
+            spreadRadius: 0,
           ),
         ],
-
-        border: Border.all(
-          width: 1,
-          color: Colors.black.withValues(alpha: 0.2),
-        ),
       ),
-      child: Column(
-        children: [
-          // العنوان الرئيسي
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.description, color: Colors.white, size: 24),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            // gradient: LinearGradient(
+            //   begin: Alignment.topLeft,
+            //   end: Alignment.bottomRight,
+            //   colors: [Color(0xFFFFFFFF), Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+            //   stops: [0.0, 0.5, 1.0],
+            // ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: Column(
+              children: [
+                // Header Row (Icon + Title + Actions)
+                Row(
                   children: [
-                    Text(
-                      'Facture',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E3A8A),
+                    // Title Section
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFF1F5F9), Color(0xFFE0E7EF)],
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF3B82F6).withOpacity(0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: const Color(0xFF3B82F6).withOpacity(0.10),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.receipt_long_rounded,
+                                  color: Color(0xFF1E3A8A),
+                                  size: 26,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'فاتورة إلكترونية',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF1E3A8A),
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.confirmation_number_rounded,
+                                  color: Color(0xFF3B82F6),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'رقم: ${provider.summary.factureNumber}',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF3B82F6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person_pin_rounded,
+                                  color: Color(0xFF10B981),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  provider.items.isNotEmpty
+                                      ? provider.items.first.refFournisseur
+                                      : 'غير محدد',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_month_rounded,
+                                  color: Color(0xFFF59E0B),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _getFormattedDate(),
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFF59E0B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Facture N° : ${provider.summary.factureNumber}',
-                      style: TextStyle(color: Color(0xFF3B82F6), fontSize: 14),
                     ),
                   ],
                 ),
-              ),
-
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  // تطبيق radius على 3 زوايا فقط (تاركين الزاوية اليمنى السفلى مربعة)
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    topRight: Radius.circular(18),
-                    bottomLeft: Radius.circular(18),
-                    bottomRight: Radius.circular(4), // زاوية مربعة
+                const SizedBox(height: 5),
+                // معلومات الفاتورة (شبكة)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xFF60A5FA).withValues(alpha: 0.08),
-                      blurRadius: 12,
-                      offset: Offset(0, 6),
-                      spreadRadius: 0,
-                    ),
-                    BoxShadow(
-                      color: Color(0xFF60A5FA).withValues(alpha: 0.04),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                      spreadRadius: 0,
-                    ),
-                  ],
-                  border: Border.all(color: Color(0xFFF1F5F9), width: 1),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(6),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 3,
-                    crossAxisSpacing: 3,
-                    physics: NeverScrollableScrollPhysics(),
+                  child: Row(
                     children: [
-                      _buildSquareAction(
-                        icon: Icons.checklist_rtl_rounded,
-                        color: Color(0xFF8B5CF6),
-                        onTap: () => provider.selectAll(),
-                        tooltip: 'تحديد الكل',
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: _buildInfoCard(
+                          icon: Icons.inventory,
+                          label: 'عدد العناصر',
+                          value: provider.items.length.toString(),
+                          color: const Color(0xFF3B82F6),
+                        ),
                       ),
-                      _buildSquareAction(
-                        icon: Icons.add_circle_outline_rounded,
-                        color: Color(0xFF10B981),
-                        onTap: () {
-                          provider.addItem();
-                          _clearControllers();
-                        },
-                        tooltip: 'إضافة جديد',
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: _buildInfoCard(
+                          icon: Icons.scale,
+                          label: 'الوزن الكلي',
+                          value:
+                              '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} كغ',
+                          color: const Color(0xFF10B981),
+                        ),
                       ),
-                      _buildSquareAction(
-                        icon: Icons.delete_sweep_rounded,
-                        color: Color(0xFFEF4444),
-                        onTap: () => _showDeleteConfirmation(context, provider),
-                        tooltip: 'حذف المحدد',
-                        visible: provider.hasSelection,
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: _buildInfoCard(
+                          icon: Icons.attach_money,
+                          label: 'مجموع المصاريف',
+                          value: totals['total']?.toStringAsFixed(2) ?? '0.00',
+                          color: const Color(0xFFF59E0B),
+                        ),
                       ),
-                      _buildSquareAction(
-                        icon: Icons.clear_all_rounded,
-                        color: Color(0xFF6B7280),
-                        onTap: () => provider.clearSelection(),
-                        tooltip: 'إلغاء التحديد',
-                        visible: provider.hasSelection,
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: _buildInfoCard(
+                          icon: Icons.inventory,
+                          label: 'إجمالي البضائع',
+                          value: _calculationService.formatCurrency(
+                            totals['totalMt'] ?? 0,
+                          ),
+                          color: const Color(0xFF1E3A8A),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      // Action Panel بحجم ثابت في نهاية الصف
+                      SizedBox(
+                        width: 100,
+                        height: 100,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(
+                              color: const Color(0xFFE2E8F0),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF64748B,
+                                ).withOpacity(0.06),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(5),
+                            child: GridView.count(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 6,
+                              crossAxisSpacing: 6,
+                              physics: const NeverScrollableScrollPhysics(),
+                              children: [
+                                // تحديد الكل
+                                Tooltip(
+                                  message: 'تحديد الكل',
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () => provider.selectAll(),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            0xFF8B5CF6,
+                                          ).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xFF8B5CF6,
+                                            ).withOpacity(0.2),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.select_all_rounded,
+                                          color: Color(0xFF8B5CF6),
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // إضافة جديد
+                                Tooltip(
+                                  message: 'إضافة جديد',
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        provider.addItem();
+                                        _clearControllers();
+                                      },
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            0xFF10B981,
+                                          ).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xFF10B981,
+                                            ).withOpacity(0.2),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.add_circle_outline_rounded,
+                                          color: Color(0xFF10B981),
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // حذف المحدد
+                                if (provider.hasSelection)
+                                  Tooltip(
+                                    message: 'حذف المحدد',
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => _showDeleteConfirmation(
+                                          context,
+                                          provider,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              0xFFEF4444,
+                                            ).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(
+                                                0xFFEF4444,
+                                              ).withOpacity(0.2),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.delete_sweep_rounded,
+                                            color: Color(0xFFEF4444),
+                                            size: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                // إلغاء التحديد
+                                if (provider.hasSelection)
+                                  Tooltip(
+                                    message: 'إلغاء التحديد',
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => provider.clearSelection(),
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              0xFF6B7280,
+                                            ).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(
+                                                0xFF6B7280,
+                                              ).withOpacity(0.2),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.clear_all_rounded,
+                                            color: Color(0xFF6B7280),
+                                            size: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
 
-          SizedBox(height: 20),
-
-          // شريط الأدوات الذكي الجديد (أيقونة + نص داخل Container)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _buildQuickStat(
-                'العناصر',
-                provider.items.length.toString(),
-                Icons.inventory,
-              ),
-              SizedBox(width: 5),
-              _buildQuickStat(
-                'الوزن الكلي',
-                '${totals['poidsTotal']?.toStringAsFixed(0)} كغ',
-                Icons.scale,
-              ),
-              SizedBox(width: 5),
-              // _buildQuickStat(
-              //   'كلفة 1 كغ',
-              //   'منطق',
-              //   Icons.attach_money,
-              // ),
-              SizedBox(width: 5),
-              _buildQuickStat(
-                'مجموع المصاريف',
-                '${totals['total']?.toStringAsFixed(2)}',
-                Icons.attach_money,
-              ),
-              SizedBox(width: 5),
-              _buildQuickStat(
-                'إجمالي البضائع',
-                _calculationService.formatCurrency(totals['totalMt'] ?? 0),
-                Icons.inventory,
-              ),
-              Spacer(),
-            ],
+  // بطاقة معلومات مفردة
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.1), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: color.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -552,69 +820,87 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       ),
       child: Row(
         children: [
-          SizedBox(width: 40), // مساحة للتحديد
-          _buildHeaderCell('مرجع المورد', flex: 2),
+          SizedBox(width: 30), // مساحة للتحديد
+
+          _buildHeaderCell('مرجع المورد', flex: 2, showDivider: true),
+          _verticalDivider(height: 28),
           _buildHeaderCell('المادة', flex: 2),
+          _verticalDivider(height: 28),
           _buildHeaderCell('الكمية', flex: 1),
+          _verticalDivider(height: 28),
           _buildHeaderCell('الوزن', flex: 2),
+          _verticalDivider(height: 28),
           _buildHeaderCell('سعر القطعة', flex: 2),
+          _verticalDivider(height: 28),
           _buildHeaderCell('المبلغ الإجمالي', flex: 2),
+          _verticalDivider(height: 28),
           _buildHeaderCell('سعر الشراء', flex: 2),
+          _verticalDivider(height: 28),
           _buildHeaderCell('مصاريف أخرى', flex: 2),
+          _verticalDivider(height: 28),
           _buildHeaderCell('تكلفة القطعة', flex: 2),
+          _verticalDivider(height: 28),
+          _buildHeaderCell('الإجراءات', flex: 1),
           // SizedBox(width: 16), // مساحة للأزرار
           // زر الإضافة في رأس الجدول
-          InkWell(
-            onTap: () {
-              final provider = Provider.of<DocumentProvider>(
-                context,
-                listen: false,
-              );
-              provider.addItem();
-              _clearControllers();
-            },
-            child: Container(
-              padding: EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Color(0xFF3B82F6), width: 1.2),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: Color(0xFF1E3A8A),
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    'إضافة',
-                    style: TextStyle(
-                      color: Color(0xFF1E3A8A),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // InkWell(
+          //   onTap: () {
+          //     final provider = Provider.of<DocumentProvider>(
+          //       context,
+          //       listen: false,
+          //     );
+          //     provider.addItem();
+          //     _clearControllers();
+          //   },
+          //   child: Container(
+          //     padding: EdgeInsets.all(5),
+          //     decoration: BoxDecoration(
+          //       color: Color(0xFFF1F5F9),
+          //       borderRadius: BorderRadius.circular(8),
+          //       border: Border.all(color: Color(0xFF3B82F6), width: 1.2),
+          //     ),
+          //     child: Row(
+          //       children: [
+          //         Icon(
+          //           Icons.add_circle_outline_rounded,
+          //           color: Color(0xFF1E3A8A),
+          //         ),
+          //         SizedBox(width: 4),
+          //         Text(
+          //           'إضافة',
+          //           style: TextStyle(
+          //             color: Color(0xFF1E3A8A),
+          //             fontWeight: FontWeight.bold,
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderCell(String title, {int flex = 1}) {
+  Widget _buildHeaderCell(
+    String title, {
+    int flex = 1,
+    bool showDivider = false,
+  }) {
     return Expanded(
       flex: flex,
-      child: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-          color: Colors.white,
-          letterSpacing: 0.2,
+      child: Container(
+        alignment: Alignment.center,
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: Colors.white,
+            letterSpacing: 0.2,
+          ),
+          textAlign: TextAlign.center,
         ),
-        textAlign: TextAlign.center,
       ),
     );
   }
@@ -646,7 +932,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
         onTap: () => provider.toggleSelection(index),
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Row(
             children: [
               // زر التحديد
@@ -668,32 +954,40 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       : null,
                 ),
               ),
-              SizedBox(width: 20),
+              SizedBox(width: 5),
 
               // بيانات الصف
               _buildDataCell(item.refFournisseur, flex: 2),
-              _buildDataCell(item.articles, flex: 3),
+              _verticalDivider(height: 28),
+              _buildDataCell(item.articles, flex: 2),
+              _verticalDivider(height: 28),
               _buildDataCell(item.qte.toString(), flex: 1),
+              _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatWeight(item.poids),
                 flex: 2,
               ),
+              _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(item.puPieces),
                 flex: 2,
               ),
+              _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(item.mt),
                 flex: 2,
               ),
+              _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(item.prixAchat),
                 flex: 2,
               ),
+              _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(item.autresCharges),
                 flex: 2,
               ),
+              _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(item.cuHt),
                 flex: 2,
@@ -745,14 +1039,18 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   Widget _buildDataCell(String text, {int flex = 1}) {
     return Expanded(
       flex: flex,
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 14,
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.bold,
-        ), //anass
-        textAlign: TextAlign.center,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Color(0xFF1E3A8A),
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
@@ -780,7 +1078,9 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
           children: [
             SizedBox(width: 20),
             _buildEditField('refFournisseur', 'مرجع المورد', flex: 2),
+            _verticalDivider(height: 28),
             _buildEditField('articles', 'المادة', flex: 2),
+            _verticalDivider(height: 28),
             _buildEditField(
               'qte',
               'الكمية',
@@ -788,6 +1088,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               isNumber: true,
               isDecimal: false,
             ),
+            _verticalDivider(height: 28),
             _buildEditField(
               'poids',
               'الوزن',
@@ -795,6 +1096,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               isNumber: true,
               isDecimal: true,
             ),
+            _verticalDivider(height: 28),
             _buildEditField(
               'puPieces',
               'سعر القطعة',
@@ -802,6 +1104,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               isNumber: true,
               isDecimal: true,
             ),
+            _verticalDivider(height: 28),
             _buildEditField(
               'mt',
               'المبلغ الإجمالي',
@@ -810,6 +1113,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               isDecimal: true,
               readOnly: true,
             ),
+            _verticalDivider(height: 28),
             _buildEditField(
               'prixAchat',
               'سعر الشراء',
@@ -818,6 +1122,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               isDecimal: true,
               readOnly: true,
             ),
+            _verticalDivider(height: 28),
             _buildEditField(
               'autresCharges',
               'مصاريف أخرى',
@@ -826,6 +1131,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               isDecimal: true,
               readOnly: true,
             ),
+            _verticalDivider(height: 28),
             _buildEditField(
               'cuHt',
               'تكلفة القطعة',
@@ -965,8 +1271,19 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   void _updateCalculatedFieldsWithService() {
     final data = _getFormData();
     final provider = Provider.of<DocumentProvider>(context, listen: false);
+    List<DocumentItem> tempItems = List.from(provider.items);
+    // إذا كنا في وضع إضافة عنصر جديد، أضف العنصر الجاري تحريره مؤقتًا
+    if (provider.editingIndex == provider.items.length) {
+      final tempCalculated = _calculationService.calculateItemValues(
+        data,
+        totalMt: 0.0, // سيتم تحديثها بعد حساب المجاميع
+        poidsTotal: 0.0,
+        grandTotal: 0.0,
+      );
+      tempItems.add(DocumentItem.fromJson(tempCalculated));
+    }
     final totals = _calculationService.calculateTotals(
-      provider.items,
+      tempItems,
       provider.summary,
     );
     final totalMt = totals['totalMt'] ?? 0.0;
@@ -1262,6 +1579,20 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
           ],
         );
       },
+    );
+  }
+
+  // أضف دالة مساعدة لتنسيق التاريخ في SmartDocumentScreenState
+  String _getFormattedDate() {
+    final now = DateTime.now();
+    return "${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}";
+  }
+
+  Widget _verticalDivider({double? height}) {
+    return Container(
+      width: 1,
+      height: height ?? double.infinity,
+      color: const Color(0xFFE5E7EB),
     );
   }
 }

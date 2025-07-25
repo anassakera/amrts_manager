@@ -1,5 +1,6 @@
 import 'package:amrts_manager/provider/document_provider.dart';
 import 'package:amrts_manager/test.dart';
+import 'package:amrts_manager/test1.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'provider/language_provider.dart';
@@ -25,6 +26,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(fontFamily: 'Tajawal'),
+      // home: InvoiceHeaderWidget(),
       home: SmartDocumentScreen(),
     );
   }

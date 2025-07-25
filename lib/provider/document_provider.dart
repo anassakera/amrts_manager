@@ -68,18 +68,38 @@ class DocumentProvider with ChangeNotifier {
       'exchangeRate': data['exchangeRate'],
       // لا تمرر autresCharges أبداً
     };
-    final totals = _calculationService.calculateTotals(_items, _summary);
+    List<DocumentItem> tempItems = List.from(_items);
+    if (index == _items.length) {
+      // إضافة عنصر جديد
+      // أضف العنصر الجديد مؤقتًا لحساب المجاميع بدقة
+      final tempCalculated = _calculationService.calculateItemValues(
+        filteredData,
+        totalMt: 0.0,
+        poidsTotal: 0.0,
+        grandTotal: 0.0,
+      );
+      tempItems.add(DocumentItem.fromJson(tempCalculated));
+    } else if (index < _items.length) {
+      // استبدل العنصر المعدل مؤقتًا لحساب المجاميع بدقة
+      final tempCalculated = _calculationService.calculateItemValues(
+        filteredData,
+        totalMt: 0.0,
+        poidsTotal: 0.0,
+        grandTotal: 0.0,
+      );
+      tempItems[index] = DocumentItem.fromJson(tempCalculated);
+    }
+    final totals = _calculationService.calculateTotals(tempItems, _summary);
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
     final grandTotal = totals['total'] ?? 0.0;
+    final calculatedData = _calculationService.calculateItemValues(
+      filteredData,
+      totalMt: totalMt,
+      poidsTotal: poidsTotal,
+      grandTotal: grandTotal,
+    );
     if (index == _items.length) {
-      // إضافة عنصر جديد
-      final calculatedData = _calculationService.calculateItemValues(
-        filteredData,
-        totalMt: totalMt,
-        poidsTotal: poidsTotal,
-        grandTotal: grandTotal,
-      );
       _items.add(
         DocumentItem.fromJson(calculatedData).copyWith(isEditing: false),
       );
@@ -87,12 +107,6 @@ class DocumentProvider with ChangeNotifier {
       _recalculateSummary();
       notifyListeners();
     } else if (index < _items.length) {
-      final calculatedData = _calculationService.calculateItemValues(
-        filteredData,
-        totalMt: totalMt,
-        poidsTotal: poidsTotal,
-        grandTotal: grandTotal,
-      );
       _items[index] = DocumentItem.fromJson(
         calculatedData,
       ).copyWith(isEditing: false);
@@ -182,18 +196,23 @@ class DocumentProvider with ChangeNotifier {
     switch (field) {
       case 'النقل':
         _summary = _summary.copyWith(transit: value);
+        _recalculateAllItemsWithSummary();
         break;
       case 'حق الجمرك':
         _summary = _summary.copyWith(droitDouane: value);
+        _recalculateAllItemsWithSummary();
         break;
       case 'شيك الصرف':
         _summary = _summary.copyWith(chequeChange: value);
+        _recalculateAllItemsWithSummary();
         break;
       case 'الشحن':
         _summary = _summary.copyWith(freiht: value);
+        _recalculateAllItemsWithSummary();
         break;
       case 'أخرى':
         _summary = _summary.copyWith(autres: value);
+        _recalculateAllItemsWithSummary();
         break;
       case 'سعر الصرف':
         _summary = _summary.copyWith(txChange: value);
@@ -204,6 +223,30 @@ class DocumentProvider with ChangeNotifier {
     }
     _recalculateSummary();
     notifyListeners();
+  }
+
+  // دالة لإعادة حساب جميع العناصر عند تغيير أي من الحقول المؤثرة في المصاريف
+  void _recalculateAllItemsWithSummary() {
+    final totals = _calculationService.calculateTotals(_items, _summary);
+    final totalMt = totals['totalMt'] ?? 0.0;
+    final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final grandTotal = totals['total'] ?? 0.0;
+    _items = _items.map((item) {
+      final recalculated = _calculationService.calculateItemValues(
+        {
+          'refFournisseur': item.refFournisseur,
+          'articles': item.articles,
+          'qte': item.qte,
+          'poids': item.poids,
+          'puPieces': item.puPieces,
+          'exchangeRate': item.exchangeRate,
+        },
+        totalMt: totalMt,
+        poidsTotal: poidsTotal,
+        grandTotal: grandTotal,
+      );
+      return DocumentItem.fromJson(recalculated);
+    }).toList();
   }
 
   // دالة لإعادة حساب جميع العناصر عند تغيير سعر الصرف الرئيسي
