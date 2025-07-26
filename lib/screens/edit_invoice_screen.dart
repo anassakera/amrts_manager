@@ -1,13 +1,17 @@
 // test.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'models/document_model.dart';
-import 'services/calculation_service.dart';
-import 'provider/document_provider.dart';
+import '../models/invoice_manage_model.dart';
+import '../services/calculation_service.dart';
+import '../provider/document_provider.dart';
+import '../provider/invoice_provider.dart';
 import 'package:flutter/services.dart';
+import '../core/language.dart';
+import '../provider/language_provider.dart';
 
 class SmartDocumentScreen extends StatefulWidget {
-  const SmartDocumentScreen({super.key});
+  final InvoiceModel? invoice;
+  const SmartDocumentScreen({super.key, this.invoice});
 
   @override
   SmartDocumentScreenState createState() => SmartDocumentScreenState();
@@ -22,6 +26,15 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   void initState() {
     super.initState();
     _initializeControllers();
+    if (widget.invoice != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final provider = Provider.of<DocumentProvider>(context, listen: false);
+        provider.setFromInvoiceModel(widget.invoice!);
+        if (widget.invoice!.items.isNotEmpty) {
+          _populateControllers(widget.invoice!.items.first);
+        }
+      });
+    }
   }
 
   void _initializeControllers() {
@@ -43,7 +56,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     }
   }
 
-  void _populateControllers(DocumentItem item, {double? defaultExchangeRate}) {
+  void _populateControllers(InvoiceItem item, {double? defaultExchangeRate}) {
     _controllers['refFournisseur']?.text = item.refFournisseur;
     _controllers['articles']?.text = item.articles;
     _controllers['qte']?.text = item.qte.toString();
@@ -118,64 +131,11 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
           },
         ),
       ),
+      // تم نقل أزرار الحفظ والإلغاء إلى _buildSmartHeader
     );
   }
 
   // دالة لبناء زر أيقونة مربع مع Tooltip ودعم خاصية الإظهار/الإخفاء
-  Widget _buildSquareAction({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-    required String tooltip,
-    bool visible = true,
-  }) {
-    if (!visible) return SizedBox.shrink();
-
-    return Tooltip(
-      message: tooltip,
-      preferBelow: false,
-      verticalOffset: 20,
-      decoration: BoxDecoration(
-        color: Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      textStyle: TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          splashColor: color.withValues(alpha: 0.2),
-          highlightColor: color.withValues(alpha: 0.1),
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: color.withValues(alpha: 0.15),
-                width: 1,
-              ),
-            ),
-            child: Center(
-              child: AnimatedSwitcher(
-                duration: Duration(milliseconds: 300),
-                child: Icon(icon, key: ValueKey(icon), color: color, size: 24),
-                transitionBuilder: (child, animation) {
-                  return ScaleTransition(scale: animation, child: child);
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSmartHeader(
     DocumentProvider provider,
@@ -187,13 +147,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.15),
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 8),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.08),
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
             blurRadius: 40,
             offset: const Offset(0, 16),
             spreadRadius: 0,
@@ -203,15 +163,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            // gradient: LinearGradient(
-            //   begin: Alignment.topLeft,
-            //   end: Alignment.bottomRight,
-            //   colors: [Color(0xFFFFFFFF), Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
-            //   stops: [0.0, 0.5, 1.0],
-            // ),
-          ),
+          decoration: const BoxDecoration(color: Colors.white),
           child: Padding(
             padding: const EdgeInsets.all(5),
             child: Column(
@@ -235,13 +187,17 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF3B82F6).withOpacity(0.08),
+                              color: const Color(
+                                0xFF3B82F6,
+                              ).withValues(alpha: 0.08),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
                           ],
                           border: Border.all(
-                            color: const Color(0xFF3B82F6).withOpacity(0.10),
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.10),
                             width: 1.2,
                           ),
                         ),
@@ -257,8 +213,15 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                   size: 26,
                                 ),
                                 const SizedBox(width: 8),
-                                const Text(
-                                  'فاتورة إلكترونية',
+                                Text(
+                                  // فاتورة إلكترونية
+                                  AppTranslations.get(
+                                    'smart_invoice',
+                                    Provider.of<LanguageProvider>(
+                                      context,
+                                      listen: true,
+                                    ).currentLanguage,
+                                  ),
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
@@ -277,7 +240,14 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'رقم: ${provider.summary.factureNumber}',
+                                  // رقم: ...
+                                  '${AppTranslations.get(
+                                        'number',
+                                        Provider.of<LanguageProvider>(
+                                          context,
+                                          listen: true,
+                                        ).currentLanguage,
+                                      )}: ${provider.summary.factureNumber}',
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -297,7 +267,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                 Text(
                                   provider.items.isNotEmpty
                                       ? provider.items.first.refFournisseur
-                                      : 'غير محدد',
+                                      : AppTranslations.get(
+                                          'not_specified',
+                                          Provider.of<LanguageProvider>(
+                                            context,
+                                            listen: true,
+                                          ).currentLanguage,
+                                        ),
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -328,13 +304,192 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+
+                    
+                    Container(
+                      height: MediaQuery.of(context).size.height * 0.085,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE57373).withOpacity(0.15),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.cancel_rounded, size: 20),
+                        label: Text(
+                          AppTranslations.get(
+                            'cancel',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: false,
+                            ).currentLanguage,
+                          ),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                          backgroundColor: Colors.transparent,
+                          animationDuration: const Duration(milliseconds: 200),
+                        ).copyWith(
+                          backgroundColor: MaterialStateProperty.resolveWith<Color>(
+                            (Set<MaterialState> states) {
+                              if (states.contains(MaterialState.pressed)) {
+                                return const Color(0xFFEF9A9A); // أفتح عند الضغط
+                              }
+                              if (states.contains(MaterialState.hovered)) {
+                                return const Color(0xFFEF5350); // أغمق عند التحويم
+                              }
+                              return const Color(0xFFE57373); // اللون الأساسي
+                            },
+                          ),
+                          overlayColor: MaterialStateProperty.resolveWith<Color?>(
+                            (Set<MaterialState> states) {
+                              if (states.contains(MaterialState.pressed)) {
+                                return Colors.white.withOpacity(0.1);
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+
+                    Container(
+                      height:
+                          MediaQuery.of(context).size.height *
+                          0.085, // Dynamic height based on screen height
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF66BB6A).withOpacity(0.15),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          final provider = Provider.of<DocumentProvider>(
+                            context,
+                            listen: false,
+                          );
+
+                      
+                          // بناء كائن الفاتورة الجديد
+                          final invoice = widget.invoice != null
+                              ? widget.invoice!.copyWith(
+                                  items: List<InvoiceItem>.from(provider.items),
+                                  summary: provider.summary,
+                                )
+                              : InvoiceModel(
+                                  id: DateTime.now()
+                                      .millisecondsSinceEpoch
+                                      .toString(),
+                                  clientName: provider.items.isNotEmpty
+                                      ? provider.items.first.refFournisseur
+                                      : '',
+                                  invoiceNumber: provider.summary.factureNumber,
+                                  date: DateTime.now(),
+                                  isLocal: true, // أو حسب الحاجة
+                                  summary: provider.summary,
+                                  items:
+                                      List<InvoiceItem>.from(provider.items),
+                                );
+
+                          if (widget.invoice != null) {
+                            Provider.of<InvoiceProvider>(context, listen: false)
+                                .updateInvoice(invoice);
+                          } else {
+                            Provider.of<InvoiceProvider>(context, listen: false)
+                                .addInvoice(invoice);
+                          }
+
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.save_rounded, size: 20),
+                        label: Text(
+                          AppTranslations.get(
+                            'save',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: false,
+                            ).currentLanguage,
+                          ),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                          backgroundColor: Colors.transparent,
+                          animationDuration: const Duration(milliseconds: 200),
+                        ).copyWith(
+                          backgroundColor: MaterialStateProperty.resolveWith<Color>(
+                            (Set<MaterialState> states) {
+                              if (states.contains(MaterialState.pressed)) {
+                                return const Color(0xFF81C784); // أفتح عند الضغط
+                              }
+                              if (states.contains(MaterialState.hovered)) {
+                                return const Color(0xFF4CAF50); // أغمق عند التحويم
+                              }
+                              return const Color(0xFF66BB6A); // اللون الأساسي
+                            },
+                          ),
+                          overlayColor: MaterialStateProperty.resolveWith<Color?>(
+                            (Set<MaterialState> states) {
+                              if (states.contains(MaterialState.pressed)) {
+                                return Colors.white.withOpacity(0.1);
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                 
+                 
                   ],
                 ),
+
                 const SizedBox(height: 5),
                 // معلومات الفاتورة (شبكة)
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: const Color(0xFFE2E8F0),
@@ -347,7 +502,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       Expanded(
                         child: _buildInfoCard(
                           icon: Icons.inventory,
-                          label: 'عدد العناصر',
+                          label: AppTranslations.get(
+                            'items_count',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: true,
+                            ).currentLanguage,
+                          ),
                           value: provider.items.length.toString(),
                           color: const Color(0xFF3B82F6),
                         ),
@@ -356,7 +517,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       Expanded(
                         child: _buildInfoCard(
                           icon: Icons.scale,
-                          label: 'الوزن الكلي',
+                          label: AppTranslations.get(
+                            'total_weight',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: true,
+                            ).currentLanguage,
+                          ),
                           value:
                               '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} كغ',
                           color: const Color(0xFF10B981),
@@ -366,7 +533,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       Expanded(
                         child: _buildInfoCard(
                           icon: Icons.attach_money,
-                          label: 'مجموع المصاريف',
+                          label: AppTranslations.get(
+                            'total_expenses',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: true,
+                            ).currentLanguage,
+                          ),
                           value: totals['total']?.toStringAsFixed(2) ?? '0.00',
                           color: const Color(0xFFF59E0B),
                         ),
@@ -375,7 +548,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       Expanded(
                         child: _buildInfoCard(
                           icon: Icons.inventory,
-                          label: 'إجمالي البضائع',
+                          label: AppTranslations.get(
+                            'goods_total',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: true,
+                            ).currentLanguage,
+                          ),
                           value: _calculationService.formatCurrency(
                             totals['totalMt'] ?? 0,
                           ),
@@ -399,7 +578,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                               BoxShadow(
                                 color: const Color(
                                   0xFF64748B,
-                                ).withOpacity(0.06),
+                                ).withValues(alpha: 0.06),
                                 blurRadius: 16,
                                 offset: const Offset(0, 4),
                               ),
@@ -415,7 +594,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                               children: [
                                 // تحديد الكل
                                 Tooltip(
-                                  message: 'تحديد الكل',
+                                  message: AppTranslations.get(
+                                    'select_all',
+                                    Provider.of<LanguageProvider>(
+                                      context,
+                                      listen: true,
+                                    ).currentLanguage,
+                                  ),
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -425,14 +610,14 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                         decoration: BoxDecoration(
                                           color: const Color(
                                             0xFF8B5CF6,
-                                          ).withOpacity(0.1),
+                                          ).withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(
                                             10,
                                           ),
                                           border: Border.all(
                                             color: const Color(
                                               0xFF8B5CF6,
-                                            ).withOpacity(0.2),
+                                            ).withValues(alpha: 0.2),
                                             width: 1,
                                           ),
                                         ),
@@ -447,7 +632,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                 ),
                                 // إضافة جديد
                                 Tooltip(
-                                  message: 'إضافة جديد',
+                                  message: AppTranslations.get(
+                                    'add_new',
+                                    Provider.of<LanguageProvider>(
+                                      context,
+                                      listen: true,
+                                    ).currentLanguage,
+                                  ),
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -460,14 +651,14 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                         decoration: BoxDecoration(
                                           color: const Color(
                                             0xFF10B981,
-                                          ).withOpacity(0.1),
+                                          ).withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(
                                             10,
                                           ),
                                           border: Border.all(
                                             color: const Color(
                                               0xFF10B981,
-                                            ).withOpacity(0.2),
+                                            ).withValues(alpha: 0.2),
                                             width: 1,
                                           ),
                                         ),
@@ -483,7 +674,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                 // حذف المحدد
                                 if (provider.hasSelection)
                                   Tooltip(
-                                    message: 'حذف المحدد',
+                                    message: AppTranslations.get(
+                                      'delete_selected',
+                                      Provider.of<LanguageProvider>(
+                                        context,
+                                        listen: true,
+                                      ).currentLanguage,
+                                    ),
                                     child: Material(
                                       color: Colors.transparent,
                                       child: InkWell(
@@ -496,14 +693,14 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                           decoration: BoxDecoration(
                                             color: const Color(
                                               0xFFEF4444,
-                                            ).withOpacity(0.1),
+                                            ).withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(
                                               10,
                                             ),
                                             border: Border.all(
                                               color: const Color(
                                                 0xFFEF4444,
-                                              ).withOpacity(0.2),
+                                              ).withValues(alpha: 0.2),
                                               width: 1,
                                             ),
                                           ),
@@ -519,7 +716,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                 // إلغاء التحديد
                                 if (provider.hasSelection)
                                   Tooltip(
-                                    message: 'إلغاء التحديد',
+                                    message: AppTranslations.get(
+                                      'clear_selection',
+                                      Provider.of<LanguageProvider>(
+                                        context,
+                                        listen: true,
+                                      ).currentLanguage,
+                                    ),
                                     child: Material(
                                       color: Colors.transparent,
                                       child: InkWell(
@@ -529,14 +732,14 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                                           decoration: BoxDecoration(
                                             color: const Color(
                                               0xFF6B7280,
-                                            ).withOpacity(0.1),
+                                            ).withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(
                                               10,
                                             ),
                                             border: Border.all(
                                               color: const Color(
                                                 0xFF6B7280,
-                                              ).withOpacity(0.2),
+                                              ).withValues(alpha: 0.2),
                                               width: 1,
                                             ),
                                           ),
@@ -575,16 +778,16 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.1), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.1), width: 1),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -599,7 +802,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: color.withOpacity(0.7),
+                    color: color.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -609,132 +812,6 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickStat(String label, String value, IconData icon) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1E3A8A), // أزرق داكن
-            Color(0xFF3B82F6), // أزرق متوسط
-            // Color(0xFFEFF6FF), // أزرق فاتح جداً (قريب من الأبيض)
-          ],
-          // stops: [0.0, 0.6, 1.0],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFF1E3A8A).withOpacity(0.25),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // الأيقونة المحسنة
-          Container(
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.35),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              size: 22,
-              color: Colors.white,
-              shadows: [
-                Shadow(
-                  color: Colors.black.withOpacity(0.3),
-                  offset: Offset(0, 1),
-                  blurRadius: 2,
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(width: 10),
-
-          // المحتوى النصي
-          Flexible(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // العنوان
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.3,
-                    height: 1.2,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                SizedBox(height: 2),
-
-                // القيمة
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.2,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withOpacity(0.25),
-                          offset: Offset(0, 1),
-                          blurRadius: 2,
-                        ),
-                      ],
-                    ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -822,25 +899,116 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
         children: [
           SizedBox(width: 30), // مساحة للتحديد
 
-          _buildHeaderCell('مرجع المورد', flex: 2, showDivider: true),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'supplier_ref',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+            showDivider: true,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('المادة', flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'article',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('الكمية', flex: 1),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'quantity',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 1,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('الوزن', flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'weight',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('سعر القطعة', flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'unit_price',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('المبلغ الإجمالي', flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'total_amount',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('سعر الشراء', flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'purchase_price',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('مصاريف أخرى', flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'other_expenses',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('تكلفة القطعة', flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'item_cost',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell('الإجراءات', flex: 1),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'actions',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 1,
+          ),
           // SizedBox(width: 16), // مساحة للأزرار
           // زر الإضافة في رأس الجدول
           // InkWell(
@@ -907,7 +1075,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
 
   Widget _buildTableRow(
     DocumentProvider provider,
-    DocumentItem item,
+    InvoiceItem item,
     int index,
   ) {
     final isSelected = provider.selectedIndices.contains(index);
@@ -1077,13 +1245,39 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
         child: Row(
           children: [
             SizedBox(width: 20),
-            _buildEditField('refFournisseur', 'مرجع المورد', flex: 2),
+            _buildEditField(
+              'refFournisseur',
+              AppTranslations.get(
+                'supplier_ref',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+            ),
             _verticalDivider(height: 28),
-            _buildEditField('articles', 'المادة', flex: 2),
+            _buildEditField(
+              'articles',
+              AppTranslations.get(
+                'article',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+            ),
             _verticalDivider(height: 28),
             _buildEditField(
               'qte',
-              'الكمية',
+              AppTranslations.get(
+                'quantity',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
               flex: 1,
               isNumber: true,
               isDecimal: false,
@@ -1091,7 +1285,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             _verticalDivider(height: 28),
             _buildEditField(
               'poids',
-              'الوزن',
+              AppTranslations.get(
+                'weight',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
               flex: 2,
               isNumber: true,
               isDecimal: true,
@@ -1099,7 +1299,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             _verticalDivider(height: 28),
             _buildEditField(
               'puPieces',
-              'سعر القطعة',
+              AppTranslations.get(
+                'unit_price',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
               flex: 2,
               isNumber: true,
               isDecimal: true,
@@ -1107,7 +1313,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             _verticalDivider(height: 28),
             _buildEditField(
               'mt',
-              'المبلغ الإجمالي',
+              AppTranslations.get(
+                'total_amount',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
               flex: 2,
               isNumber: true,
               isDecimal: true,
@@ -1116,7 +1328,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             _verticalDivider(height: 28),
             _buildEditField(
               'prixAchat',
-              'سعر الشراء',
+              AppTranslations.get(
+                'purchase_price',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
               flex: 2,
               isNumber: true,
               isDecimal: true,
@@ -1125,7 +1343,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             _verticalDivider(height: 28),
             _buildEditField(
               'autresCharges',
-              'مصاريف أخرى',
+              AppTranslations.get(
+                'other_expenses',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
               flex: 2,
               isNumber: true,
               isDecimal: true,
@@ -1134,7 +1358,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             _verticalDivider(height: 28),
             _buildEditField(
               'cuHt',
-              'تكلفة القطعة',
+              AppTranslations.get(
+                'item_cost',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
               flex: 2,
               isNumber: true,
               isDecimal: true,
@@ -1195,7 +1425,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.blueAccent.withOpacity(0.2),
+                color: Colors.blueAccent.withValues(alpha: 0.2),
                 spreadRadius: 2,
                 blurRadius: 5,
                 offset: Offset(0, 3),
@@ -1242,13 +1472,33 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             ),
             validator: (value) {
               if (!readOnly && (value == null || value.isEmpty)) {
-                return 'مطلوب';
+                return AppTranslations.get(
+                  'required',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: false,
+                  ).currentLanguage,
+                );
               }
               if (isNumber && value != null && value.isNotEmpty) {
                 if (isDecimal) {
-                  if (double.tryParse(value) == null) return 'رقم غير صحيح';
+                  if (double.tryParse(value) == null)
+                    return AppTranslations.get(
+                      'invalid_number',
+                      Provider.of<LanguageProvider>(
+                        context,
+                        listen: false,
+                      ).currentLanguage,
+                    );
                 } else {
-                  if (int.tryParse(value) == null) return 'رقم صحيح فقط';
+                  if (int.tryParse(value) == null)
+                    return AppTranslations.get(
+                      'integer_only',
+                      Provider.of<LanguageProvider>(
+                        context,
+                        listen: false,
+                      ).currentLanguage,
+                    );
                 }
               }
               return null;
@@ -1271,7 +1521,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   void _updateCalculatedFieldsWithService() {
     final data = _getFormData();
     final provider = Provider.of<DocumentProvider>(context, listen: false);
-    List<DocumentItem> tempItems = List.from(provider.items);
+    List<InvoiceItem> tempItems = List.from(provider.items);
     // إذا كنا في وضع إضافة عنصر جديد، أضف العنصر الجاري تحريره مؤقتًا
     if (provider.editingIndex == provider.items.length) {
       final tempCalculated = _calculationService.calculateItemValues(
@@ -1280,7 +1530,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
         poidsTotal: 0.0,
         grandTotal: 0.0,
       );
-      tempItems.add(DocumentItem.fromJson(tempCalculated));
+      tempItems.add(InvoiceItem.fromJson(tempCalculated));
     }
     final totals = _calculationService.calculateTotals(
       tempItems,
@@ -1330,7 +1580,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     );
   }
 
-  Widget _buildSummaryGrid(DocumentSummary summary) {
+  Widget _buildSummaryGrid(InvoiceSummary summary) {
     return Consumer<DocumentProvider>(
       builder: (context, provider, _) {
         // متغير مركزي لتتبع أي حقل في وضع التحرير
@@ -1340,7 +1590,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'تفاصيل المصاريف المرجو إدخال المبالغ بدون رسوم الضريبة على القيمة المضافة(',
+                AppTranslations.get(
+                  'expense_details',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -1352,7 +1608,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                 children: [
                   Expanded(
                     child: EditableSummaryItem(
-                      label: 'النقل',
+                      label: AppTranslations.get(
+                        'transit',
+                        Provider.of<LanguageProvider>(
+                          context,
+                          listen: true,
+                        ).currentLanguage,
+                      ),
                       value: summary.transit,
                       icon: Icons.local_shipping,
                       calculationService: _calculationService,
@@ -1369,7 +1631,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                   ),
                   Expanded(
                     child: EditableSummaryItem(
-                      label: 'حق الجمرك',
+                      label: AppTranslations.get(
+                        'customs',
+                        Provider.of<LanguageProvider>(
+                          context,
+                          listen: true,
+                        ).currentLanguage,
+                      ),
                       value: summary.droitDouane,
                       icon: Icons.account_balance,
                       calculationService: _calculationService,
@@ -1386,7 +1654,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                   ),
                   Expanded(
                     child: EditableSummaryItem(
-                      label: 'شيك الصرف',
+                      label: AppTranslations.get(
+                        'exchange_cheque',
+                        Provider.of<LanguageProvider>(
+                          context,
+                          listen: true,
+                        ).currentLanguage,
+                      ),
                       value: summary.chequeChange,
                       icon: Icons.money,
                       calculationService: _calculationService,
@@ -1403,7 +1677,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                   ),
                   Expanded(
                     child: EditableSummaryItem(
-                      label: 'الشحن',
+                      label: AppTranslations.get(
+                        'freight',
+                        Provider.of<LanguageProvider>(
+                          context,
+                          listen: true,
+                        ).currentLanguage,
+                      ),
                       value: summary.freiht,
                       icon: Icons.flight_takeoff,
                       calculationService: _calculationService,
@@ -1420,7 +1700,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                   ),
                   Expanded(
                     child: EditableSummaryItem(
-                      label: 'أخرى',
+                      label: AppTranslations.get(
+                        'other',
+                        Provider.of<LanguageProvider>(
+                          context,
+                          listen: true,
+                        ).currentLanguage,
+                      ),
                       value: summary.autres,
                       icon: Icons.more_horiz,
                       calculationService: _calculationService,
@@ -1437,7 +1723,13 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                   ),
                   Expanded(
                     child: EditableSummaryItem(
-                      label: 'سعر الصرف',
+                      label: AppTranslations.get(
+                        'exchange_rate',
+                        Provider.of<LanguageProvider>(
+                          context,
+                          listen: true,
+                        ).currentLanguage,
+                      ),
                       value: summary.txChange,
                       isCurrency: false,
                       icon: Icons.currency_exchange,
@@ -1529,14 +1821,36 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('تأكيد الحذف'),
+          title: Text(
+            AppTranslations.get(
+              'confirm_delete',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+          ),
           content: Text(
-            'هل تريد حذف العناصر المحددة (${provider.selectedIndices.length} عنصر)؟',
+            '${AppTranslations.get(
+                  'delete_selected_items',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                )} (${provider.selectedIndices.length})؟',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('إلغاء'),
+              child: Text(
+                AppTranslations.get(
+                  'cancel',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1544,7 +1858,16 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: Text('حذف', style: TextStyle(color: Colors.white)),
+              child: Text(
+                AppTranslations.get(
+                  'delete',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -1561,12 +1884,36 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('تأكيد الحذف'),
-          content: Text('هل تريد حذف هذا العنصر؟'),
+          title: Text(
+            AppTranslations.get(
+              'confirm_delete',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+          ),
+          content: Text(
+            AppTranslations.get(
+              'delete_this_item',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('إلغاء'),
+              child: Text(
+                AppTranslations.get(
+                  'cancel',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1574,7 +1921,16 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: Text('حذف', style: TextStyle(color: Colors.white)),
+              child: Text(
+                AppTranslations.get(
+                  'delete',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -1737,7 +2093,13 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                                 decoration: InputDecoration(
                                   filled: true,
                                   fillColor: Colors.white,
-                                  hintText: 'أدخل القيمة',
+                                  hintText: AppTranslations.get(
+                                    'enter_value',
+                                    Provider.of<LanguageProvider>(
+                                      context,
+                                      listen: true,
+                                    ).currentLanguage,
+                                  ),
                                   hintStyle: TextStyle(
                                     color: Color(0xFF60A5FA),
                                   ),
@@ -1770,7 +2132,13 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                                         () {},
                                       ); // لتحديث الحقل إذا لزم الأمر
                                     },
-                                    tooltip: 'مسح القيمة',
+                                    tooltip: AppTranslations.get(
+                                      'clear_value',
+                                      Provider.of<LanguageProvider>(
+                                        context,
+                                        listen: true,
+                                      ).currentLanguage,
+                                    ),
                                   ),
                                 ),
                                 onSubmitted: (val) {

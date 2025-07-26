@@ -1,5 +1,7 @@
-// models/document_model.dart
-class DocumentItem {
+// models/invoice_manage_model.dart
+
+// كلاس عنصر الفاتورة
+class InvoiceItem {
   final String refFournisseur;
   final String articles;
   final int qte;
@@ -13,7 +15,7 @@ class DocumentItem {
   bool isEditing;
   bool isSelected;
 
-  DocumentItem({
+  InvoiceItem({
     required this.refFournisseur,
     required this.articles,
     required this.qte,
@@ -29,7 +31,7 @@ class DocumentItem {
   });
 
   // نسخة محدثة من العنصر
-  DocumentItem copyWith({
+  InvoiceItem copyWith({
     String? refFournisseur,
     String? articles,
     int? qte,
@@ -43,7 +45,7 @@ class DocumentItem {
     bool? isEditing,
     bool? isSelected,
   }) {
-    return DocumentItem(
+    return InvoiceItem(
       refFournisseur: refFournisseur ?? this.refFournisseur,
       articles: articles ?? this.articles,
       qte: qte ?? this.qte,
@@ -76,8 +78,8 @@ class DocumentItem {
   }
 
   // إنشاء من Map للقراءة
-  factory DocumentItem.fromJson(Map<String, dynamic> json) {
-    return DocumentItem(
+  factory InvoiceItem.fromJson(Map<String, dynamic> json) {
+    return InvoiceItem(
       refFournisseur: json['refFournisseur'] ?? '',
       articles: json['articles'] ?? '',
       qte: json['qte'] ?? 0,
@@ -85,14 +87,15 @@ class DocumentItem {
       puPieces: json['puPieces']?.toDouble() ?? 0.0,
       mt: json['mt']?.toDouble() ?? 0.0,
       prixAchat: json['prixAchat']?.toDouble() ?? 0.0,
-      autresCharges: json['autresCharges']?.toDouble() ?? 0.0, // فقط من الحساب
+      autresCharges: json['autresCharges']?.toDouble() ?? 0.0,
       cuHt: json['cuHt']?.toDouble() ?? 0.0,
       exchangeRate: json['exchangeRate']?.toDouble() ?? 1.0,
     );
   }
 }
 
-class DocumentSummary {
+// كلاس ملخص الفاتورة
+class InvoiceSummary {
   final String factureNumber;
   final double transit;
   final double droitDouane;
@@ -103,7 +106,7 @@ class DocumentSummary {
   final double txChange;
   final double poidsTotal;
 
-  DocumentSummary({
+  InvoiceSummary({
     required this.factureNumber,
     required this.transit,
     required this.droitDouane,
@@ -115,7 +118,7 @@ class DocumentSummary {
     required this.poidsTotal,
   });
 
-  DocumentSummary copyWith({
+  InvoiceSummary copyWith({
     String? factureNumber,
     double? transit,
     double? droitDouane,
@@ -126,7 +129,7 @@ class DocumentSummary {
     double? txChange,
     double? poidsTotal,
   }) {
-    return DocumentSummary(
+    return InvoiceSummary(
       factureNumber: factureNumber ?? this.factureNumber,
       transit: transit ?? this.transit,
       droitDouane: droitDouane ?? this.droitDouane,
@@ -136,6 +139,55 @@ class DocumentSummary {
       total: total ?? this.total,
       txChange: txChange ?? this.txChange,
       poidsTotal: poidsTotal ?? this.poidsTotal,
+    );
+  }
+}
+
+// كلاس الفاتورة الرئيسي
+class InvoiceModel {
+  final String id;
+  final String clientName;
+  final String invoiceNumber;
+  final DateTime date;
+  final bool isLocal; // true للمحلي، false للخارجي
+  final double totalAmount;
+  final String status;
+  final List<InvoiceItem> items;
+  final InvoiceSummary summary;
+
+  InvoiceModel({
+    required this.id,
+    required this.clientName,
+    required this.invoiceNumber,
+    required this.date,
+    required this.isLocal,
+    this.totalAmount = 0.0,
+    this.status = 'مسودة',
+    this.items = const [],
+    required this.summary,
+  });
+
+  InvoiceModel copyWith({
+    String? id,
+    String? clientName,
+    String? invoiceNumber,
+    DateTime? date,
+    bool? isLocal,
+    double? totalAmount,
+    String? status,
+    List<InvoiceItem>? items,
+    InvoiceSummary? summary,
+  }) {
+    return InvoiceModel(
+      id: id ?? this.id,
+      clientName: clientName ?? this.clientName,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      date: date ?? this.date,
+      isLocal: isLocal ?? this.isLocal,
+      totalAmount: totalAmount ?? this.totalAmount,
+      status: status ?? this.status,
+      items: items ?? this.items,
+      summary: summary ?? this.summary,
     );
   }
 }

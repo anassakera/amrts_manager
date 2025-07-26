@@ -1,5 +1,5 @@
 // services/calculation_service.dart
-import '../models/document_model.dart';
+import '../models/invoice_manage_model.dart';
 
 class CalculationService {
   // حساب قيم العنصر الواحد
@@ -63,8 +63,8 @@ class CalculationService {
 
   // حساب المجاميع الكلية
   Map<String, double> calculateTotals(
-    List<DocumentItem> items,
-    DocumentSummary summary,
+    List<InvoiceItem> items,
+    InvoiceSummary summary,
   ) {
     double totalMt = 0.0;
     double totalPoids = 0.0;
@@ -92,7 +92,7 @@ class CalculationService {
 
   // حساب النسب المئوية للتوزيع
   Map<String, double> calculateDistributionRatios(
-    DocumentItem item,
+    InvoiceItem item,
     double totalMt,
   ) {
     if (totalMt == 0) return {'ratio': 0.0};
@@ -103,8 +103,8 @@ class CalculationService {
 
   // حساب المصاريف الموزعة على كل عنصر
   Map<String, double> calculateDistributedCosts(
-    DocumentItem item,
-    DocumentSummary summary,
+    InvoiceItem item,
+    InvoiceSummary summary,
     double totalMt,
   ) {
     final ratio = calculateDistributionRatios(item, totalMt)['ratio'] ?? 0.0;
@@ -202,7 +202,7 @@ class CalculationService {
   }
 
   // حساب إحصائيات سريعة
-  Map<String, dynamic> getQuickStats(List<DocumentItem> items) {
+  Map<String, dynamic> getQuickStats(List<InvoiceItem> items) {
     if (items.isEmpty) {
       return {
         'totalItems': 0,

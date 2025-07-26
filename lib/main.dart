@@ -1,6 +1,6 @@
 import 'package:amrts_manager/provider/document_provider.dart';
-import 'package:amrts_manager/test.dart';
-import 'package:amrts_manager/test1.dart';
+import 'package:amrts_manager/provider/invoice_provider.dart';
+import 'package:amrts_manager/screens/invoices_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'provider/language_provider.dart';
@@ -10,6 +10,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => InvoiceProvider()),
         ChangeNotifierProvider(
           create: (_) => DocumentProvider()..loadSampleData(),
         ),
@@ -27,8 +28,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Tajawal'),
-      // home: InvoiceHeaderWidget(),
-      home: SmartDocumentScreen(),
+
+      //home: SmartDocumentScreen(),
+      home: const InvoicesScreen(),
     );
   }
 }

@@ -1,6 +1,5 @@
 import '../../../core/imports.dart';
 import 'settings_screen.dart';
-import 'package:provider/provider.dart';
 import '../../provider/language_provider.dart';
 import '../../core/language.dart';
 

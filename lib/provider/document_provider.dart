@@ -1,14 +1,14 @@
 // providers/document_provider.dart
 import 'package:flutter/foundation.dart';
-import '../models/document_model.dart';
+import '../models/invoice_manage_model.dart';
 import '../services/calculation_service.dart';
 
 class DocumentProvider with ChangeNotifier {
   final CalculationService _calculationService = CalculationService();
 
   // البيانات الأساسية
-  List<DocumentItem> _items = [];
-  DocumentSummary _summary = DocumentSummary(
+  List<InvoiceItem> _items = [];
+  InvoiceSummary _summary = InvoiceSummary(
     factureNumber: 'CI-SSA240103002,1',
     transit: 0,
     droitDouane: 0,
@@ -26,8 +26,8 @@ class DocumentProvider with ChangeNotifier {
   bool _isMultiSelectMode = false;
 
   // Getters
-  List<DocumentItem> get items => _items;
-  DocumentSummary get summary => _summary;
+  List<InvoiceItem> get items => _items;
+  InvoiceSummary get summary => _summary;
   int? get editingIndex => _editingIndex;
   List<int> get selectedIndices => _selectedIndices;
   bool get isMultiSelectMode => _isMultiSelectMode;
@@ -68,7 +68,7 @@ class DocumentProvider with ChangeNotifier {
       'exchangeRate': data['exchangeRate'],
       // لا تمرر autresCharges أبداً
     };
-    List<DocumentItem> tempItems = List.from(_items);
+    List<InvoiceItem> tempItems = List.from(_items);
     if (index == _items.length) {
       // إضافة عنصر جديد
       // أضف العنصر الجديد مؤقتًا لحساب المجاميع بدقة
@@ -78,7 +78,7 @@ class DocumentProvider with ChangeNotifier {
         poidsTotal: 0.0,
         grandTotal: 0.0,
       );
-      tempItems.add(DocumentItem.fromJson(tempCalculated));
+      tempItems.add(InvoiceItem.fromJson(tempCalculated));
     } else if (index < _items.length) {
       // استبدل العنصر المعدل مؤقتًا لحساب المجاميع بدقة
       final tempCalculated = _calculationService.calculateItemValues(
@@ -87,7 +87,7 @@ class DocumentProvider with ChangeNotifier {
         poidsTotal: 0.0,
         grandTotal: 0.0,
       );
-      tempItems[index] = DocumentItem.fromJson(tempCalculated);
+      tempItems[index] = InvoiceItem.fromJson(tempCalculated);
     }
     final totals = _calculationService.calculateTotals(tempItems, _summary);
     final totalMt = totals['totalMt'] ?? 0.0;
@@ -101,13 +101,13 @@ class DocumentProvider with ChangeNotifier {
     );
     if (index == _items.length) {
       _items.add(
-        DocumentItem.fromJson(calculatedData).copyWith(isEditing: false),
+        InvoiceItem.fromJson(calculatedData).copyWith(isEditing: false),
       );
       _editingIndex = null;
       _recalculateSummary();
       notifyListeners();
     } else if (index < _items.length) {
-      _items[index] = DocumentItem.fromJson(
+      _items[index] = InvoiceItem.fromJson(
         calculatedData,
       ).copyWith(isEditing: false);
       _editingIndex = null;
@@ -185,7 +185,7 @@ class DocumentProvider with ChangeNotifier {
   }
 
   // تحديث الملخص
-  void updateSummary(DocumentSummary newSummary) {
+  void updateSummary(InvoiceSummary newSummary) {
     _summary = newSummary;
     _recalculateSummary();
     notifyListeners();
@@ -245,7 +245,7 @@ class DocumentProvider with ChangeNotifier {
         poidsTotal: poidsTotal,
         grandTotal: grandTotal,
       );
-      return DocumentItem.fromJson(recalculated);
+      return InvoiceItem.fromJson(recalculated);
     }).toList();
   }
 
@@ -269,7 +269,7 @@ class DocumentProvider with ChangeNotifier {
         poidsTotal: poidsTotal,
         grandTotal: grandTotal,
       );
-      return DocumentItem.fromJson(recalculated);
+      return InvoiceItem.fromJson(recalculated);
     }).toList();
   }
 
@@ -299,5 +299,21 @@ class DocumentProvider with ChangeNotifier {
     _editingIndex = null;
     _isMultiSelectMode = false;
     loadSampleData();
+  }
+
+  // تهيئة البيانات من كائن الفاتورة
+  void setFromInvoiceModel(InvoiceModel model) {
+    _items = List<InvoiceItem>.from(model.items);
+    _summary = model.summary;
+    _editingIndex = null;
+    _selectedIndices.clear();
+    _isMultiSelectMode = false;
+    notifyListeners();
+  }
+
+  // حفظ الفاتورة (منطق تجريبي)
+  void saveInvoice() {
+    // هنا يمكنك إضافة منطق الحفظ الفعلي (API أو قاعدة بيانات)
+    notifyListeners();
   }
 }
