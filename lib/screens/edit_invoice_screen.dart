@@ -1,4 +1,6 @@
 // test.dart
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/invoice_manage_model.dart';
@@ -11,7 +13,12 @@ import '../provider/language_provider.dart';
 
 class SmartDocumentScreen extends StatefulWidget {
   final InvoiceModel? invoice;
-  const SmartDocumentScreen({super.key, this.invoice});
+   final bool isLocal; 
+  const SmartDocumentScreen({super.key, this.invoice,
+  
+   this.isLocal = true,
+   
+   });
 
   @override
   SmartDocumentScreenState createState() => SmartDocumentScreenState();
@@ -21,6 +28,8 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   final Map<String, TextEditingController> _controllers = {};
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final CalculationService _calculationService = CalculationService();
+    // إضافة متغير للتحقق من حالة الصفحة
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -93,6 +102,176 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
           1.0,
     };
   }
+// استبدل دالة _saveInvoice بالكامل بهذه النسخة المحسنة
+void _saveInvoice() {
+  print('🚀 بدء عملية الحفظ...');
+  
+  // التحقق من صحة النموذج
+  if (_formKey.currentState != null && !_formKey.currentState!.validate()) {
+    print('❌ فشل التحقق من صحة النموذج');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('يرجى تصحيح الأخطاء في النموذج'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
+
+  final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+  final invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
+  
+  print('📋 بيانات DocumentProvider:');
+  print('   - عدد العناصر: ${documentProvider.items.length}');
+  print('   - رقم الفاتورة: ${documentProvider.summary.factureNumber}');
+  
+  // التحقق من وجود عناصر في الفاتورة
+  if (documentProvider.items.isEmpty) {
+    print('⚠️ لا توجد عناصر في الفاتورة');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('لا يمكن حفظ فاتورة فارغة. يرجى إضافة عناصر أولاً'),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
+
+  try {
+    // حساب المبلغ الإجمالي
+    double totalAmount = _calculateTotalAmount(documentProvider.items, documentProvider.summary);
+    print('💰 المبلغ الإجمالي المحسوب: $totalAmount');
+    
+    // تحديد اسم العميل
+    String clientName = _getClientName(documentProvider.items, 
+        widget.invoice?.clientName ?? 'عميل غير محدد');
+    print('👤 اسم العميل: $clientName');
+
+    if (widget.invoice != null) {
+      print('📝 تحديث فاتورة موجودة: ${widget.invoice!.id}');
+      // تحديث فاتورة موجودة
+      final updatedInvoice = widget.invoice!.copyWith(
+        items: List<InvoiceItem>.from(documentProvider.items),
+        summary: documentProvider.summary,
+        totalAmount: totalAmount,
+        status: 'محدثة',
+        clientName: clientName,
+      );
+      
+      print('   - عدد العناصر في الفاتورة المحدثة: ${updatedInvoice.items.length}');
+      invoiceProvider.updateInvoice(updatedInvoice);
+      _showSuccessMessage('تم تحديث الفاتورة بنجاح', Icons.check_circle);
+    } else {
+      print('🆕 إنشاء فاتورة جديدة');
+      // إنشاء فاتورة جديدة
+      final newInvoice = InvoiceModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        clientName: clientName,
+        invoiceNumber: documentProvider.summary.factureNumber,
+        date: DateTime.now(),
+        isLocal: widget.isLocal,
+        totalAmount: totalAmount,
+        status: 'مسودة',
+        items: List<InvoiceItem>.from(documentProvider.items),
+        summary: documentProvider.summary,
+      );
+
+      print('   - رقم الفاتورة الجديدة: ${newInvoice.invoiceNumber}');
+      print('   - عدد العناصر: ${newInvoice.items.length}');
+      print('   - نوع الفاتورة: ${newInvoice.isLocal ? "محلي" : "خارجي"}');
+      
+      // طباعة تفاصيل العناصر
+      for (int i = 0; i < newInvoice.items.length; i++) {
+        final item = newInvoice.items[i];
+        print('   - العنصر $i: ${item.articles} - الكمية: ${item.qte}');
+      }
+
+      invoiceProvider.addInvoice(newInvoice);
+      _showSuccessMessage('تم إنشاء الفاتورة بنجاح', Icons.add_circle);
+    }
+    
+    print('🧹 تنظيف البيانات والعودة...');
+    // مسح النموذج والعودة
+    _clearControllers();
+    documentProvider.reset();
+    
+    // التأكد من أن Navigator متاح
+    if (mounted) {
+      Navigator.of(context).pop(true);
+      print('✅ تم الانتهاء من عملية الحفظ بنجاح');
+    }
+    
+  } catch (e, stackTrace) {
+    print('💥 خطأ أثناء الحفظ: $e');
+    print('📍 Stack Trace: $stackTrace');
+    _showErrorMessage('حدث خطأ أثناء حفظ الفاتورة: ${e.toString()}');
+  }
+}
+
+// دوال مساعدة
+String _getClientName(List<InvoiceItem> items, String defaultName) {
+  if (items.isNotEmpty && items.first.refFournisseur.isNotEmpty) {
+    return items.first.refFournisseur;
+  }
+  return defaultName;
+}
+
+double _calculateTotalAmount(List<InvoiceItem> items, InvoiceSummary summary) {
+  // حساب مجموع قيم العناصر بالعملة المحلية
+  double itemsTotal = items.fold(0.0, (sum, item) => sum + (item.mt * item.exchangeRate));
+  
+  // إضافة المصروفات الأخرى
+  double expensesTotal = summary.transit + 
+                        summary.droitDouane + 
+                        summary.chequeChange + 
+                        summary.freiht + 
+                        summary.autres;
+  
+  return itemsTotal + expensesTotal;
+}
+
+void _showSuccessMessage(String message, IconData icon) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          Icon(icon, color: Colors.white),
+          SizedBox(width: 8),
+          Text(message),
+        ],
+      ),
+      backgroundColor: Colors.green,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+    ),
+  );
+}
+
+void _showErrorMessage(String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          Icon(Icons.error, color: Colors.white),
+          SizedBox(width: 8),
+          Expanded(child: Text(message)),
+        ],
+      ),
+      backgroundColor: Colors.red,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      duration: Duration(seconds: 5),
+    ),
+  );
+}
+
+
 
   @override
   void dispose() {
@@ -313,7 +492,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE57373).withOpacity(0.15),
+                            color: const Color(0xFFE57373).withValues(alpha:0.15),
                             blurRadius: 12,
                             spreadRadius: 1,
                             offset: const Offset(0, 3),
@@ -352,21 +531,21 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                           backgroundColor: Colors.transparent,
                           animationDuration: const Duration(milliseconds: 200),
                         ).copyWith(
-                          backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.pressed)) {
-                                return const Color(0xFFEF9A9A); // أفتح عند الضغط
+                          backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.pressed)) {
+                                return const Color(0xFFEF9A9A);
                               }
-                              if (states.contains(MaterialState.hovered)) {
-                                return const Color(0xFFEF5350); // أغمق عند التحويم
+                              if (states.contains(WidgetState.hovered)) {
+                                return const Color(0xFFEF5350);
                               }
-                              return const Color(0xFFE57373); // اللون الأساسي
+                              return const Color(0xFFE57373);
                             },
                           ),
-                          overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.pressed)) {
-                                return Colors.white.withOpacity(0.1);
+                          overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.pressed)) {
+                                return Colors.white.withValues(alpha:0.1);
                               }
                               return null;
                             },
@@ -374,17 +553,16 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 5),
-
+                    const SizedBox(width: 12),
+                    
+                    // Save Button
                     Container(
-                      height:
-                          MediaQuery.of(context).size.height *
-                          0.085, // Dynamic height based on screen height
+                      height: MediaQuery.of(context).size.height * 0.085,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF66BB6A).withOpacity(0.15),
+                            color: const Color(0xFF66BB6A).withValues(alpha:0.15),
                             blurRadius: 12,
                             spreadRadius: 1,
                             offset: const Offset(0, 3),
@@ -392,44 +570,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                         ],
                       ),
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          final provider = Provider.of<DocumentProvider>(
-                            context,
-                            listen: false,
-                          );
-
-                      
-                          // بناء كائن الفاتورة الجديد
-                          final invoice = widget.invoice != null
-                              ? widget.invoice!.copyWith(
-                                  items: List<InvoiceItem>.from(provider.items),
-                                  summary: provider.summary,
-                                )
-                              : InvoiceModel(
-                                  id: DateTime.now()
-                                      .millisecondsSinceEpoch
-                                      .toString(),
-                                  clientName: provider.items.isNotEmpty
-                                      ? provider.items.first.refFournisseur
-                                      : '',
-                                  invoiceNumber: provider.summary.factureNumber,
-                                  date: DateTime.now(),
-                                  isLocal: true, // أو حسب الحاجة
-                                  summary: provider.summary,
-                                  items:
-                                      List<InvoiceItem>.from(provider.items),
-                                );
-
-                          if (widget.invoice != null) {
-                            Provider.of<InvoiceProvider>(context, listen: false)
-                                .updateInvoice(invoice);
-                          } else {
-                            Provider.of<InvoiceProvider>(context, listen: false)
-                                .addInvoice(invoice);
-                          }
-
-                          Navigator.pop(context);
-                        },
+                        onPressed: _saveInvoice,
                         icon: const Icon(Icons.save_rounded, size: 20),
                         label: Text(
                           AppTranslations.get(
@@ -458,21 +599,21 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                           backgroundColor: Colors.transparent,
                           animationDuration: const Duration(milliseconds: 200),
                         ).copyWith(
-                          backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.pressed)) {
-                                return const Color(0xFF81C784); // أفتح عند الضغط
+                          backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.pressed)) {
+                                return const Color(0xFF81C784);
                               }
-                              if (states.contains(MaterialState.hovered)) {
-                                return const Color(0xFF4CAF50); // أغمق عند التحويم
+                              if (states.contains(WidgetState.hovered)) {
+                                return const Color(0xFF4CAF50);
                               }
-                              return const Color(0xFF66BB6A); // اللون الأساسي
+                              return const Color(0xFF66BB6A);
                             },
                           ),
-                          overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.pressed)) {
-                                return Colors.white.withOpacity(0.1);
+                          overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.pressed)) {
+                                return Colors.white.withValues(alpha:0.1);
                               }
                               return null;
                             },
@@ -480,7 +621,66 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                         ),
                       ),
                     ),
-                 
+                    const SizedBox(width: 5),
+// أضف هذا الزر مؤقتاً بجانب زر الحفظ للاختبار
+Container(
+  height: MediaQuery.of(context).size.height * 0.085,
+  child: ElevatedButton.icon(
+    onPressed: () {
+      final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+      final invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
+      
+      print('🔍 تشخيص البيانات:');
+      print('DocumentProvider:');
+      print('  - عدد العناصر: ${documentProvider.items.length}');
+      print('  - رقم الفاتورة: ${documentProvider.summary.factureNumber}');
+      
+      print('InvoiceProvider:');
+      print('  - عدد الفواتير الحالي: ${invoiceProvider.allInvoices.length}');
+      print('  - الفواتير المحلية: ${invoiceProvider.localInvoices.length}');
+      print('  - الفواتير الخارجية: ${invoiceProvider.foreignInvoices.length}');
+      
+      // اختبار إضافة فاتورة تجريبية
+      try {
+        final testInvoice = InvoiceModel(
+          id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+          clientName: 'عميل تجريبي',
+          invoiceNumber: 'TEST-${DateTime.now().millisecondsSinceEpoch}',
+          date: DateTime.now(),
+          isLocal: true,
+          totalAmount: 1000.0,
+          status: 'اختبار',
+          items: [],
+          summary: documentProvider.summary,
+        );
+        
+        invoiceProvider.addInvoice(testInvoice);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم إضافة فاتورة تجريبية بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        print('❌ خطأ في الاختبار: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في الاختبار: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    },
+    icon: Icon(Icons.bug_report, size: 20),
+    label: Text('اختبار'),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.purple,
+      foregroundColor: Colors.white,
+    ),
+  ),
+),
+                   
                  
                   ],
                 ),
@@ -1482,7 +1682,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               }
               if (isNumber && value != null && value.isNotEmpty) {
                 if (isDecimal) {
-                  if (double.tryParse(value) == null)
+                  if (double.tryParse(value) == null) {
                     return AppTranslations.get(
                       'invalid_number',
                       Provider.of<LanguageProvider>(
@@ -1490,8 +1690,9 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                         listen: false,
                       ).currentLanguage,
                     );
+                  }
                 } else {
-                  if (int.tryParse(value) == null)
+                  if (int.tryParse(value) == null) {
                     return AppTranslations.get(
                       'integer_only',
                       Provider.of<LanguageProvider>(
@@ -1499,6 +1700,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                         listen: false,
                       ).currentLanguage,
                     );
+                  }
                 }
               }
               return null;

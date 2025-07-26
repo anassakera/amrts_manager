@@ -350,49 +350,65 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
     }
   }
 
-  void _createInvoice() {
-    if (_formKey.currentState!.validate()) {
-      final invoice = InvoiceModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        clientName: _clientController.text,
-        invoiceNumber: _numberController.text,
-        date: _selectedDate,
-        isLocal: widget.isLocal,
-        summary: InvoiceSummary(
-          factureNumber: _numberController.text,
-          transit: 0.0,
-          droitDouane: 0.0,
-          chequeChange: 0.0,
-          freiht: 0.0,
-          autres: 0.0,
-          total: 0.0,
-          txChange: 1.0,
-          poidsTotal: 0.0,
-        ),
-      );
-
-      Navigator.pop(context); // إغلاق نافذة الإدخال
-      Future.delayed(Duration.zero, () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SmartDocumentScreen(invoice: invoice),
-          ),
-        );
-        if (result is InvoiceModel) {
-          if (!mounted) return; // التحقق من أن الويدجت لا يزال mounted
-          Provider.of<InvoiceProvider>(
-            context,
-            listen: false,
-          ).addInvoice(result);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('تم إنشاء الفاتورة بنجاح'),
-              backgroundColor: widget.isLocal ? Colors.green : Colors.blue,
-            ),
-          );
-        }
-      });
+  Future<void> _createInvoice() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    // Create the invoice
+    final invoice = InvoiceModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      clientName: _clientController.text,
+      invoiceNumber: _numberController.text,
+      date: _selectedDate,
+      isLocal: widget.isLocal,
+      summary: InvoiceSummary(
+        factureNumber: _numberController.text,
+        transit: 0.0,
+        droitDouane: 0.0,
+        chequeChange: 0.0,
+        freiht: 0.0,
+        autres: 0.0,
+        total: 0.0,
+        txChange: 1.0,
+        poidsTotal: 0.0,
+      ),
+    );
+
+    // Close the dialog first
+    if (!mounted) return;
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    
+    // Wait for the next frame to ensure the dialog is closed
+    await Future.delayed(Duration.zero);
+    
+    // Get the current scaffold messenger before any async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    // Navigate to the edit screen
+    final result = await navigator.push(
+      MaterialPageRoute(
+        builder: (context) => SmartDocumentScreen(invoice: invoice),
+      ),
+    );
+    
+    if (result is! InvoiceModel) return;
+    
+    // Add the invoice to the provider
+    final provider = Provider.of<InvoiceProvider>(
+      context,
+      listen: false,
+    );
+    
+    provider.addInvoice(result);
+    
+    // Show success message
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: const Text('تم إنشاء الفاتورة بنجاح'),
+        backgroundColor: widget.isLocal ? Colors.green : Colors.blue,
+      ),
+    );
   }
 }

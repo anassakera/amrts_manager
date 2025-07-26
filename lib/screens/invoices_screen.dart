@@ -182,23 +182,46 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     );
   }
 
-  void _showAddInvoiceDialog() {
-    final isLocal = _tabController.index == 0;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AddInvoiceDialog(isLocal: isLocal),
-    );
-  }
+void _showAddInvoiceDialog() {
+  final isLocal = _tabController.index == 0;
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AddInvoiceDialog(isLocal: isLocal),
+  ).then((result) {
+    if (result == true) {
+      // الانتقال إلى شاشة التحرير مع نوع الفاتورة المحدد
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SmartDocumentScreen(
+            isLocal: isLocal,
+          ),
+        ),
+      );
+    }
+  });
+}
 
-  void _editInvoice(InvoiceModel invoice) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SmartDocumentScreen(invoice: invoice),
+void _editInvoice(InvoiceModel invoice) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SmartDocumentScreen(
+        invoice: invoice,
+        isLocal: invoice.isLocal, // تمرير نوع الفاتورة
       ),
-    );
-  }
+    ),
+  ).then((result) {
+    // إذا عادت العملية بنجاح، يمكن إضافة أي منطق إضافي هنا
+    if (result == true) {
+      // تحديث الشاشة أو إظهار رسالة نجاح إضافية إذا لزم الأمر
+      setState(() {
+        // إعادة بناء الشاشة لإظهار التحديثات
+      });
+    }
+  });
+}
 
   void _viewInvoice(InvoiceModel invoice) {
     ScaffoldMessenger.of(context).showSnackBar(

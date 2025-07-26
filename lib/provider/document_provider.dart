@@ -293,23 +293,68 @@ class DocumentProvider with ChangeNotifier {
   }
 
   // إعادة تعيين البيانات
-  void reset() {
-    _items.clear();
-    _selectedIndices.clear();
-    _editingIndex = null;
-    _isMultiSelectMode = false;
-    loadSampleData();
-  }
+  // استبدل دالة reset الحالية في DocumentProvider بهذه النسخة
+void reset() {
+  _items.clear();
+  _selectedIndices.clear();
+  _editingIndex = null;
+  _isMultiSelectMode = false;
+  
+  // إعادة تعيين الملخص للقيم الافتراضية
+  _summary = InvoiceSummary(
+    factureNumber: 'CI-SSA${DateTime.now().year}${DateTime.now().month.toString().padLeft(2, '0')}${DateTime.now().day.toString().padLeft(2, '0')}${DateTime.now().millisecond}',
+    transit: 0,
+    droitDouane: 0,
+    chequeChange: 0,
+    freiht: 0,
+    autres: 0,
+    total: 0,
+    txChange: 11.2, // قيمة افتراضية لسعر الصرف
+    poidsTotal: 0.0,
+  );
+  
+  notifyListeners();
+}
 
   // تهيئة البيانات من كائن الفاتورة
-  void setFromInvoiceModel(InvoiceModel model) {
-    _items = List<InvoiceItem>.from(model.items);
-    _summary = model.summary;
-    _editingIndex = null;
-    _selectedIndices.clear();
-    _isMultiSelectMode = false;
-    notifyListeners();
-  }
+// استبدل دالة setFromInvoiceModel الحالية في DocumentProvider بهذه النسخة
+void setFromInvoiceModel(InvoiceModel model) {
+  // نسخ عميق للعناصر لتجنب التداخل في المراجع
+  _items = model.items.map((item) => InvoiceItem(
+    refFournisseur: item.refFournisseur,
+    articles: item.articles,
+    qte: item.qte,
+    poids: item.poids,
+    puPieces: item.puPieces,
+    mt: item.mt,
+    prixAchat: item.prixAchat,
+    autresCharges: item.autresCharges,
+    cuHt: item.cuHt,
+    exchangeRate: item.exchangeRate,
+    isEditing: false,
+    isSelected: false,
+  )).toList();
+  
+  // نسخ الملخص
+  _summary = InvoiceSummary(
+    factureNumber: model.summary.factureNumber,
+    transit: model.summary.transit,
+    droitDouane: model.summary.droitDouane,
+    chequeChange: model.summary.chequeChange,
+    freiht: model.summary.freiht,
+    autres: model.summary.autres,
+    total: model.summary.total,
+    txChange: model.summary.txChange,
+    poidsTotal: model.summary.poidsTotal,
+  );
+  
+  // إعادة تعيين حالة التحكم
+  _editingIndex = null;
+  _selectedIndices.clear();
+  _isMultiSelectMode = false;
+  
+  notifyListeners();
+}
 
   // حفظ الفاتورة (منطق تجريبي)
   void saveInvoice() {
