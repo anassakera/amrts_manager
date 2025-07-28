@@ -1,7 +1,4 @@
-import '../../../core/imports.dart';
-import 'settings_screen.dart';
-import '../../provider/language_provider.dart';
-import '../../core/language.dart';
+import '../core/imports.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +13,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // late GlobalKey<State<SalesInterfaceScreen>> _salesInterfaceKey;
   // late GlobalKey<State<ProductManagementScreen>> _productManagementKey;
-  // late List<Widget> _screens;
+  late List<Widget> _screens;
 
   // قائمة بأسماء الشاشات
   List<String> _screenTitles(BuildContext context) {
@@ -33,15 +30,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // _salesInterfaceKey = GlobalKey<State<SalesInterfaceScreen>>();
-    // _productManagementKey = GlobalKey<State<ProductManagementScreen>>();
-    // _screens = [
-    //   SalesInterfaceScreen(key: _salesInterfaceKey),
-    //   ProductManagementScreen(key: _productManagementKey),
-    //   const SalesInvoicesScreen(),
-    //   const PurchaseInvoicesScreen(),
-    //   const ReportsScreen(),
-    // ];
+
+    _screens = [
+      InvoicesScreen(),
+      SalesScreen(),
+      InventoryScreen(),
+      ProductionScreen(),
+      FinancialTransactionsScreen(),
+    ];
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() {
       setState(() {
@@ -332,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       body: Column(
         children: [
-          // Expanded(child: _screens[_selectedIndex])
+          Expanded(child: _screens[_selectedIndex])
         ],
       ),
     );

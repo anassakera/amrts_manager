@@ -1,24 +1,21 @@
-// test.dart
 // ignore_for_file: avoid_print
-
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/invoice_manage_model.dart';
-import '../services/calculation_service.dart';
-import '../provider/document_provider.dart';
-import '../provider/invoice_provider.dart';
-import 'package:flutter/services.dart';
-import '../core/language.dart';
-import '../provider/language_provider.dart';
+import '../core/imports.dart';
 
 class SmartDocumentScreen extends StatefulWidget {
-  final InvoiceModel? invoice;
-   final bool isLocal; 
-  const SmartDocumentScreen({super.key, this.invoice,
-  
-   this.isLocal = true,
-   
-   });
+  final Map<String, dynamic>? invoice;
+  final bool isLocal;
+  final String? clientName;
+  final String? invoiceNumber;
+  final DateTime? date;
+
+  const SmartDocumentScreen({
+    super.key,
+    this.invoice,
+    this.isLocal = true,
+    this.clientName,
+    this.invoiceNumber,
+    this.date,
+  });
 
   @override
   SmartDocumentScreenState createState() => SmartDocumentScreenState();
@@ -28,22 +25,259 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   final Map<String, TextEditingController> _controllers = {};
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final CalculationService _calculationService = CalculationService();
-    // إضافة متغير للتحقق من حالة الصفحة
-  bool _isSaving = false;
+
+  // State moved from DocumentProvider
+  List<Map<String, dynamic>> _items = [];
+  Map<String, dynamic> _summary = {
+    'factureNumber':
+        'CI-SSA${DateTime.now().year}${DateTime.now().month.toString().padLeft(2, '0')}${DateTime.now().day.toString().padLeft(2, '0')}${DateTime.now().millisecond}',
+    'transit': 0.0,
+    'droitDouane': 0.0,
+    'chequeChange': 0.0,
+    'freiht': 0.0,
+    'autres': 0.0,
+    'total': 0.0,
+    'txChange': 11.2,
+    'poidsTotal': 0.0,
+  };
+  int? _editingIndex;
+  List<int> _selectedIndices = [];
+  bool get _hasSelection => _selectedIndices.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
     _initializeControllers();
     if (widget.invoice != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final provider = Provider.of<DocumentProvider>(context, listen: false);
-        provider.setFromInvoiceModel(widget.invoice!);
-        if (widget.invoice!.items.isNotEmpty) {
-          _populateControllers(widget.invoice!.items.first);
+      _setFromInvoiceModel(widget.invoice!);
+    } else {
+      // Use the new parameters if available
+      setState(() {
+        if (widget.invoiceNumber != null) {
+          _summary['factureNumber'] = widget.invoiceNumber!;
         }
       });
     }
+  }
+
+  // Methods moved from DocumentProvider
+  void _addItem() {
+    setState(() {
+      _editingIndex = _items.length;
+    });
+  }
+
+  void _startEditing(int index) {
+    setState(() {
+      _editingIndex = index;
+    });
+  }
+
+  void _saveItem(int index, Map<String, dynamic> data) {
+    setState(() {
+      final filteredData = {
+        'refFournisseur': data['refFournisseur'],
+        'articles': data['articles'],
+        'qte': data['qte'],
+        'poids': data['poids'],
+        'puPieces': data['puPieces'],
+        'exchangeRate': data['exchangeRate'],
+      };
+      List<Map<String, dynamic>> tempItems = List.from(_items);
+      if (index == _items.length) {
+        final tempCalculated = _calculationService.calculateItemValues(
+          filteredData,
+          totalMt: 0.0,
+          poidsTotal: 0.0,
+          grandTotal: 0.0,
+        );
+        tempItems.add(tempCalculated);
+      } else if (index < _items.length) {
+        final tempCalculated = _calculationService.calculateItemValues(
+          filteredData,
+          totalMt: 0.0,
+          poidsTotal: 0.0,
+          grandTotal: 0.0,
+        );
+        tempItems[index] = tempCalculated;
+      }
+      final totals = _calculationService.calculateTotals(tempItems, _summary);
+      final totalMt = totals['totalMt'] ?? 0.0;
+      final poidsTotal = totals['poidsTotal'] ?? 0.0;
+      final grandTotal = totals['total'] ?? 0.0;
+      final calculatedData = _calculationService.calculateItemValues(
+        filteredData,
+        totalMt: totalMt,
+        poidsTotal: poidsTotal,
+        grandTotal: grandTotal,
+      );
+      if (index == _items.length) {
+        _items.add({...calculatedData, 'isEditing': false});
+      } else if (index < _items.length) {
+        _items[index] = {...calculatedData, 'isEditing': false};
+      }
+      _editingIndex = null;
+      _recalculateSummary();
+    });
+  }
+
+  void _cancelEditing(int index) {
+    setState(() {
+      if (index == _items.length) {
+        _editingIndex = null;
+      } else if (index < _items.length) {
+        if ((_items[index]['refFournisseur'] as String).isEmpty) {
+          _items.removeAt(index);
+        }
+        _editingIndex = null;
+      }
+    });
+  }
+
+  void _deleteItem(int index) {
+    setState(() {
+      if (index < _items.length) {
+        _items.removeAt(index);
+        _recalculateSummary();
+      }
+    });
+  }
+
+  void _toggleSelection(int index) {
+    setState(() {
+      if (_selectedIndices.contains(index)) {
+        _selectedIndices.remove(index);
+      } else {
+        _selectedIndices.add(index);
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      _selectedIndices = List.generate(_items.length, (index) => index);
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedIndices.clear();
+    });
+  }
+
+  void _deleteSelected() {
+    setState(() {
+      _selectedIndices.sort((a, b) => b.compareTo(a));
+      for (int index in _selectedIndices) {
+        if (index < _items.length) {
+          _items.removeAt(index);
+        }
+      }
+      _selectedIndices.clear();
+      _recalculateSummary();
+    });
+  }
+
+  void _updateSummaryField(String field, double value) {
+    setState(() {
+      final newSummary = Map<String, dynamic>.from(_summary);
+      switch (field) {
+        case 'النقل':
+          newSummary['transit'] = value;
+          break;
+        case 'حق الجمرك':
+          newSummary['droitDouane'] = value;
+          break;
+        case 'شيك الصرف':
+          newSummary['chequeChange'] = value;
+          break;
+        case 'الشحن':
+          newSummary['freiht'] = value;
+          break;
+        case 'أخرى':
+          newSummary['autres'] = value;
+          break;
+        case 'سعر الصرف':
+          newSummary['txChange'] = value;
+          break;
+      }
+      _summary = newSummary;
+      _recalculateAllItemsWithExchangeRate(
+        (newSummary['txChange'] as num).toDouble(),
+      );
+      _recalculateSummary();
+    });
+  }
+
+  void _recalculateAllItemsWithExchangeRate(double newExchangeRate) {
+    final totals = _calculationService.calculateTotals(_items, _summary);
+    final totalMt = totals['totalMt'] ?? 0.0;
+    final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final grandTotal = totals['total'] ?? 0.0;
+    _items = _items.map((item) {
+      final itemData = {
+        'refFournisseur': item['refFournisseur'],
+        'articles': item['articles'],
+        'qte': item['qte'],
+        'poids': item['poids'],
+        'puPieces': item['puPieces'],
+        'exchangeRate': newExchangeRate,
+      };
+      return _calculationService.calculateItemValues(
+        itemData,
+        totalMt: totalMt,
+        poidsTotal: poidsTotal,
+        grandTotal: grandTotal,
+      );
+    }).toList();
+  }
+
+  void _recalculateSummary() {
+    final totals = _calculationService.calculateTotals(_items, _summary);
+    final newSummary = Map<String, dynamic>.from(_summary);
+    newSummary['total'] = totals['total'];
+    newSummary['poidsTotal'] = totals['poidsTotal'];
+    _summary = newSummary;
+  }
+
+  void _reset() {
+    setState(() {
+      _items.clear();
+      _selectedIndices.clear();
+      _editingIndex = null;
+      _summary = {
+        'factureNumber':
+            'CI-SSA${DateTime.now().year}${DateTime.now().month.toString().padLeft(2, '0')}${DateTime.now().day.toString().padLeft(2, '0')}${DateTime.now().millisecond}',
+        'transit': 0.0,
+        'droitDouane': 0.0,
+        'chequeChange': 0.0,
+        'freiht': 0.0,
+        'autres': 0.0,
+        'total': 0.0,
+        'txChange': 11.2,
+        'poidsTotal': 0.0,
+      };
+    });
+  }
+
+  void _setFromInvoiceModel(Map<String, dynamic> model) {
+    setState(() {
+      _items = (model['items'] as List? ?? [])
+          .map(
+            (item) => Map<String, dynamic>.from(item as Map<String, dynamic>),
+          )
+          .toList();
+      _summary = Map<String, dynamic>.from(
+        model['summary'] as Map<String, dynamic>? ?? {},
+      );
+      _editingIndex = null;
+      _selectedIndices.clear();
+
+      // تأكد من أن clientName يتم تمريره بشكل صحيح
+      if (model['clientName'] != null && widget.clientName == null) {
+        // يمكن إضافة منطق إضافي هنا إذا لزم الأمر
+      }
+    });
   }
 
   void _initializeControllers() {
@@ -63,24 +297,34 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     for (String field in fields) {
       _controllers[field] = TextEditingController();
     }
+
+    _controllers['qte']?.addListener(_updateCalculatedFieldsWithService);
+    _controllers['poids']?.addListener(_updateCalculatedFieldsWithService);
+    _controllers['puPieces']?.addListener(_updateCalculatedFieldsWithService);
+    _controllers['exchangeRate']?.addListener(
+      _updateCalculatedFieldsWithService,
+    );
   }
 
-  void _populateControllers(InvoiceItem item, {double? defaultExchangeRate}) {
-    _controllers['refFournisseur']?.text = item.refFournisseur;
-    _controllers['articles']?.text = item.articles;
-    _controllers['qte']?.text = item.qte.toString();
-    _controllers['poids']?.text = item.poids.toString();
-    _controllers['puPieces']?.text = item.puPieces.toString();
-    _controllers['mt']?.text = item.mt.toString();
-    _controllers['prixAchat']?.text = item.prixAchat.toString();
-    _controllers['autresCharges']?.text = item.autresCharges.toString();
-    _controllers['cuHt']?.text = item.cuHt.toString();
-    // إذا كان exchangeRate فارغاً أو 1، استخدم القيمة الافتراضية من ملخص الفاتورة
-    if ((item.exchangeRate == 1.0 || item.exchangeRate == 0.0) &&
+  void _populateControllers(
+    Map<String, dynamic> item, {
+    double? defaultExchangeRate,
+  }) {
+    _controllers['refFournisseur']?.text = item['refFournisseur'].toString();
+    _controllers['articles']?.text = item['articles'].toString();
+    _controllers['qte']?.text = item['qte'].toString();
+    _controllers['poids']?.text = item['poids'].toString();
+    _controllers['puPieces']?.text = item['puPieces'].toString();
+    _controllers['mt']?.text = item['mt'].toString();
+    _controllers['prixAchat']?.text = item['prixAchat'].toString();
+    _controllers['autresCharges']?.text = item['autresCharges'].toString();
+    _controllers['cuHt']?.text = item['cuHt'].toString();
+    final exchangeRate = (item['exchangeRate'] as num?)?.toDouble() ?? 0.0;
+    if ((exchangeRate == 1.0 || exchangeRate == 0.0) &&
         defaultExchangeRate != null) {
       _controllers['exchangeRate']?.text = defaultExchangeRate.toString();
     } else {
-      _controllers['exchangeRate']?.text = item.exchangeRate.toString();
+      _controllers['exchangeRate']?.text = exchangeRate.toString();
     }
   }
 
@@ -102,179 +346,131 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
           1.0,
     };
   }
-// استبدل دالة _saveInvoice بالكامل بهذه النسخة المحسنة
-void _saveInvoice() {
-  print('🚀 بدء عملية الحفظ...');
-  
-  // التحقق من صحة النموذج
-  if (_formKey.currentState != null && !_formKey.currentState!.validate()) {
-    print('❌ فشل التحقق من صحة النموذج');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('يرجى تصحيح الأخطاء في النموذج'),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    return;
-  }
 
-  final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
-  final invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
-  
-  print('📋 بيانات DocumentProvider:');
-  print('   - عدد العناصر: ${documentProvider.items.length}');
-  print('   - رقم الفاتورة: ${documentProvider.summary.factureNumber}');
-  
-  // التحقق من وجود عناصر في الفاتورة
-  if (documentProvider.items.isEmpty) {
-    print('⚠️ لا توجد عناصر في الفاتورة');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('لا يمكن حفظ فاتورة فارغة. يرجى إضافة عناصر أولاً'),
-        backgroundColor: Colors.orange,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    return;
-  }
+  void _saveInvoice() {
+    if (_editingIndex != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى حفظ العنصر قيد التعديل أولاً')),
+      );
+      return;
+    }
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا يمكن حفظ فاتورة فارغة. يرجى إضافة عناصر أولاً'),
+        ),
+      );
+      return;
+    }
 
-  try {
-    // حساب المبلغ الإجمالي
-    double totalAmount = _calculateTotalAmount(documentProvider.items, documentProvider.summary);
-    print('💰 المبلغ الإجمالي المحسوب: $totalAmount');
-    
-    // تحديد اسم العميل
-    String clientName = _getClientName(documentProvider.items, 
-        widget.invoice?.clientName ?? 'عميل غير محدد');
-    print('👤 اسم العميل: $clientName');
+    final totalAmount = _calculateTotalAmount(_items);
+
+    // الحصول على اسم العميل من الفاتورة الأصلية أو من المعاملات
+    final clientName = _getClientName(_items, widget.clientName);
+
+    final now = widget.date ?? DateTime.now();
+    final formattedDate =
+        '${now.day}/${now.month}/${now.year} | ${now.hour}:${now.minute.toString().padLeft(2, '0')}';
+
+    Map<String, dynamic> resultInvoice;
 
     if (widget.invoice != null) {
-      print('📝 تحديث فاتورة موجودة: ${widget.invoice!.id}');
-      // تحديث فاتورة موجودة
-      final updatedInvoice = widget.invoice!.copyWith(
-        items: List<InvoiceItem>.from(documentProvider.items),
-        summary: documentProvider.summary,
-        totalAmount: totalAmount,
-        status: 'محدثة',
-        clientName: clientName,
-      );
-      
-      print('   - عدد العناصر في الفاتورة المحدثة: ${updatedInvoice.items.length}');
-      invoiceProvider.updateInvoice(updatedInvoice);
+      resultInvoice = Map<String, dynamic>.from(widget.invoice!);
+      resultInvoice['items'] = List<Map<String, dynamic>>.from(_items);
+      resultInvoice['summary'] = Map<String, dynamic>.from(_summary);
+      resultInvoice['totalAmount'] = totalAmount;
+      // resultInvoice['status'] = 'محدثة';
+      // الحفاظ على clientName الأصلي إذا كان موجوداً، وإلا استخدم الجديد
+      if (widget.invoice!['clientName'] != null &&
+          widget.invoice!['clientName'].toString().isNotEmpty) {
+        resultInvoice['clientName'] = widget.invoice!['clientName'];
+      } else {
+        resultInvoice['clientName'] = clientName;
+      }
       _showSuccessMessage('تم تحديث الفاتورة بنجاح', Icons.check_circle);
     } else {
-      print('🆕 إنشاء فاتورة جديدة');
-      // إنشاء فاتورة جديدة
-      final newInvoice = InvoiceModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        clientName: clientName,
-        invoiceNumber: documentProvider.summary.factureNumber,
-        date: DateTime.now(),
-        isLocal: widget.isLocal,
-        totalAmount: totalAmount,
-        status: 'مسودة',
-        items: List<InvoiceItem>.from(documentProvider.items),
-        summary: documentProvider.summary,
-      );
-
-      print('   - رقم الفاتورة الجديدة: ${newInvoice.invoiceNumber}');
-      print('   - عدد العناصر: ${newInvoice.items.length}');
-      print('   - نوع الفاتورة: ${newInvoice.isLocal ? "محلي" : "خارجي"}');
-      
-      // طباعة تفاصيل العناصر
-      for (int i = 0; i < newInvoice.items.length; i++) {
-        final item = newInvoice.items[i];
-        print('   - العنصر $i: ${item.articles} - الكمية: ${item.qte}');
-      }
-
-      invoiceProvider.addInvoice(newInvoice);
+      resultInvoice = {
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'clientName': clientName,
+        'invoiceNumber': widget.invoiceNumber ?? _summary['factureNumber'],
+        'date': formattedDate,
+        'isLocal': widget.isLocal,
+        'totalAmount': totalAmount,
+        'status': 'Brouillon',
+        'items': List<Map<String, dynamic>>.from(_items),
+        'summary': Map<String, dynamic>.from(_summary),
+      };
       _showSuccessMessage('تم إنشاء الفاتورة بنجاح', Icons.add_circle);
     }
-    
-    print('🧹 تنظيف البيانات والعودة...');
-    // مسح النموذج والعودة
+
     _clearControllers();
-    documentProvider.reset();
-    
-    // التأكد من أن Navigator متاح
-    if (mounted) {
-      Navigator.of(context).pop(true);
-      print('✅ تم الانتهاء من عملية الحفظ بنجاح');
+    _reset();
+    Navigator.of(context).pop(resultInvoice);
+  }
+
+  String _getClientName(
+    List<Map<String, dynamic>> items,
+    String? fallbackClientName,
+  ) {
+    // أولاً، تحقق من clientName في الفاتورة الأصلية
+    if (widget.invoice != null && widget.invoice!['clientName'] != null) {
+      final originalClientName = widget.invoice!['clientName'];
+      if (originalClientName is String && originalClientName.isNotEmpty) {
+        return originalClientName;
+      }
     }
-    
-  } catch (e, stackTrace) {
-    print('💥 خطأ أثناء الحفظ: $e');
-    print('📍 Stack Trace: $stackTrace');
-    _showErrorMessage('حدث خطأ أثناء حفظ الفاتورة: ${e.toString()}');
+
+    // ثانياً، تحقق من fallbackClientName (widget.clientName)
+    if (fallbackClientName != null && fallbackClientName.isNotEmpty) {
+      return fallbackClientName;
+    }
+
+    // ثالثاً، ابحث في العناصر
+    for (var item in items) {
+      final name = item['clientName'];
+      if (name is String && name.isNotEmpty) {
+        return name;
+      }
+    }
+
+    return 'عميل غير محدد';
   }
-}
 
-// دوال مساعدة
-String _getClientName(List<InvoiceItem> items, String defaultName) {
-  if (items.isNotEmpty && items.first.refFournisseur.isNotEmpty) {
-    return items.first.refFournisseur;
+  double _calculateTotalAmount(List<Map<String, dynamic>> items) {
+    double itemsTotal = items.fold(
+      0.0,
+      (sum, item) => sum + ((item['mt'] as num?)?.toDouble() ?? 0.0),
+    );
+    return itemsTotal;
   }
-  return defaultName;
-}
 
-double _calculateTotalAmount(List<InvoiceItem> items, InvoiceSummary summary) {
-  // حساب مجموع قيم العناصر بالعملة المحلية
-  double itemsTotal = items.fold(0.0, (sum, item) => sum + (item.mt * item.exchangeRate));
-  
-  // إضافة المصروفات الأخرى
-  double expensesTotal = summary.transit + 
-                        summary.droitDouane + 
-                        summary.chequeChange + 
-                        summary.freiht + 
-                        summary.autres;
-  
-  return itemsTotal + expensesTotal;
-}
-
-void _showSuccessMessage(String message, IconData icon) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          Icon(icon, color: Colors.white),
-          SizedBox(width: 8),
-          Text(message),
-        ],
+  void _showSuccessMessage(String message, IconData icon) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      backgroundColor: Colors.green,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-    ),
-  );
-}
-
-void _showErrorMessage(String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          Icon(Icons.error, color: Colors.white),
-          SizedBox(width: 8),
-          Expanded(child: Text(message)),
-        ],
-      ),
-      backgroundColor: Colors.red,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      duration: Duration(seconds: 5),
-    ),
-  );
-}
-
-
+    );
+  }
 
   @override
   void dispose() {
+    _controllers['qte']?.removeListener(_updateCalculatedFieldsWithService);
+    _controllers['poids']?.removeListener(_updateCalculatedFieldsWithService);
+    _controllers['puPieces']?.removeListener(
+      _updateCalculatedFieldsWithService,
+    );
+    _controllers['exchangeRate']?.removeListener(
+      _updateCalculatedFieldsWithService,
+    );
     _controllers.forEach((key, controller) {
       controller.dispose();
     });
@@ -283,43 +479,22 @@ void _showErrorMessage(String message) {
 
   @override
   Widget build(BuildContext context) {
+    final totals = _calculationService.calculateTotals(_items, _summary);
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          color: Color(0xFFF1F5F9), // خلفية رئيسية فاتحة جدًا
-        ),
-        child: Consumer<DocumentProvider>(
-          builder: (context, provider, child) {
-            final totals = _calculationService.calculateTotals(
-              provider.items,
-              provider.summary,
-            );
-
-            return Column(
-              children: [
-                // رأس الصفحة الذكي
-                _buildSmartHeader(provider, totals),
-
-                // الجدول الذكي
-                Expanded(child: _buildSmartTable(provider)),
-
-                // ملخص البيانات
-                _buildSummaryFooter(provider, totals),
-              ],
-            );
-          },
+        decoration: const BoxDecoration(color: Color(0xFFF1F5F9)),
+        child: Column(
+          children: [
+            _buildSmartHeader(totals),
+            Expanded(child: _buildSmartTable()),
+            _buildSummaryFooter(totals),
+          ],
         ),
       ),
-      // تم نقل أزرار الحفظ والإلغاء إلى _buildSmartHeader
     );
   }
 
-  // دالة لبناء زر أيقونة مربع مع Tooltip ودعم خاصية الإظهار/الإخفاء
-
-  Widget _buildSmartHeader(
-    DocumentProvider provider,
-    Map<String, double> totals,
-  ) {
+  Widget _buildSmartHeader(Map<String, double> totals) {
     return Container(
       margin: const EdgeInsets.all(5),
       decoration: BoxDecoration(
@@ -347,10 +522,8 @@ void _showErrorMessage(String message) {
             padding: const EdgeInsets.all(5),
             child: Column(
               children: [
-                // Header Row (Icon + Title + Actions)
                 Row(
                   children: [
-                    // Title Section
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -393,7 +566,6 @@ void _showErrorMessage(String message) {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  // فاتورة إلكترونية
                                   AppTranslations.get(
                                     'smart_invoice',
                                     Provider.of<LanguageProvider>(
@@ -401,7 +573,7 @@ void _showErrorMessage(String message) {
                                       listen: true,
                                     ).currentLanguage,
                                   ),
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
                                     color: Color(0xFF1E3A8A),
@@ -419,14 +591,7 @@ void _showErrorMessage(String message) {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  // رقم: ...
-                                  '${AppTranslations.get(
-                                        'number',
-                                        Provider.of<LanguageProvider>(
-                                          context,
-                                          listen: true,
-                                        ).currentLanguage,
-                                      )}: ${provider.summary.factureNumber}',
+                                  '${AppTranslations.get('number', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)}: ${_summary['factureNumber']}',
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -444,15 +609,7 @@ void _showErrorMessage(String message) {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  provider.items.isNotEmpty
-                                      ? provider.items.first.refFournisseur
-                                      : AppTranslations.get(
-                                          'not_specified',
-                                          Provider.of<LanguageProvider>(
-                                            context,
-                                            listen: true,
-                                          ).currentLanguage,
-                                        ),
+                                  _getClientName(_items, widget.clientName),
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -484,15 +641,15 @@ void _showErrorMessage(String message) {
                       ),
                     ),
                     const SizedBox(width: 12),
-
-                    
                     Container(
-                      height: MediaQuery.of(context).size.height * 0.085,
+                      height: MediaQuery.of(context).size.height * 0.073,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE57373).withValues(alpha:0.15),
+                            color: const Color(
+                              0xFFE57373,
+                            ).withValues(alpha: 0.15),
                             blurRadius: 12,
                             spreadRadius: 1,
                             offset: const Offset(0, 3),
@@ -501,6 +658,8 @@ void _showErrorMessage(String message) {
                       ),
                       child: ElevatedButton.icon(
                         onPressed: () {
+                          // final now = DateTime.now();
+                          // print('${now.day}/${now.month}/${now.year} | ${now.hour}:${now.minute.toString().padLeft(2, '0')}');
                           Navigator.pop(context);
                         },
                         icon: const Icon(Icons.cancel_rounded, size: 20),
@@ -518,51 +677,58 @@ void _showErrorMessage(String message) {
                             letterSpacing: 0.3,
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                          backgroundColor: Colors.transparent,
-                          animationDuration: const Duration(milliseconds: 200),
-                        ).copyWith(
-                          backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                            (Set<WidgetState> states) {
-                              if (states.contains(WidgetState.pressed)) {
-                                return const Color(0xFFEF9A9A);
-                              }
-                              if (states.contains(WidgetState.hovered)) {
-                                return const Color(0xFFEF5350);
-                              }
-                              return const Color(0xFFE57373);
-                            },
-                          ),
-                          overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                            (Set<WidgetState> states) {
-                              if (states.contains(WidgetState.pressed)) {
-                                return Colors.white.withValues(alpha:0.1);
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
+                        style:
+                            ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                              backgroundColor: Colors.transparent,
+                              animationDuration: const Duration(
+                                milliseconds: 200,
+                              ),
+                            ).copyWith(
+                              backgroundColor:
+                                  WidgetStateProperty.resolveWith<Color>((
+                                    Set<WidgetState> states,
+                                  ) {
+                                    if (states.contains(WidgetState.pressed)) {
+                                      return const Color(0xFFEF9A9A);
+                                    }
+                                    if (states.contains(WidgetState.hovered)) {
+                                      return const Color(0xFFEF5350);
+                                    }
+                                    return const Color(0xFFE57373);
+                                  }),
+                              overlayColor:
+                                  WidgetStateProperty.resolveWith<Color?>((
+                                    Set<WidgetState> states,
+                                  ) {
+                                    if (states.contains(WidgetState.pressed)) {
+                                      return Colors.white.withValues(
+                                        alpha: 0.1,
+                                      );
+                                    }
+                                    return null;
+                                  }),
+                            ),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    
-                    // Save Button
                     Container(
-                      height: MediaQuery.of(context).size.height * 0.085,
+                      height: MediaQuery.of(context).size.height * 0.073,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF66BB6A).withValues(alpha:0.15),
+                            color: const Color(
+                              0xFF66BB6A,
+                            ).withValues(alpha: 0.15),
                             blurRadius: 12,
                             spreadRadius: 1,
                             offset: const Offset(0, 3),
@@ -586,107 +752,52 @@ void _showErrorMessage(String message) {
                             letterSpacing: 0.3,
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                          backgroundColor: Colors.transparent,
-                          animationDuration: const Duration(milliseconds: 200),
-                        ).copyWith(
-                          backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                            (Set<WidgetState> states) {
-                              if (states.contains(WidgetState.pressed)) {
-                                return const Color(0xFF81C784);
-                              }
-                              if (states.contains(WidgetState.hovered)) {
-                                return const Color(0xFF4CAF50);
-                              }
-                              return const Color(0xFF66BB6A);
-                            },
-                          ),
-                          overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                            (Set<WidgetState> states) {
-                              if (states.contains(WidgetState.pressed)) {
-                                return Colors.white.withValues(alpha:0.1);
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
+                        style:
+                            ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                              backgroundColor: Colors.transparent,
+                              animationDuration: const Duration(
+                                milliseconds: 200,
+                              ),
+                            ).copyWith(
+                              backgroundColor:
+                                  WidgetStateProperty.resolveWith<Color>((
+                                    Set<WidgetState> states,
+                                  ) {
+                                    if (states.contains(WidgetState.pressed)) {
+                                      return const Color(0xFF81C784);
+                                    }
+                                    if (states.contains(WidgetState.hovered)) {
+                                      return const Color(0xFF4CAF50);
+                                    }
+                                    return const Color(0xFF66BB6A);
+                                  }),
+                              overlayColor:
+                                  WidgetStateProperty.resolveWith<Color?>((
+                                    Set<WidgetState> states,
+                                  ) {
+                                    if (states.contains(WidgetState.pressed)) {
+                                      return Colors.white.withValues(
+                                        alpha: 0.1,
+                                      );
+                                    }
+                                    return null;
+                                  }),
+                            ),
                       ),
                     ),
                     const SizedBox(width: 5),
-// أضف هذا الزر مؤقتاً بجانب زر الحفظ للاختبار
-Container(
-  height: MediaQuery.of(context).size.height * 0.085,
-  child: ElevatedButton.icon(
-    onPressed: () {
-      final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
-      final invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
-      
-      print('🔍 تشخيص البيانات:');
-      print('DocumentProvider:');
-      print('  - عدد العناصر: ${documentProvider.items.length}');
-      print('  - رقم الفاتورة: ${documentProvider.summary.factureNumber}');
-      
-      print('InvoiceProvider:');
-      print('  - عدد الفواتير الحالي: ${invoiceProvider.allInvoices.length}');
-      print('  - الفواتير المحلية: ${invoiceProvider.localInvoices.length}');
-      print('  - الفواتير الخارجية: ${invoiceProvider.foreignInvoices.length}');
-      
-      // اختبار إضافة فاتورة تجريبية
-      try {
-        final testInvoice = InvoiceModel(
-          id: 'test_${DateTime.now().millisecondsSinceEpoch}',
-          clientName: 'عميل تجريبي',
-          invoiceNumber: 'TEST-${DateTime.now().millisecondsSinceEpoch}',
-          date: DateTime.now(),
-          isLocal: true,
-          totalAmount: 1000.0,
-          status: 'اختبار',
-          items: [],
-          summary: documentProvider.summary,
-        );
-        
-        invoiceProvider.addInvoice(testInvoice);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم إضافة فاتورة تجريبية بنجاح'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } catch (e) {
-        print('❌ خطأ في الاختبار: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في الاختبار: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    },
-    icon: Icon(Icons.bug_report, size: 20),
-    label: Text('اختبار'),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.purple,
-      foregroundColor: Colors.white,
-    ),
-  ),
-),
-                   
-                 
                   ],
                 ),
-
                 const SizedBox(height: 5),
-                // معلومات الفاتورة (شبكة)
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.7),
@@ -709,7 +820,7 @@ Container(
                               listen: true,
                             ).currentLanguage,
                           ),
-                          value: provider.items.length.toString(),
+                          value: _items.length.toString(),
                           color: const Color(0xFF3B82F6),
                         ),
                       ),
@@ -762,7 +873,6 @@ Container(
                         ),
                       ),
                       const SizedBox(width: 5),
-                      // Action Panel بحجم ثابت في نهاية الصف
                       SizedBox(
                         width: 100,
                         height: 100,
@@ -792,7 +902,6 @@ Container(
                               crossAxisSpacing: 6,
                               physics: const NeverScrollableScrollPhysics(),
                               children: [
-                                // تحديد الكل
                                 Tooltip(
                                   message: AppTranslations.get(
                                     'select_all',
@@ -804,7 +913,7 @@ Container(
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
-                                      onTap: () => provider.selectAll(),
+                                      onTap: _selectAll,
                                       borderRadius: BorderRadius.circular(10),
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -830,7 +939,6 @@ Container(
                                     ),
                                   ),
                                 ),
-                                // إضافة جديد
                                 Tooltip(
                                   message: AppTranslations.get(
                                     'add_new',
@@ -843,7 +951,7 @@ Container(
                                     color: Colors.transparent,
                                     child: InkWell(
                                       onTap: () {
-                                        provider.addItem();
+                                        _addItem();
                                         _clearControllers();
                                       },
                                       borderRadius: BorderRadius.circular(10),
@@ -871,8 +979,7 @@ Container(
                                     ),
                                   ),
                                 ),
-                                // حذف المحدد
-                                if (provider.hasSelection)
+                                if (_hasSelection)
                                   Tooltip(
                                     message: AppTranslations.get(
                                       'delete_selected',
@@ -884,10 +991,8 @@ Container(
                                     child: Material(
                                       color: Colors.transparent,
                                       child: InkWell(
-                                        onTap: () => _showDeleteConfirmation(
-                                          context,
-                                          provider,
-                                        ),
+                                        onTap: () =>
+                                            _showDeleteConfirmation(context),
                                         borderRadius: BorderRadius.circular(10),
                                         child: Container(
                                           decoration: BoxDecoration(
@@ -913,8 +1018,7 @@ Container(
                                       ),
                                     ),
                                   ),
-                                // إلغاء التحديد
-                                if (provider.hasSelection)
+                                if (_hasSelection)
                                   Tooltip(
                                     message: AppTranslations.get(
                                       'clear_selection',
@@ -926,7 +1030,7 @@ Container(
                                     child: Material(
                                       color: Colors.transparent,
                                       child: InkWell(
-                                        onTap: () => provider.clearSelection(),
+                                        onTap: _clearSelection,
                                         borderRadius: BorderRadius.circular(10),
                                         child: Container(
                                           decoration: BoxDecoration(
@@ -968,7 +1072,6 @@ Container(
     );
   }
 
-  // بطاقة معلومات مفردة
   Widget _buildInfoCard({
     required IconData icon,
     required String label,
@@ -1022,11 +1125,11 @@ Container(
     );
   }
 
-  Widget _buildSmartTable(DocumentProvider provider) {
-    final isAddingNew = provider.editingIndex == provider.items.length;
-    final itemCount = provider.items.length + (isAddingNew ? 1 : 0);
+  Widget _buildSmartTable() {
+    final isAddingNew = _editingIndex == _items.length;
+    final itemCount = _items.length + (isAddingNew ? 1 : 0);
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 5),
+      margin: const EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -1037,10 +1140,7 @@ Container(
       ),
       child: Column(
         children: [
-          // رأس الجدول
           _buildTableHeader(),
-
-          // محتوى الجدول
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.zero,
@@ -1048,31 +1148,16 @@ Container(
               itemBuilder: (context, index) {
                 if (isAddingNew) {
                   if (index == 0) {
-                    // صف التحرير في الأعلى عند الإضافة
-                    return _buildEditRow(provider, provider.items.length);
+                    return _buildEditRow(_items.length);
                   } else {
-                    // بقية العناصر
-                    return _buildTableRow(
-                      provider,
-                      provider.items[index - 1],
-                      index - 1,
-                    );
+                    return _buildTableRow(_items[index - 1], index - 1);
                   }
                 } else {
-                  if (index < provider.items.length) {
-                    return _buildTableRow(
-                      provider,
-                      provider.items[index],
-                      index,
-                    );
-                  } else {
-                    // احتياطي، لا يجب أن يصل هنا
-                    return SizedBox.shrink();
-                  }
+                  return _buildTableRow(_items[index], index);
                 }
               },
             ),
-          ), // ← هنا الفاصلة المطلوبة
+          ),
         ],
       ),
     );
@@ -1080,8 +1165,8 @@ Container(
 
   Widget _buildTableHeader() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
@@ -1097,8 +1182,7 @@ Container(
       ),
       child: Row(
         children: [
-          SizedBox(width: 30), // مساحة للتحديد
-
+          const SizedBox(width: 30),
           _buildHeaderCell(
             AppTranslations.get(
               'supplier_ref',
@@ -1209,42 +1293,6 @@ Container(
             ),
             flex: 1,
           ),
-          // SizedBox(width: 16), // مساحة للأزرار
-          // زر الإضافة في رأس الجدول
-          // InkWell(
-          //   onTap: () {
-          //     final provider = Provider.of<DocumentProvider>(
-          //       context,
-          //       listen: false,
-          //     );
-          //     provider.addItem();
-          //     _clearControllers();
-          //   },
-          //   child: Container(
-          //     padding: EdgeInsets.all(5),
-          //     decoration: BoxDecoration(
-          //       color: Color(0xFFF1F5F9),
-          //       borderRadius: BorderRadius.circular(8),
-          //       border: Border.all(color: Color(0xFF3B82F6), width: 1.2),
-          //     ),
-          //     child: Row(
-          //       children: [
-          //         Icon(
-          //           Icons.add_circle_outline_rounded,
-          //           color: Color(0xFF1E3A8A),
-          //         ),
-          //         SizedBox(width: 4),
-          //         Text(
-          //           'إضافة',
-          //           style: TextStyle(
-          //             color: Color(0xFF1E3A8A),
-          //             fontWeight: FontWeight.bold,
-          //           ),
-          //         ),
-          //       ],
-          //     ),
-          //   ),
-          // ),
         ],
       ),
     );
@@ -1273,112 +1321,122 @@ Container(
     );
   }
 
-  Widget _buildTableRow(
-    DocumentProvider provider,
-    InvoiceItem item,
-    int index,
-  ) {
-    final isSelected = provider.selectedIndices.contains(index);
-    final isEditing = provider.editingIndex == index;
+  Widget _buildTableRow(Map<String, dynamic> item, int index) {
+    final isSelected = _selectedIndices.contains(index);
+    final isEditing = _editingIndex == index;
 
     if (isEditing) {
-      return _buildEditRow(provider, index);
+      return _buildEditRow(index);
     }
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: isSelected
-            ? Color(0xFF60A5FA).withValues(alpha: 0.13)
+            ? const Color(0xFF60A5FA).withValues(alpha: 0.13)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: isSelected
-            ? Border.all(color: Color(0xFF3B82F6), width: 2)
+            ? Border.all(color: const Color(0xFF3B82F6), width: 2)
             : null,
       ),
       child: InkWell(
-        onTap: () => provider.toggleSelection(index),
+        onTap: () => _toggleSelection(index),
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Row(
             children: [
-              // زر التحديد
               InkWell(
-                onTap: () => provider.toggleSelection(index),
+                onTap: () => _toggleSelection(index),
                 child: Container(
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: isSelected ? Color(0xFF1E3A8A) : Colors.transparent,
+                    color: isSelected
+                        ? const Color(0xFF1E3A8A)
+                        : Colors.transparent,
                     border: Border.all(
-                      color: isSelected ? Color(0xFF1E3A8A) : Color(0xFF60A5FA),
+                      color: isSelected
+                          ? const Color(0xFF1E3A8A)
+                          : const Color(0xFF60A5FA),
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: isSelected
-                      ? Icon(Icons.check, color: Colors.white, size: 14)
+                      ? const Icon(Icons.check, color: Colors.white, size: 14)
                       : null,
                 ),
               ),
-              SizedBox(width: 5),
-
-              // بيانات الصف
-              _buildDataCell(item.refFournisseur, flex: 2),
+              const SizedBox(width: 5),
+              _buildDataCell(item['refFournisseur'].toString(), flex: 2),
               _verticalDivider(height: 28),
-              _buildDataCell(item.articles, flex: 2),
+              _buildDataCell(item['articles'].toString(), flex: 2),
               _verticalDivider(height: 28),
-              _buildDataCell(item.qte.toString(), flex: 1),
+              _buildDataCell(item['qte'].toString(), flex: 1),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _calculationService.formatWeight(item.poids),
+                _calculationService.formatWeight(
+                  (item['poids'] as num).toDouble(),
+                ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _calculationService.formatCurrency(item.puPieces),
+                _calculationService.formatCurrency(
+                  (item['puPieces'] as num).toDouble(),
+                ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _calculationService.formatCurrency(item.mt),
+                _calculationService.formatCurrency(
+                  (item['mt'] as num).toDouble(),
+                ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _calculationService.formatCurrency(item.prixAchat),
+                _calculationService.formatCurrency(
+                  (item['prixAchat'] as num).toDouble(),
+                ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _calculationService.formatCurrency(item.autresCharges),
+                _calculationService.formatCurrency(
+                  (item['autresCharges'] as num).toDouble(),
+                ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _calculationService.formatCurrency(item.cuHt),
+                _calculationService.formatCurrency(
+                  (item['cuHt'] as num).toDouble(),
+                ),
                 flex: 2,
               ),
-
-              // أزرار التحكم
               SizedBox(
                 width: 60,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     IconButton(
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.edit,
                         size: 16,
                         color: Color(0xFF3B82F6),
                       ),
                       onPressed: () {
-                        provider.startEditing(index);
+                        _startEditing(index);
                         _populateControllers(item);
                       },
                       padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                      constraints: const BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 28,
+                      ),
                     ),
                     IconButton(
                       icon: Icon(
@@ -1386,13 +1444,13 @@ Container(
                         size: 16,
                         color: Colors.red.shade400,
                       ),
-                      onPressed: () => _showDeleteSingleConfirmation(
-                        context,
-                        provider,
-                        index,
-                      ),
+                      onPressed: () =>
+                          _showDeleteSingleConfirmation(context, index),
                       padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                      constraints: const BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 28,
+                      ),
                     ),
                   ],
                 ),
@@ -1423,28 +1481,28 @@ Container(
     );
   }
 
-  Widget _buildEditRow(DocumentProvider provider, int index) {
-    final exchangeRateFromSummary = provider.summary.txChange;
-    final isNew = index == provider.items.length;
-    // عند بناء صف التحرير، إذا كان عنصر جديد أو exchangeRate فارغ، عبئ exchangeRate من ملخص الفاتورة
+  Widget _buildEditRow(int index) {
+    final exchangeRateFromSummary =
+        (_summary['txChange'] as num?)?.toDouble() ?? 1.0;
+    final isNew = index == _items.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (isNew || (_controllers['exchangeRate']?.text.isEmpty ?? true)) {
         _controllers['exchangeRate']?.text = exchangeRateFromSummary.toString();
       }
     });
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
-        color: Color(0xFF60A5FA).withValues(alpha: 0.10),
+        color: const Color(0xFF60A5FA).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Color(0xFF3B82F6), width: 2),
+        border: Border.all(color: const Color(0xFF3B82F6), width: 2),
       ),
       child: Form(
         key: _formKey,
         child: Row(
           children: [
-            SizedBox(width: 20),
+            const SizedBox(width: 20),
             _buildEditField(
               'refFournisseur',
               AppTranslations.get(
@@ -1570,21 +1628,27 @@ Container(
               isDecimal: true,
               readOnly: true,
             ),
-            // أزرار الحفظ والإلغاء
             SizedBox(
               width: 60,
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.save, size: 16, color: Color(0xFF1E3A8A)),
+                    icon: const Icon(
+                      Icons.save,
+                      size: 16,
+                      color: Color(0xFF1E3A8A),
+                    ),
                     onPressed: () {
                       if (_formKey.currentState?.validate() ?? false) {
-                        provider.saveItem(index, _getFormData());
+                        _saveItem(index, _getFormData());
                         _clearControllers();
                       }
                     },
                     padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
                   ),
                   IconButton(
                     icon: Icon(
@@ -1593,11 +1657,14 @@ Container(
                       color: Colors.red.shade400,
                     ),
                     onPressed: () {
-                      provider.cancelEditing(index);
+                      _cancelEditing(index);
                       _clearControllers();
                     },
                     padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
                   ),
                 ],
               ),
@@ -1619,7 +1686,7 @@ Container(
     return Expanded(
       flex: flex,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 5),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -1628,7 +1695,7 @@ Container(
                 color: Colors.blueAccent.withValues(alpha: 0.2),
                 spreadRadius: 2,
                 blurRadius: 5,
-                offset: Offset(0, 3),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -1637,10 +1704,10 @@ Container(
             readOnly: readOnly,
             keyboardType: isNumber
                 ? (isDecimal
-                      ? TextInputType.numberWithOptions(decimal: true)
+                      ? const TextInputType.numberWithOptions(decimal: true)
                       : TextInputType.number)
                 : TextInputType.text,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.black87,
               fontWeight: FontWeight.bold,
@@ -1657,16 +1724,19 @@ Container(
                 : [],
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
+              hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.blueAccent),
+                borderSide: const BorderSide(color: Colors.blueAccent),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.blueAccent),
+                borderSide: const BorderSide(color: Colors.blueAccent),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 5,
+                vertical: 5,
+              ),
               filled: true,
               fillColor: Colors.white,
             ),
@@ -1706,12 +1776,7 @@ Container(
               return null;
             },
             onChanged: (value) {
-              if (key == 'qte' ||
-                  key == 'puPieces' ||
-                  key == 'autresCharges' ||
-                  key == 'exchangeRate') {
-                _updateCalculatedFieldsWithService();
-              }
+              // The listener will handle the update
             },
           ),
         ),
@@ -1719,25 +1784,18 @@ Container(
     );
   }
 
-  // أضف دالة جديدة تستخدم CalculationService
   void _updateCalculatedFieldsWithService() {
     final data = _getFormData();
-    final provider = Provider.of<DocumentProvider>(context, listen: false);
-    List<InvoiceItem> tempItems = List.from(provider.items);
-    // إذا كنا في وضع إضافة عنصر جديد، أضف العنصر الجاري تحريره مؤقتًا
-    if (provider.editingIndex == provider.items.length) {
-      final tempCalculated = _calculationService.calculateItemValues(
-        data,
-        totalMt: 0.0, // سيتم تحديثها بعد حساب المجاميع
-        poidsTotal: 0.0,
-        grandTotal: 0.0,
-      );
-      tempItems.add(InvoiceItem.fromJson(tempCalculated));
+    List<Map<String, dynamic>> tempItems = _items
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    if (_editingIndex != null && _editingIndex! < _items.length) {
+      //
+    } else {
+      tempItems.add(data);
     }
-    final totals = _calculationService.calculateTotals(
-      tempItems,
-      provider.summary,
-    );
+
+    final totals = _calculationService.calculateTotals(tempItems, _summary);
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
     final grandTotal = totals['total'] ?? 0.0;
@@ -1754,13 +1812,10 @@ Container(
     _controllers['cuHt']?.text = calculated['cuHt'].toString();
   }
 
-  Widget _buildSummaryFooter(
-    DocumentProvider provider,
-    Map<String, double> totals,
-  ) {
+  Widget _buildSummaryFooter(Map<String, double> totals) {
     return Container(
-      margin: EdgeInsets.all(5),
-      padding: EdgeInsets.all(5),
+      margin: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(
@@ -1770,255 +1825,189 @@ Container(
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF60A5FA).withValues(alpha: 0.10),
+            color: const Color(0xFF60A5FA).withValues(alpha: 0.10),
             blurRadius: 15,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Row(
-        children: [Expanded(child: _buildSummaryGrid(provider.summary))],
-      ),
+      child: Row(children: [Expanded(child: _buildSummaryGrid())]),
     );
   }
 
-  Widget _buildSummaryGrid(InvoiceSummary summary) {
-    return Consumer<DocumentProvider>(
-      builder: (context, provider, _) {
-        // متغير مركزي لتتبع أي حقل في وضع التحرير
-        final editingField = ValueNotifier<String?>(null);
-        return StatefulBuilder(
-          builder: (context, setState) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildSummaryGrid() {
+    final editingField = ValueNotifier<String?>(null);
+    return StatefulBuilder(
+      builder: (context, setState) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppTranslations.get(
+              'expense_details',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
-              Text(
-                AppTranslations.get(
-                  'expense_details',
-                  Provider.of<LanguageProvider>(
-                    context,
-                    listen: true,
-                  ).currentLanguage,
-                ),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E3A8A),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'transit',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
+                  ),
+                  value: (_summary['transit'] as num?)?.toDouble() ?? 0.0,
+                  icon: Icons.local_shipping,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'النقل',
+                  onEdit: () {
+                    setState(() => editingField.value = 'النقل');
+                  },
+                  onValueChanged: (v) {
+                    _updateSummaryField('النقل', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
                 ),
               ),
-              SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: EditableSummaryItem(
-                      label: AppTranslations.get(
-                        'transit',
-                        Provider.of<LanguageProvider>(
-                          context,
-                          listen: true,
-                        ).currentLanguage,
-                      ),
-                      value: summary.transit,
-                      icon: Icons.local_shipping,
-                      calculationService: _calculationService,
-                      isEditing: editingField.value == 'النقل',
-                      onEdit: () {
-                        setState(() => editingField.value = 'النقل');
-                      },
-                      onValueChanged: (v) {
-                        provider.updateSummaryField('النقل', v);
-                        setState(() => editingField.value = null);
-                      },
-                      onCancel: () => setState(() => editingField.value = null),
-                    ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'customs',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
                   ),
-                  Expanded(
-                    child: EditableSummaryItem(
-                      label: AppTranslations.get(
-                        'customs',
-                        Provider.of<LanguageProvider>(
-                          context,
-                          listen: true,
-                        ).currentLanguage,
-                      ),
-                      value: summary.droitDouane,
-                      icon: Icons.account_balance,
-                      calculationService: _calculationService,
-                      isEditing: editingField.value == 'حق الجمرك',
-                      onEdit: () {
-                        setState(() => editingField.value = 'حق الجمرك');
-                      },
-                      onValueChanged: (v) {
-                        provider.updateSummaryField('حق الجمرك', v);
-                        setState(() => editingField.value = null);
-                      },
-                      onCancel: () => setState(() => editingField.value = null),
-                    ),
+                  value: (_summary['droitDouane'] as num?)?.toDouble() ?? 0.0,
+                  icon: Icons.account_balance,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'حق الجمرك',
+                  onEdit: () {
+                    setState(() => editingField.value = 'حق الجمرك');
+                  },
+                  onValueChanged: (v) {
+                    _updateSummaryField('حق الجمرك', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'exchange_cheque',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
                   ),
-                  Expanded(
-                    child: EditableSummaryItem(
-                      label: AppTranslations.get(
-                        'exchange_cheque',
-                        Provider.of<LanguageProvider>(
-                          context,
-                          listen: true,
-                        ).currentLanguage,
-                      ),
-                      value: summary.chequeChange,
-                      icon: Icons.money,
-                      calculationService: _calculationService,
-                      isEditing: editingField.value == 'شيك الصرف',
-                      onEdit: () {
-                        setState(() => editingField.value = 'شيك الصرف');
-                      },
-                      onValueChanged: (v) {
-                        provider.updateSummaryField('شيك الصرف', v);
-                        setState(() => editingField.value = null);
-                      },
-                      onCancel: () => setState(() => editingField.value = null),
-                    ),
+                  value: (_summary['chequeChange'] as num?)?.toDouble() ?? 0.0,
+                  icon: Icons.money,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'شيك الصرف',
+                  onEdit: () {
+                    setState(() => editingField.value = 'شيك الصرف');
+                  },
+                  onValueChanged: (v) {
+                    _updateSummaryField('شيك الصرف', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'freight',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
                   ),
-                  Expanded(
-                    child: EditableSummaryItem(
-                      label: AppTranslations.get(
-                        'freight',
-                        Provider.of<LanguageProvider>(
-                          context,
-                          listen: true,
-                        ).currentLanguage,
-                      ),
-                      value: summary.freiht,
-                      icon: Icons.flight_takeoff,
-                      calculationService: _calculationService,
-                      isEditing: editingField.value == 'الشحن',
-                      onEdit: () {
-                        setState(() => editingField.value = 'الشحن');
-                      },
-                      onValueChanged: (v) {
-                        provider.updateSummaryField('الشحن', v);
-                        setState(() => editingField.value = null);
-                      },
-                      onCancel: () => setState(() => editingField.value = null),
-                    ),
+                  value: (_summary['freiht'] as num?)?.toDouble() ?? 0.0,
+                  icon: Icons.flight_takeoff,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'الشحن',
+                  onEdit: () {
+                    setState(() => editingField.value = 'الشحن');
+                  },
+                  onValueChanged: (v) {
+                    _updateSummaryField('الشحن', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'other',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
                   ),
-                  Expanded(
-                    child: EditableSummaryItem(
-                      label: AppTranslations.get(
-                        'other',
-                        Provider.of<LanguageProvider>(
-                          context,
-                          listen: true,
-                        ).currentLanguage,
-                      ),
-                      value: summary.autres,
-                      icon: Icons.more_horiz,
-                      calculationService: _calculationService,
-                      isEditing: editingField.value == 'أخرى',
-                      onEdit: () {
-                        setState(() => editingField.value = 'أخرى');
-                      },
-                      onValueChanged: (v) {
-                        provider.updateSummaryField('أخرى', v);
-                        setState(() => editingField.value = null);
-                      },
-                      onCancel: () => setState(() => editingField.value = null),
-                    ),
+                  value: (_summary['autres'] as num?)?.toDouble() ?? 0.0,
+                  icon: Icons.more_horiz,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'أخرى',
+                  onEdit: () {
+                    setState(() => editingField.value = 'أخرى');
+                  },
+                  onValueChanged: (v) {
+                    _updateSummaryField('أخرى', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'exchange_rate',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
                   ),
-                  Expanded(
-                    child: EditableSummaryItem(
-                      label: AppTranslations.get(
-                        'exchange_rate',
-                        Provider.of<LanguageProvider>(
-                          context,
-                          listen: true,
-                        ).currentLanguage,
-                      ),
-                      value: summary.txChange,
-                      isCurrency: false,
-                      icon: Icons.currency_exchange,
-                      calculationService: _calculationService,
-                      isEditing: editingField.value == 'سعر الصرف',
-                      onEdit: () {
-                        setState(() => editingField.value = 'سعر الصرف');
-                      },
-                      onValueChanged: (v) {
-                        provider.updateSummaryField('سعر الصرف', v);
-                        // تحديث exchangeRate في الحقول المفتوحة للتحرير
-                        if (_controllers['exchangeRate'] != null) {
-                          _controllers['exchangeRate']?.text = v.toString();
-                        }
-                        setState(() => editingField.value = null);
-                      },
-                      onCancel: () => setState(() => editingField.value = null),
-                    ),
-                  ),
-                ],
+                  value: (_summary['txChange'] as num?)?.toDouble() ?? 0.0,
+                  isCurrency: false,
+                  icon: Icons.currency_exchange,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'سعر الصرف',
+                  onEdit: () {
+                    setState(() => editingField.value = 'سعر الصرف');
+                  },
+                  onValueChanged: (v) {
+                    _updateSummaryField('سعر الصرف', v);
+                    if (_controllers['exchangeRate'] != null) {
+                      _controllers['exchangeRate']?.text = v.toString();
+                    }
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget buildSummaryCard({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String value,
-  }) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFF60A5FA).withValues(alpha: 0.10),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: iconColor.withValues(alpha: 0.13), width: 1),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          Icon(icon, color: iconColor, size: 26),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Color(0xFF1E3A8A),
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: iconColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 
-  void _showDeleteConfirmation(
-    BuildContext context,
-    DocumentProvider provider,
-  ) {
+  void _showDeleteConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2033,13 +2022,7 @@ Container(
             ),
           ),
           content: Text(
-            '${AppTranslations.get(
-                  'delete_selected_items',
-                  Provider.of<LanguageProvider>(
-                    context,
-                    listen: true,
-                  ).currentLanguage,
-                )} (${provider.selectedIndices.length})؟',
+            '${AppTranslations.get('delete_selected_items', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)} (${_selectedIndices.length})؟',
           ),
           actions: [
             TextButton(
@@ -2056,7 +2039,7 @@ Container(
             ),
             ElevatedButton(
               onPressed: () {
-                provider.deleteSelected();
+                _deleteSelected();
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -2068,7 +2051,7 @@ Container(
                     listen: true,
                   ).currentLanguage,
                 ),
-                style: TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],
@@ -2077,11 +2060,7 @@ Container(
     );
   }
 
-  void _showDeleteSingleConfirmation(
-    BuildContext context,
-    DocumentProvider provider,
-    int index,
-  ) {
+  void _showDeleteSingleConfirmation(BuildContext context, int index) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2119,7 +2098,7 @@ Container(
             ),
             ElevatedButton(
               onPressed: () {
-                provider.deleteItem(index);
+                _deleteItem(index);
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -2131,7 +2110,7 @@ Container(
                     listen: true,
                   ).currentLanguage,
                 ),
-                style: TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],
@@ -2140,10 +2119,12 @@ Container(
     );
   }
 
-  // أضف دالة مساعدة لتنسيق التاريخ في SmartDocumentScreenState
   String _getFormattedDate() {
-    final now = DateTime.now();
-    return "${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}";
+    if (widget.invoice != null && widget.invoice!['date'] is String) {
+      return widget.invoice!['date'];
+    }
+    final dateToFormat = widget.date ?? DateTime.now();
+    return "${dateToFormat.day}/${dateToFormat.month.toString().padLeft(2, '0')}/${dateToFormat.year} | ${dateToFormat.hour}:${dateToFormat.minute.toString().padLeft(2, '0')}";
   }
 
   Widget _verticalDivider({double? height}) {
@@ -2155,7 +2136,6 @@ Container(
   }
 }
 
-// تمرير CalculationService للعنصر القابل للتعديل
 class EditableSummaryItem extends StatefulWidget {
   final String label;
   final double value;
@@ -2210,12 +2190,12 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
         }
       },
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
-        padding: EdgeInsets.all(5),
-        margin: EdgeInsets.symmetric(horizontal: 5),
+        padding: const EdgeInsets.all(5),
+        margin: const EdgeInsets.symmetric(horizontal: 5),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
@@ -2224,9 +2204,9 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF60A5FA).withValues(alpha: 0.10),
+              color: const Color(0xFF60A5FA).withValues(alpha: 0.10),
               blurRadius: 12,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(
@@ -2242,7 +2222,7 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
               children: [
                 if (widget.icon != null) ...[
                   Container(
-                    padding: EdgeInsets.all(5),
+                    padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -2253,9 +2233,8 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                     ),
                     child: Icon(widget.icon, color: Colors.white, size: 20),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                 ],
-                // نص التسمية
                 Text(
                   widget.label,
                   textAlign: TextAlign.center,
@@ -2269,14 +2248,14 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                 ),
               ],
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             AnimatedSwitcher(
-              duration: Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 250),
               transitionBuilder: (child, anim) =>
                   FadeTransition(opacity: anim, child: child),
               child: widget.isEditing
                   ? Row(
-                      key: ValueKey('edit'),
+                      key: const ValueKey('edit'),
                       children: [
                         Expanded(
                           child: Stack(
@@ -2285,10 +2264,11 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                               TextField(
                                 controller: controller,
                                 autofocus: true,
-                                keyboardType: TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
-                                style: TextStyle(
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                style: const TextStyle(
                                   fontSize: 16,
                                   color: Color(0xFF1E3A8A),
                                 ),
@@ -2302,37 +2282,34 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                                       listen: true,
                                     ).currentLanguage,
                                   ),
-                                  hintStyle: TextStyle(
+                                  hintStyle: const TextStyle(
                                     color: Color(0xFF60A5FA),
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
+                                    borderSide: const BorderSide(
                                       color: Color(0xFF3B82F6),
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
+                                    borderSide: const BorderSide(
                                       color: Color(0xFF1E3A8A),
                                       width: 2,
                                     ),
                                   ),
-                                  contentPadding: EdgeInsets.symmetric(
+                                  contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 4,
                                   ),
-                                  // إضافة أيقونة الحذف داخل الحقل
                                   suffixIcon: IconButton(
-                                    icon: Icon(
+                                    icon: const Icon(
                                       Icons.clear,
                                       color: Color(0xFF3B82F6),
                                     ),
                                     onPressed: () {
                                       controller.clear();
-                                      setState(
-                                        () {},
-                                      ); // لتحديث الحقل إذا لزم الأمر
+                                      setState(() {});
                                     },
                                     tooltip: AppTranslations.get(
                                       'clear_value',
@@ -2358,7 +2335,10 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.check, color: Color(0xFF22C55E)),
+                          icon: const Icon(
+                            Icons.check,
+                            color: Color(0xFF22C55E),
+                          ),
                           onPressed: () {
                             double? newValue = double.tryParse(controller.text);
                             if (newValue != null &&
@@ -2371,7 +2351,10 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                           },
                         ),
                         IconButton(
-                          icon: Icon(Icons.close, color: Colors.redAccent),
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.redAccent,
+                          ),
                           onPressed: () {
                             if (widget.onCancel != null) {
                               widget.onCancel!();
@@ -2381,8 +2364,8 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                       ],
                     )
                   : Container(
-                      key: ValueKey('value'),
-                      padding: EdgeInsets.symmetric(
+                      key: const ValueKey('value'),
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 6,
                       ),
@@ -2403,14 +2386,14 @@ class _EditableSummaryItemState extends State<EditableSummaryItem> {
                             ? '${widget.calculationService.formatWeight(widget.value)} ${widget.unit}'
                             : widget.value.toString(),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                           letterSpacing: 0.3,
                           shadows: [
                             Shadow(
-                              color: Colors.black.withValues(alpha: 0.3),
+                              color: Colors.black,
                               offset: Offset(0, 1),
                               blurRadius: 2,
                             ),

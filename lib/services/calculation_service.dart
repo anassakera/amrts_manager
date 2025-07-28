@@ -1,6 +1,3 @@
-// services/calculation_service.dart
-import '../models/invoice_manage_model.dart';
-
 class CalculationService {
   // حساب قيم العنصر الواحد
   Map<String, dynamic> calculateItemValues(
@@ -63,25 +60,24 @@ class CalculationService {
 
   // حساب المجاميع الكلية
   Map<String, double> calculateTotals(
-    List<InvoiceItem> items,
-    InvoiceSummary summary,
+    List<Map<String, dynamic>> items,
+    Map<String, dynamic> summary,
   ) {
     double totalMt = 0.0;
     double totalPoids = 0.0;
 
     // جمع المبالغ الإجمالية والأوزان من جميع العناصر
     for (var item in items) {
-      totalMt += item.mt;
-      totalPoids += item.poids;
+      totalMt += (item['mt'] as num?)?.toDouble() ?? 0.0;
+      totalPoids += (item['poids'] as num?)?.toDouble() ?? 0.0;
     }
 
     // حساب المجموع الكلي للمصاريف الإضافية
-    final grandTotal =
-        summary.transit +
-        summary.droitDouane +
-        summary.chequeChange +
-        summary.freiht +
-        summary.autres;
+    final grandTotal = ((summary['transit'] as num?)?.toDouble() ?? 0.0) +
+        ((summary['droitDouane'] as num?)?.toDouble() ?? 0.0) +
+        ((summary['chequeChange'] as num?)?.toDouble() ?? 0.0) +
+        ((summary['freiht'] as num?)?.toDouble() ?? 0.0) +
+        ((summary['autres'] as num?)?.toDouble() ?? 0.0);
 
     return {
       'totalMt': double.parse(totalMt.toStringAsFixed(2)),
@@ -92,37 +88,44 @@ class CalculationService {
 
   // حساب النسب المئوية للتوزيع
   Map<String, double> calculateDistributionRatios(
-    InvoiceItem item,
+    Map<String, dynamic> item,
     double totalMt,
   ) {
     if (totalMt == 0) return {'ratio': 0.0};
 
-    final ratio = double.parse((item.mt / totalMt).toStringAsFixed(2));
+    final ratio = double.parse(
+        (((item['mt'] as num?)?.toDouble() ?? 0.0) / totalMt)
+            .toStringAsFixed(2));
     return {'ratio': ratio};
   }
 
   // حساب المصاريف الموزعة على كل عنصر
   Map<String, double> calculateDistributedCosts(
-    InvoiceItem item,
-    InvoiceSummary summary,
+    Map<String, dynamic> item,
+    Map<String, dynamic> summary,
     double totalMt,
   ) {
     final ratio = calculateDistributionRatios(item, totalMt)['ratio'] ?? 0.0;
 
     final distributedTransit = double.parse(
-      (summary.transit * ratio).toStringAsFixed(2),
+      (((summary['transit'] as num?)?.toDouble() ?? 0.0) * ratio)
+          .toStringAsFixed(2),
     );
     final distributedDroitDouane = double.parse(
-      (summary.droitDouane * ratio).toStringAsFixed(2),
+      (((summary['droitDouane'] as num?)?.toDouble() ?? 0.0) * ratio)
+          .toStringAsFixed(2),
     );
     final distributedChequeChange = double.parse(
-      (summary.chequeChange * ratio).toStringAsFixed(2),
+      (((summary['chequeChange'] as num?)?.toDouble() ?? 0.0) * ratio)
+          .toStringAsFixed(2),
     );
     final distributedFreiht = double.parse(
-      (summary.freiht * ratio).toStringAsFixed(2),
+      (((summary['freiht'] as num?)?.toDouble() ?? 0.0) * ratio)
+          .toStringAsFixed(2),
     );
     final distributedAutres = double.parse(
-      (summary.autres * ratio).toStringAsFixed(2),
+      (((summary['autres'] as num?)?.toDouble() ?? 0.0) * ratio)
+          .toStringAsFixed(2),
     );
 
     final totalDistributedCost = double.parse(
@@ -133,10 +136,11 @@ class CalculationService {
               distributedAutres)
           .toStringAsFixed(2),
     );
-
-    final finalCostPerUnit = item.qte > 0
+    final qte = (item['qte'] as num?)?.toInt() ?? 0;
+    final mt = (item['mt'] as num?)?.toDouble() ?? 0.0;
+    final finalCostPerUnit = qte > 0
         ? double.parse(
-            ((item.mt + totalDistributedCost) / item.qte).toStringAsFixed(2),
+            ((mt + totalDistributedCost) / qte).toStringAsFixed(2),
           )
         : 0.0;
 
@@ -202,7 +206,7 @@ class CalculationService {
   }
 
   // حساب إحصائيات سريعة
-  Map<String, dynamic> getQuickStats(List<InvoiceItem> items) {
+  Map<String, dynamic> getQuickStats(List<Map<String, dynamic>> items) {
     if (items.isEmpty) {
       return {
         'totalItems': 0,
@@ -218,9 +222,9 @@ class CalculationService {
     double totalValue = 0.0;
 
     for (var item in items) {
-      totalQuantity += item.qte;
-      totalWeight += item.poids;
-      totalValue += item.mt;
+      totalQuantity += (item['qte'] as num?)?.toInt() ?? 0;
+      totalWeight += (item['poids'] as num?)?.toDouble() ?? 0.0;
+      totalValue += (item['mt'] as num?)?.toDouble() ?? 0.0;
     }
 
     final averagePrice = totalQuantity > 0

@@ -1,11 +1,13 @@
-import 'package:amrts_manager/core/imports.dart';
+import '../core/imports.dart';
 
 class InvoiceCard extends StatelessWidget {
-  final InvoiceModel invoice;
+  final Map<String, dynamic> invoice;
   final VoidCallback onView;
   final VoidCallback onEdit;
   final VoidCallback onPrint;
   final VoidCallback onDelete;
+  final Function(String)? onStatusUpdate; // إضافة callback لتحديث الحالة
+  final Function(bool)? onTypeUpdate; // إضافة callback لتغيير النوع
 
   const InvoiceCard({
     super.key,
@@ -14,206 +16,234 @@ class InvoiceCard extends StatelessWidget {
     required this.onEdit,
     required this.onPrint,
     required this.onDelete,
+    this.onStatusUpdate, // إضافة parameter جديد
+    this.onTypeUpdate, // إضافة parameter جديد
   });
 
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width > 600;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white, Colors.grey.shade50],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _getStatusColor().withValues(alpha: 0.2),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // شريط الحالة الجانبي
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: _getStatusColors(),
-                  ),
-                ),
+            Container(
+              width: 8,
+              height: isWide ? 90 : 120,
+              decoration: BoxDecoration(
+                color: _getStatusColor(),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // الصف الأول: اسم العميل والرقم
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              invoice.clientName,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF2D3748),
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: invoice.isLocal
-                                    ? Colors.green.withValues(alpha: 0.1)
-                                    : Colors.blue.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                invoice.isLocal
-                                    ? 'استيراد محلي'
-                                    : 'استيراد خارجي',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: invoice.isLocal
-                                      ? Colors.green.shade700
-                                      : Colors.blue.shade700,
+            const SizedBox(width: 14),
+            // المحتوى الرئيسي
+            Expanded(
+              child: isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // معلومات العميل ونوع الفاتورة
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                invoice['clientName'] ?? 'غير محدد',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1a202c),
+                                  height: 1.2,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              _buildTypeChip(),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Icon(Icons.schedule, size: 15, color: Colors.grey.shade500),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    invoice['date'] ?? 'غير محدد',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // رقم الفاتورة والحالة
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                invoice['invoiceNumber'] ?? 'غير محدد',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              _buildStatusChip(),
+                              const SizedBox(height: 18),
+                              Text(
+                                '${(invoice['totalAmount'] ?? 0.0).toStringAsFixed(2)} DH',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2d3748),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        // Divider عمودي جميل
+                        Container(
+                          margin: const EdgeInsets.only(left: 5, right: 5, top: 0, bottom: 0),
+                          width: 3,
+                          height: 90,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade400,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        // الإجراءات
+                        Expanded(
+                          flex: 0,
+                          child: Align(
+                            alignment: Alignment.topRight,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    _buildGridAction(Icons.visibility, Colors.blue.shade600, onView),
+                                    _buildGridAction(Icons.edit, Colors.orange.shade600, onEdit),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    _buildGridAction(Icons.print, Colors.green.shade600, onPrint),
+                                    _buildGridAction(Icons.delete, Colors.red.shade600, onDelete),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            // اسم العميل ونوع الفاتورة
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    invoice['clientName'] ?? 'غير محدد',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1a202c),
+                                      height: 1.2,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  _buildTypeChip(),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // رقم الفاتورة والحالة
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    invoice['invoiceNumber'] ?? 'غير محدد',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  _buildStatusChip(),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            invoice.invoiceNumber,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade600,
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Icon(Icons.schedule, size: 14, color: Colors.grey.shade500),
+                            const SizedBox(width: 4),
+                            Text(
+                              invoice['date'] ?? 'غير محدد',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor().withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              invoice.status,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: _getStatusColor(),
+                            const Spacer(),
+                            Text(
+                              '${(invoice['totalAmount'] ?? 0.0).toStringAsFixed(2)} DH',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2d3748),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // الصف الثاني: التاريخ والمبلغ
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 16,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatDate(invoice.date),
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '${invoice.totalAmount.toStringAsFixed(0)} ر.س',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2D3748),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // أزرار الإجراءات
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildActionButton(
-                        icon: Icons.visibility_outlined,
-                        label: 'عرض',
-                        color: Colors.blue,
-                        onTap: onView,
-                      ),
-                      _buildActionButton(
-                        icon: Icons.edit_outlined,
-                        label: 'تعديل',
-                        color: Colors.orange,
-                        onTap: onEdit,
-                      ),
-                      _buildActionButton(
-                        icon: Icons.print_outlined,
-                        label: 'طباعة',
-                        color: Colors.green,
-                        onTap: onPrint,
-                      ),
-                      _buildActionButton(
-                        icon: Icons.delete_outline,
-                        label: 'حذف',
-                        color: Colors.red,
-                        onTap: onDelete,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                        const SizedBox(height: 10),
+                        // الإجراءات في صف واحد على الهاتف
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildGridAction(Icons.visibility, Colors.blue.shade600, onView),
+                            _buildGridAction(Icons.edit, Colors.orange.shade600, onEdit),
+                            _buildGridAction(Icons.print, Colors.green.shade600, onPrint),
+                            _buildGridAction(Icons.delete, Colors.red.shade600, onDelete),
+                          ],
+                        ),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -221,66 +251,204 @@ class InvoiceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildTypeChip() {
+    final bool isLocal = invoice['isLocal'] ?? true;
+    return Builder(
+      builder: (context) => GestureDetector(
+        onTap: () => _showTypePopup(context, isLocal),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: isLocal
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.blue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            isLocal ? 'محلي' : 'خارجي',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: isLocal ? Colors.green.shade700 : Colors.blue.shade700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip() {
+    return Builder(
+      builder: (context) => GestureDetector(
+        onTap: () => _showStatusPopup(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: _getStatusColor().withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                invoice['status'] ?? 'غير محدد',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: _getStatusColor(),
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(Icons.arrow_drop_down, size: 12, color: _getStatusColor()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showStatusPopup(BuildContext context) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      items: [
+        _buildStatusMenuItem('Terminée', Colors.green),
+        _buildStatusMenuItem('En attente', Colors.orange),
+        _buildStatusMenuItem('Brouillon', Colors.grey),
+      ],
+    ).then((selectedStatus) {
+      if (selectedStatus != null && onStatusUpdate != null) {
+        onStatusUpdate!(selectedStatus);
+      }
+    });
+  }
+
+  PopupMenuItem<String> _buildStatusMenuItem(String status, Color color) {
+    final bool isCurrentStatus = invoice['status'] == status;
+    return PopupMenuItem<String>(
+      value: status,
+      child: Row(
+        children: [
+          Icon(
+            isCurrentStatus ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color: isCurrentStatus ? color : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            status,
+            style: TextStyle(
+              color: isCurrentStatus ? color : Colors.black87,
+              fontWeight: isCurrentStatus ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTypePopup(BuildContext context, bool isLocal) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<bool>(
+      context: context,
+      position: position,
+      items: [
+        _buildTypeMenuItem(true, 'محلي', Colors.green),
+        _buildTypeMenuItem(false, 'خارجي', Colors.blue),
+      ],
+    ).then((selectedType) {
+      if (selectedType != null && onTypeUpdate != null) {
+        onTypeUpdate!(selectedType);
+      }
+    });
+  }
+
+  PopupMenuItem<bool> _buildTypeMenuItem(
+    bool value,
+    String label,
+    Color color,
+  ) {
+    final bool isCurrent = (invoice['isLocal'] ?? true) == value;
+    return PopupMenuItem<bool>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(
+            isCurrent ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color: isCurrent ? color : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: isCurrent ? color : Colors.black87,
+              fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridAction(IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+          color: color.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
+        child: Icon(icon, size: 20, color: color),
       ),
     );
   }
 
-  List<Color> _getStatusColors() {
-    switch (invoice.status) {
-      case 'مكتملة':
-        return [Colors.green.shade400, Colors.green.shade600];
-      case 'في الانتظار':
-        return [Colors.orange.shade400, Colors.orange.shade600];
-      case 'مسودة':
-        return [Colors.grey.shade400, Colors.grey.shade600];
-      default:
-        return [Colors.blue.shade400, Colors.blue.shade600];
-    }
-  }
-
   Color _getStatusColor() {
-    switch (invoice.status) {
-      case 'مكتملة':
-        return Colors.green.shade700;
-      case 'في الانتظار':
-        return Colors.orange.shade700;
-      case 'مسودة':
-        return Colors.grey.shade700;
+    final String status = invoice['status'] ?? '';
+    switch (status) {
+      case 'Terminée':
+        return Colors.green.shade600;
+      case 'En attente':
+        return Colors.orange.shade600;
+      case 'Brouillon':
+        return Colors.grey.shade600;
       default:
-        return Colors.blue.shade700;
+        return Colors.blue.shade600;
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
+  // String _formatDate(DateTime? date) {
+  //   if (date == null) return 'غير محدد';
+  //   return '${date.day}/${date.month}/${date.year} | ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  // }
 }

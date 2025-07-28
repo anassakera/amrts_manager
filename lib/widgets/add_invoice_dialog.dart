@@ -1,5 +1,4 @@
-import 'package:amrts_manager/core/imports.dart';
-import '../screens/edit_invoice_screen.dart';
+import '../core/imports.dart';
 
 class AddInvoiceDialog extends StatefulWidget {
   final bool isLocal;
@@ -12,16 +11,18 @@ class AddInvoiceDialog extends StatefulWidget {
 
 class _AddInvoiceDialogState extends State<AddInvoiceDialog>
     with SingleTickerProviderStateMixin {
-  final _formKey = GlobalKey<FormState>();
-  final _clientController = TextEditingController();
-  final _numberController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _clientNameController;
+  late TextEditingController _invoiceNumberController;
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    _clientNameController = TextEditingController();
+    _invoiceNumberController = TextEditingController();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -30,25 +31,75 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
       CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
     _animationController.forward();
-
-    // إنشاء رقم فاتورة تلقائي
-    _generateInvoiceNumber();
-  }
-
-  void _generateInvoiceNumber() {
-    final year = DateTime.now().year;
-    final prefix = widget.isLocal ? 'LOC' : 'INT';
-    final number = DateTime.now().millisecondsSinceEpoch % 1000;
-    _numberController.text =
-        '$prefix-$year-${number.toString().padLeft(3, '0')}';
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _clientController.dispose();
-    _numberController.dispose();
+    _clientNameController.dispose();
+    _invoiceNumberController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDateTime(BuildContext context) async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: widget.isLocal
+                  ? Colors.green.shade600
+                  : Colors.blue.shade600,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (!mounted) return;
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        // ignore: use_build_context_synchronously
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_selectedDate),
+        builder: (context, child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: ColorScheme.light(
+                primary: widget.isLocal
+                    ? Colors.green.shade600
+                    : Colors.blue.shade600,
+                onPrimary: Colors.white,
+                surface: Colors.white,
+                onSurface: Colors.black,
+              ),
+              dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+            ),
+            child: child!,
+          );
+        },
+      );
+      if (!mounted) return;
+      if (pickedTime != null) {
+        setState(() {
+          _selectedDate = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+        });
+      }
+    }
   }
 
   @override
@@ -148,7 +199,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                     children: [
                       // حقل اسم العميل
                       _buildTextField(
-                        controller: _clientController,
+                        controller: _clientNameController,
                         label: 'اسم العميل',
                         icon: Icons.person_outline,
                         validator: (value) {
@@ -163,7 +214,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
 
                       // حقل رقم الفاتورة
                       _buildTextField(
-                        controller: _numberController,
+                        controller: _invoiceNumberController,
                         label: 'رقم الفاتورة',
                         icon: Icons.numbers_outlined,
                         validator: (value) {
@@ -176,51 +227,71 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
 
                       const SizedBox(height: 20),
 
-                      // حقل التاريخ
-                      GestureDetector(
-                        onTap: _selectDate,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today_outlined,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'تاريخ الفاتورة',
-                                      style: TextStyle(
-                                        fontSize: 12,
+                      // حقل التاريخ والوقت
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => _pickDateTime(context),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today_outlined,
                                         color: Colors.grey.shade600,
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'تاريخ ووقت الفاتورة',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year} | ${_selectedDate.hour}:${_selectedDate.minute.toString().padLeft(2, '0')}',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                              Icon(
-                                Icons.arrow_drop_down,
-                                color: Colors.grey.shade600,
+                            ),
+                            Container(
+                              height: 60,
+                              width: 1,
+                              color: Colors.grey.shade300,
+                            ),
+                            IconButton(
+                              onPressed: () => _pickDateTime(context),
+                              icon: Icon(
+                                Icons.edit_calendar_outlined,
+                                color: widget.isLocal
+                                    ? Colors.green.shade600
+                                    : Colors.blue.shade600,
                               ),
-                            ],
-                          ),
+                              tooltip: 'تعديل التاريخ والوقت',
+                            ),
+                          ],
                         ),
                       ),
 
@@ -254,7 +325,32 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                           const SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: _createInvoice,
+                              onPressed: () async {
+                                if (_formKey.currentState!.validate()) {
+                                  final newInvoice =
+                                      await Navigator.push<
+                                        Map<String, dynamic>
+                                      >(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              SmartDocumentScreen(
+                                                isLocal: widget.isLocal,
+                                                clientName:
+                                                    _clientNameController.text,
+                                                invoiceNumber:
+                                                    _invoiceNumberController
+                                                        .text,
+                                                date: _selectedDate,
+                                              ),
+                                        ),
+                                      );
+                                  if (!(context.mounted)) return;
+                                  if (newInvoice != null) {
+                                    Navigator.pop(context, newInvoice);
+                                  }
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: widget.isLocal
                                     ? Colors.green.shade600
@@ -290,10 +386,10 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
   }
 
   Widget _buildTextField({
-    required TextEditingController controller,
     required String label,
     required IconData icon,
-    required String? Function(String?) validator,
+    required TextEditingController controller,
+    String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
@@ -320,94 +416,6 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
             width: 2,
           ),
         ),
-      ),
-    );
-  }
-
-  Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: widget.isLocal
-                  ? Colors.green.shade600
-                  : Colors.blue.shade600,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
-  Future<void> _createInvoice() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    // Create the invoice
-    final invoice = InvoiceModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      clientName: _clientController.text,
-      invoiceNumber: _numberController.text,
-      date: _selectedDate,
-      isLocal: widget.isLocal,
-      summary: InvoiceSummary(
-        factureNumber: _numberController.text,
-        transit: 0.0,
-        droitDouane: 0.0,
-        chequeChange: 0.0,
-        freiht: 0.0,
-        autres: 0.0,
-        total: 0.0,
-        txChange: 1.0,
-        poidsTotal: 0.0,
-      ),
-    );
-
-    // Close the dialog first
-    if (!mounted) return;
-    final navigator = Navigator.of(context);
-    navigator.pop();
-    
-    // Wait for the next frame to ensure the dialog is closed
-    await Future.delayed(Duration.zero);
-    
-    // Get the current scaffold messenger before any async operations
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
-    // Navigate to the edit screen
-    final result = await navigator.push(
-      MaterialPageRoute(
-        builder: (context) => SmartDocumentScreen(invoice: invoice),
-      ),
-    );
-    
-    if (result is! InvoiceModel) return;
-    
-    // Add the invoice to the provider
-    final provider = Provider.of<InvoiceProvider>(
-      context,
-      listen: false,
-    );
-    
-    provider.addInvoice(result);
-    
-    // Show success message
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: const Text('تم إنشاء الفاتورة بنجاح'),
-        backgroundColor: widget.isLocal ? Colors.green : Colors.blue,
       ),
     );
   }
