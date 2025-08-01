@@ -28,6 +28,7 @@ export '../services/calculation_service.dart';
 export '../widgets/home_screen_widgets.dart';
 export '../widgets/invoice_card.dart';
 export '../widgets/add_invoice_dialog.dart';
+export '../widgets/view_invoice_dialog.dart';
 
 // lib
 export '../test/test.dart';

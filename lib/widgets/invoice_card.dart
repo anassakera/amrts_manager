@@ -34,7 +34,7 @@ class InvoiceCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha:0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -425,7 +425,7 @@ class InvoiceCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.10),
+          color: color.withValues(alpha:0.10),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, size: 20, color: color),

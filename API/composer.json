@@ -1,0 +1,43 @@
+{
+    "name": "amrts/manager-api",
+    "description": "API backend لنظام إدارة المشتريات والمبيعات والمخزون والإنتاج والمعاملات المالية",
+    "type": "project",
+    "keywords": ["api", "php", "mysql", "inventory", "management"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "AMRTS Team",
+            "email": "info@amrtech.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "ext-pdo": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AMRTS\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AMRTS\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "post-install-cmd": [
+            "echo 'API installation completed successfully!'"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+} 
