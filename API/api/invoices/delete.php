@@ -1,27 +1,52 @@
 <?php
 require_once '../../config/cors.php';
 require_once '../../config/database.php';
-require_once '../../models/Invoice.php';
 
-$database = new Database();
-$db = $database->getConnection();
+if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
 
-$invoice = new Invoice($db);
+$id = $_GET['id'] ?? null;
 
-$data = json_decode(file_get_contents("php://input"));
-
-if(!empty($data->id)) {
-    $invoice->id = $data->id;
-
-    if($invoice->delete()) {
-        http_response_code(200);
-        echo json_encode(array("message" => "Invoice was deleted successfully."));
-    } else {
-        http_response_code(503);
-        echo json_encode(array("message" => "Unable to delete invoice."));
-    }
-} else {
+if (!$id) {
     http_response_code(400);
-    echo json_encode(array("message" => "Unable to delete invoice. ID is required."));
+    echo json_encode(['success' => false, 'message' => 'Invoice ID is required']);
+    exit;
+}
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    // حذف الفاتورة (سيتم حذف العناصر والملخص تلقائياً بسبب CASCADE)
+    $query = "DELETE FROM invoices WHERE id = ?";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$id]);
+    
+    if ($stmt->rowCount() == 0) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Invoice not found']);
+        exit;
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'Invoice deleted successfully'
+    ]);
+    
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Database error: ' . $e->getMessage()
+    ]);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error: ' . $e->getMessage()
+    ]);
 }
 ?> 

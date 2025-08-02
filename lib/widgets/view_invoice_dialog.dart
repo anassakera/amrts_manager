@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import '../core/imports.dart';
 
 class ViewInvoiceDialog extends StatefulWidget {
   final Map<String, dynamic> invoice;
@@ -55,6 +55,9 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    final currentLang = languageProvider.currentLanguage;
+    
     final items = widget.invoice['items'] as List<dynamic>? ?? [];
     final summary = widget.invoice['summary'] as Map<String, dynamic>? ?? {};
     final status = widget.invoice['status'] ?? '';
@@ -89,7 +92,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                     Icon(Icons.receipt_long, color: Colors.white, size: 28),
                     const SizedBox(width: 10),
                     Text(
-                      'فاتورة رقم: ${widget.invoice['invoiceNumber'] ?? 'غير محدد'}',
+                      '${AppTranslations.get('invoice_number', currentLang)}: ${widget.invoice['invoiceNumber'] ?? AppTranslations.get('not_specified', currentLang)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -122,7 +125,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.white),
                       onPressed: () => Navigator.pop(context),
-                      tooltip: 'إغلاق',
+                      tooltip: AppTranslations.get('close', currentLang),
                     ),
                   ],
                 ),
@@ -140,7 +143,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              widget.invoice['clientName'] ?? 'غير محدد',
+                              widget.invoice['clientName'] ?? AppTranslations.get('not_specified', currentLang),
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -154,7 +157,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                           Icon(Icons.calendar_today, color: Colors.grey.shade500, size: 16),
                           const SizedBox(width: 4),
                           Text(
-                            widget.invoice['date'] ?? 'غير محدد',
+                            widget.invoice['date'] ?? AppTranslations.get('not_specified', currentLang),
                             style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                           ),
                         ],
@@ -173,7 +176,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              isLocal ? 'محلي' : 'خارجي',
+                              isLocal ? AppTranslations.get('local', currentLang) : AppTranslations.get('external', currentLang),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
@@ -200,9 +203,9 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                       if (items.isNotEmpty) ...[
                         Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          child: const Text(
-                            'العناصر',
-                            style: TextStyle(
+                          child: Text(
+                            AppTranslations.get('items', currentLang),
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                               color: Color(0xFF1a202c),
@@ -216,10 +219,10 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                             IconButton(
                               onPressed: _scrollLeft,
                               icon: Icon(Icons.arrow_left, color: Colors.blue.shade600),
-                              tooltip: 'تمرير لليسار',
+                              tooltip: AppTranslations.get('scroll_left', currentLang),
                             ),
                             Text(
-                              'استخدم الأزرار للتنقل بين الأعمدة',
+                              AppTranslations.get('use_buttons_to_navigate', currentLang),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
@@ -228,7 +231,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                             IconButton(
                               onPressed: _scrollRight,
                               icon: Icon(Icons.arrow_right, color: Colors.blue.shade600),
-                              tooltip: 'تمرير لليمين',
+                              tooltip: AppTranslations.get('scroll_right', currentLang),
                             ),
                           ],
                         ),
@@ -243,15 +246,15 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                             scrollDirection: Axis.horizontal,
                             child: DataTable(
                               headingRowColor: WidgetStateProperty.all(Colors.blue.shade50),
-                              columns: const [
-                                DataColumn(label: Text('المرجع', style: TextStyle(fontSize: 12))),
-                                DataColumn(label: Text('الصنف', style: TextStyle(fontSize: 12))),
-                                DataColumn(label: Text('الكمية', style: TextStyle(fontSize: 12))),
-                                DataColumn(label: Text('الوزن', style: TextStyle(fontSize: 12))),
-                                DataColumn(label: Text('سعر القطعة', style: TextStyle(fontSize: 12))),
-                                DataColumn(label: Text('سعر الشراء', style: TextStyle(fontSize: 12))),
-                                DataColumn(label: Text('مصروفات أخرى', style: TextStyle(fontSize: 12))),
-                                DataColumn(label: Text('الإجمالي', style: TextStyle(fontSize: 12))),
+                              columns: [
+                                DataColumn(label: Text(AppTranslations.get('reference', currentLang), style: const TextStyle(fontSize: 12))),
+                                DataColumn(label: Text(AppTranslations.get('category', currentLang), style: const TextStyle(fontSize: 12))),
+                                DataColumn(label: Text(AppTranslations.get('quantity', currentLang), style: const TextStyle(fontSize: 12))),
+                                DataColumn(label: Text(AppTranslations.get('weight', currentLang), style: const TextStyle(fontSize: 12))),
+                                DataColumn(label: Text(AppTranslations.get('unit_price_header', currentLang), style: const TextStyle(fontSize: 12))),
+                                DataColumn(label: Text(AppTranslations.get('purchase_price_header', currentLang), style: const TextStyle(fontSize: 12))),
+                                DataColumn(label: Text(AppTranslations.get('other_expenses_header', currentLang), style: const TextStyle(fontSize: 12))),
+                                DataColumn(label: Text(AppTranslations.get('total_header', currentLang), style: const TextStyle(fontSize: 12))),
                               ],
                               rows: items
                                   .map<DataRow>(
@@ -279,9 +282,9 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                       if (summary.isNotEmpty) ...[
                         Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          child: const Text(
-                            'ملخص الفاتورة',
-                            style: TextStyle(
+                          child: Text(
+                            AppTranslations.get('invoice_summary', currentLang),
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                               color: Color(0xFF1a202c),
@@ -300,14 +303,14 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                             runSpacing: 8,
                             spacing: 16,
                             children: [
-                              _summaryItem('رقم الفاتورة الجمركية', summary['factureNumber']),
-                              _summaryItem('الترانزيت', summary['transit']),
-                              _summaryItem('الجمركة', summary['droitDouane']),
-                              _summaryItem('شيك الصرف', summary['chequeChange']),
-                              _summaryItem('الشحن', summary['freiht']),
-                              _summaryItem('مصروفات أخرى', summary['autres']),
-                              _summaryItem('إجمالي الوزن', summary['poidsTotal']),
-                              _summaryItem('إجمالي الفاتورة', summary['total']),
+                              _summaryItem(AppTranslations.get('customs_invoice_number', currentLang), summary['factureNumber']),
+                              _summaryItem(AppTranslations.get('transit', currentLang), summary['transit']),
+                              _summaryItem(AppTranslations.get('customs', currentLang), summary['droitDouane']),
+                              _summaryItem(AppTranslations.get('exchange_cheque', currentLang), summary['chequeChange']),
+                              _summaryItem(AppTranslations.get('freight', currentLang), summary['freiht']),
+                              _summaryItem(AppTranslations.get('other_expenses', currentLang), summary['autres']),
+                              _summaryItem(AppTranslations.get('total_weight_summary', currentLang), summary['poidsTotal']),
+                              _summaryItem(AppTranslations.get('total_invoice', currentLang), summary['total']),
                             ],
                           ),
                         ),
@@ -323,9 +326,9 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close, color: Colors.white, size: 18),
-                  label: const Text(
-                    'إغلاق',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  label: Text(
+                    AppTranslations.get('close', currentLang),
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,

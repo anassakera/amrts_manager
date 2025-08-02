@@ -1,5 +1,6 @@
 import '../core/imports.dart';
 
+
 class AddInvoiceDialog extends StatefulWidget {
   final bool isLocal;
 
@@ -104,6 +105,9 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
 
   @override
   Widget build(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    final currentLang = languageProvider.currentLanguage;
+    
     return Dialog(
       backgroundColor: Colors.transparent,
       child: ScaleTransition(
@@ -165,7 +169,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'إضافة فاتورة جديدة',
+                            AppTranslations.get('add_new_invoice', currentLang),
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -173,7 +177,9 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                             ),
                           ),
                           Text(
-                            widget.isLocal ? 'استيراد محلي' : 'استيراد خارجي',
+                            widget.isLocal 
+                                ? AppTranslations.get('local_import', currentLang) 
+                                : AppTranslations.get('external_import', currentLang),
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.white.withValues(alpha: 0.9),
@@ -200,11 +206,11 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                       // حقل اسم العميل
                       _buildTextField(
                         controller: _clientNameController,
-                        label: 'اسم العميل',
+                        label: AppTranslations.get('client_name', currentLang),
                         icon: Icons.person_outline,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'يرجى إدخال اسم العميل';
+                            return AppTranslations.get('please_enter_client_name', currentLang);
                           }
                           return null;
                         },
@@ -215,11 +221,11 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                       // حقل رقم الفاتورة
                       _buildTextField(
                         controller: _invoiceNumberController,
-                        label: 'رقم الفاتورة',
+                        label: AppTranslations.get('invoice_number', currentLang),
                         icon: Icons.numbers_outlined,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'يرجى إدخال رقم الفاتورة';
+                            return AppTranslations.get('please_enter_invoice_number', currentLang);
                           }
                           return null;
                         },
@@ -254,7 +260,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'تاريخ ووقت الفاتورة',
+                                              AppTranslations.get('invoice_date_time', currentLang),
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: Colors.grey.shade600,
@@ -289,7 +295,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                     ? Colors.green.shade600
                                     : Colors.blue.shade600,
                               ),
-                              tooltip: 'تعديل التاريخ والوقت',
+                              tooltip: AppTranslations.get('edit_date_time', currentLang),
                             ),
                           ],
                         ),
@@ -313,7 +319,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                 ),
                               ),
                               child: Text(
-                                'إلغاء',
+                                AppTranslations.get('cancel', currentLang),
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -362,9 +368,9 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: const Text(
-                                'إنشاء الفاتورة',
-                                style: TextStyle(
+                              child: Text(
+                                AppTranslations.get('create_invoice', currentLang),
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,

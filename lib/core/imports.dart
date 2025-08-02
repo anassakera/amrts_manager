@@ -19,6 +19,7 @@ export '../screens/production_screen.dart';
 export '../screens/purchases_screen.dart';
 export '../screens/sales_screen.dart';
 export '../screens/settings_screen.dart';
+export '../screens/drawer_screen.dart';
 
 
 // services

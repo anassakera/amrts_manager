@@ -203,7 +203,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       }
       _summary = newSummary;
       _recalculateAllItemsWithExchangeRate(
-        (newSummary['txChange'] as num).toDouble(),
+        _safeParseDouble(newSummary['txChange']),
       );
       _recalculateSummary();
     });
@@ -319,7 +319,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     _controllers['prixAchat']?.text = item['prixAchat'].toString();
     _controllers['autresCharges']?.text = item['autresCharges'].toString();
     _controllers['cuHt']?.text = item['cuHt'].toString();
-    final exchangeRate = (item['exchangeRate'] as num?)?.toDouble() ?? 0.0;
+    final exchangeRate = _safeParseDouble(item['exchangeRate']);
     if ((exchangeRate == 1.0 || exchangeRate == 0.0) &&
         defaultExchangeRate != null) {
       _controllers['exchangeRate']?.text = defaultExchangeRate.toString();
@@ -439,7 +439,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   double _calculateTotalAmount(List<Map<String, dynamic>> items) {
     double itemsTotal = items.fold(
       0.0,
-      (sum, item) => sum + ((item['mt'] as num?)?.toDouble() ?? 0.0),
+      (sum, item) => sum + _safeParseDouble(item['mt']),
     );
     return itemsTotal;
   }
@@ -1378,42 +1378,42 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatWeight(
-                  (item['poids'] as num).toDouble(),
+                  _safeParseDouble(item['poids']),
                 ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(
-                  (item['puPieces'] as num).toDouble(),
+                  _safeParseDouble(item['puPieces']),
                 ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(
-                  (item['mt'] as num).toDouble(),
+                  _safeParseDouble(item['mt']),
                 ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(
-                  (item['prixAchat'] as num).toDouble(),
+                  _safeParseDouble(item['prixAchat']),
                 ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(
-                  (item['autresCharges'] as num).toDouble(),
+                  _safeParseDouble(item['autresCharges']),
                 ),
                 flex: 2,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatCurrency(
-                  (item['cuHt'] as num).toDouble(),
+                  _safeParseDouble(item['cuHt']),
                 ),
                 flex: 2,
               ),
@@ -1482,8 +1482,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
   }
 
   Widget _buildEditRow(int index) {
-    final exchangeRateFromSummary =
-        (_summary['txChange'] as num?)?.toDouble() ?? 1.0;
+    final exchangeRateFromSummary = _safeParseDouble(_summary['txChange']);
     final isNew = index == _items.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (isNew || (_controllers['exchangeRate']?.text.isEmpty ?? true)) {
@@ -1867,7 +1866,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       listen: true,
                     ).currentLanguage,
                   ),
-                  value: (_summary['transit'] as num?)?.toDouble() ?? 0.0,
+                  value: _safeParseDouble(_summary['transit']),
                   icon: Icons.local_shipping,
                   calculationService: _calculationService,
                   isEditing: editingField.value == 'النقل',
@@ -1890,7 +1889,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       listen: true,
                     ).currentLanguage,
                   ),
-                  value: (_summary['droitDouane'] as num?)?.toDouble() ?? 0.0,
+                  value: _safeParseDouble(_summary['droitDouane']),
                   icon: Icons.account_balance,
                   calculationService: _calculationService,
                   isEditing: editingField.value == 'حق الجمرك',
@@ -1913,7 +1912,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       listen: true,
                     ).currentLanguage,
                   ),
-                  value: (_summary['chequeChange'] as num?)?.toDouble() ?? 0.0,
+                  value: _safeParseDouble(_summary['chequeChange']),
                   icon: Icons.money,
                   calculationService: _calculationService,
                   isEditing: editingField.value == 'شيك الصرف',
@@ -1936,7 +1935,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       listen: true,
                     ).currentLanguage,
                   ),
-                  value: (_summary['freiht'] as num?)?.toDouble() ?? 0.0,
+                  value: _safeParseDouble(_summary['freiht']),
                   icon: Icons.flight_takeoff,
                   calculationService: _calculationService,
                   isEditing: editingField.value == 'الشحن',
@@ -1959,7 +1958,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       listen: true,
                     ).currentLanguage,
                   ),
-                  value: (_summary['autres'] as num?)?.toDouble() ?? 0.0,
+                  value: _safeParseDouble(_summary['autres']),
                   icon: Icons.more_horiz,
                   calculationService: _calculationService,
                   isEditing: editingField.value == 'أخرى',
@@ -1982,7 +1981,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                       listen: true,
                     ).currentLanguage,
                   ),
-                  value: (_summary['txChange'] as num?)?.toDouble() ?? 0.0,
+                  value: _safeParseDouble(_summary['txChange']),
                   isCurrency: false,
                   icon: Icons.currency_exchange,
                   calculationService: _calculationService,
@@ -2133,6 +2132,21 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       height: height ?? double.infinity,
       color: const Color(0xFFE5E7EB),
     );
+  }
+
+  // دالة مساعدة لتحويل البيانات إلى double بشكل آمن
+  double _safeParseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    
+    if (value is num) {
+      return value.toDouble();
+    }
+    
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    
+    return 0.0;
   }
 }
 

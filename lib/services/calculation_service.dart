@@ -9,15 +9,15 @@ class CalculationService {
     // البيانات المدخلة يدوياً من المستخدم
     final refFournisseur = data['refFournisseur'] ?? '';
     final articles = data['articles'] ?? '';
-    final qte = (data['qte'] ?? 0).toInt();
+    final qte = _safeParseInt(data['qte']);
     final poids = double.parse(
-      ((data['poids'] ?? 0.0).toDouble()).toStringAsFixed(2),
+      (_safeParseDouble(data['poids'])).toStringAsFixed(2),
     );
     final puPieces = double.parse(
-      ((data['puPieces'] ?? 0.0).toDouble()).toStringAsFixed(2),
+      (_safeParseDouble(data['puPieces'])).toStringAsFixed(2),
     );
     final exchangeRate = double.parse(
-      ((data['exchangeRate'] ?? 1.0).toDouble()).toStringAsFixed(2),
+      (_safeParseDouble(data['exchangeRate'])).toStringAsFixed(2),
     );
 
     // الحسابات التلقائية
@@ -68,16 +68,20 @@ class CalculationService {
 
     // جمع المبالغ الإجمالية والأوزان من جميع العناصر
     for (var item in items) {
-      totalMt += (item['mt'] as num?)?.toDouble() ?? 0.0;
-      totalPoids += (item['poids'] as num?)?.toDouble() ?? 0.0;
+      // تحويل البيانات من String إلى double بشكل آمن
+      final mtValue = _safeParseDouble(item['mt']);
+      final poidsValue = _safeParseDouble(item['poids']);
+      
+      totalMt += mtValue;
+      totalPoids += poidsValue;
     }
 
     // حساب المجموع الكلي للمصاريف الإضافية
-    final grandTotal = ((summary['transit'] as num?)?.toDouble() ?? 0.0) +
-        ((summary['droitDouane'] as num?)?.toDouble() ?? 0.0) +
-        ((summary['chequeChange'] as num?)?.toDouble() ?? 0.0) +
-        ((summary['freiht'] as num?)?.toDouble() ?? 0.0) +
-        ((summary['autres'] as num?)?.toDouble() ?? 0.0);
+    final grandTotal = _safeParseDouble(summary['transit']) +
+        _safeParseDouble(summary['droitDouane']) +
+        _safeParseDouble(summary['chequeChange']) +
+        _safeParseDouble(summary['freiht']) +
+        _safeParseDouble(summary['autres']);
 
     return {
       'totalMt': double.parse(totalMt.toStringAsFixed(2)),
@@ -94,7 +98,7 @@ class CalculationService {
     if (totalMt == 0) return {'ratio': 0.0};
 
     final ratio = double.parse(
-        (((item['mt'] as num?)?.toDouble() ?? 0.0) / totalMt)
+        (_safeParseDouble(item['mt']) / totalMt)
             .toStringAsFixed(2));
     return {'ratio': ratio};
   }
@@ -108,23 +112,23 @@ class CalculationService {
     final ratio = calculateDistributionRatios(item, totalMt)['ratio'] ?? 0.0;
 
     final distributedTransit = double.parse(
-      (((summary['transit'] as num?)?.toDouble() ?? 0.0) * ratio)
+      (_safeParseDouble(summary['transit']) * ratio)
           .toStringAsFixed(2),
     );
     final distributedDroitDouane = double.parse(
-      (((summary['droitDouane'] as num?)?.toDouble() ?? 0.0) * ratio)
+      (_safeParseDouble(summary['droitDouane']) * ratio)
           .toStringAsFixed(2),
     );
     final distributedChequeChange = double.parse(
-      (((summary['chequeChange'] as num?)?.toDouble() ?? 0.0) * ratio)
+      (_safeParseDouble(summary['chequeChange']) * ratio)
           .toStringAsFixed(2),
     );
     final distributedFreiht = double.parse(
-      (((summary['freiht'] as num?)?.toDouble() ?? 0.0) * ratio)
+      (_safeParseDouble(summary['freiht']) * ratio)
           .toStringAsFixed(2),
     );
     final distributedAutres = double.parse(
-      (((summary['autres'] as num?)?.toDouble() ?? 0.0) * ratio)
+      (_safeParseDouble(summary['autres']) * ratio)
           .toStringAsFixed(2),
     );
 
@@ -136,8 +140,8 @@ class CalculationService {
               distributedAutres)
           .toStringAsFixed(2),
     );
-    final qte = (item['qte'] as num?)?.toInt() ?? 0;
-    final mt = (item['mt'] as num?)?.toDouble() ?? 0.0;
+    final qte = _safeParseInt(item['qte']);
+    final mt = _safeParseDouble(item['mt']);
     final finalCostPerUnit = qte > 0
         ? double.parse(
             ((mt + totalDistributedCost) / qte).toStringAsFixed(2),
@@ -222,9 +226,9 @@ class CalculationService {
     double totalValue = 0.0;
 
     for (var item in items) {
-      totalQuantity += (item['qte'] as num?)?.toInt() ?? 0;
-      totalWeight += (item['poids'] as num?)?.toDouble() ?? 0.0;
-      totalValue += (item['mt'] as num?)?.toDouble() ?? 0.0;
+      totalQuantity += _safeParseInt(item['qte']);
+      totalWeight += _safeParseDouble(item['poids']);
+      totalValue += _safeParseDouble(item['mt']);
     }
 
     final averagePrice = totalQuantity > 0
@@ -260,6 +264,36 @@ class CalculationService {
     }
 
     return recalculatedItems;
+  }
+
+  // دالة مساعدة لتحويل البيانات إلى double بشكل آمن
+  double _safeParseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    
+    if (value is num) {
+      return value.toDouble();
+    }
+    
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    
+    return 0.0;
+  }
+
+  // دالة مساعدة لتحويل البيانات إلى int بشكل آمن
+  int _safeParseInt(dynamic value) {
+    if (value == null) return 0;
+    
+    if (value is num) {
+      return value.toInt();
+    }
+    
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    
+    return 0;
   }
 }
 

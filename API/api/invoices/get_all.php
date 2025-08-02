@@ -2,26 +2,12 @@
 require_once '../../config/cors.php';
 require_once '../../config/database.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
-    exit;
-}
-
-$query = $_GET['q'] ?? '';
-
-if (empty($query)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Search query is required']);
-    exit;
-}
-
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    // البحث في الفواتير
-    $searchQuery = "
+    // جلب جميع الفواتير مع العناصر والملخص
+    $query = "
         SELECT 
             i.*,
             JSON_ARRAYAGG(
@@ -52,14 +38,12 @@ try {
         FROM invoices i
         LEFT JOIN invoice_items ii ON i.id = ii.invoice_id
         LEFT JOIN invoice_summary is ON i.id = is.invoice_id
-        WHERE i.clientName LIKE ? OR i.invoiceNumber LIKE ?
         GROUP BY i.id
         ORDER BY i.created_at DESC
     ";
     
-    $searchTerm = "%$query%";
-    $stmt = $pdo->prepare($searchQuery);
-    $stmt->execute([$searchTerm, $searchTerm]);
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
     $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // تحويل البيانات إلى التنسيق المطلوب

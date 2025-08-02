@@ -1,5 +1,6 @@
 import '../core/imports.dart';
 
+
 class InvoiceCard extends StatelessWidget {
   final Map<String, dynamic> invoice;
   final VoidCallback onView;
@@ -22,6 +23,9 @@ class InvoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    final currentLang = languageProvider.currentLanguage;
+    
     final isWide = MediaQuery.of(context).size.width > 600;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -68,7 +72,7 @@ class InvoiceCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                invoice['clientName'] ?? 'غير محدد',
+                                invoice['clientName'] ?? AppTranslations.get('not_specified', currentLang),
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
@@ -79,14 +83,14 @@ class InvoiceCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
-                              _buildTypeChip(),
+                              _buildTypeChip(currentLang),
                               const SizedBox(height: 10),
                               Row(
                                 children: [
                                   Icon(Icons.schedule, size: 15, color: Colors.grey.shade500),
                                   const SizedBox(width: 4),
                                   Text(
-                                    invoice['date'] ?? 'غير محدد',
+                                    invoice['date'] ?? AppTranslations.get('not_specified', currentLang),
                                     style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                                   ),
                                 ],
@@ -101,7 +105,7 @@ class InvoiceCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                invoice['invoiceNumber'] ?? 'غير محدد',
+                                invoice['invoiceNumber'] ?? AppTranslations.get('not_specified', currentLang),
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -109,7 +113,7 @@ class InvoiceCard extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              _buildStatusChip(),
+                              _buildStatusChip(currentLang),
                               const SizedBox(height: 18),
                               Text(
                                 '${(invoice['totalAmount'] ?? 0.0).toStringAsFixed(2)} DH',
@@ -174,7 +178,7 @@ class InvoiceCard extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    invoice['clientName'] ?? 'غير محدد',
+                                    invoice['clientName'] ?? AppTranslations.get('not_specified', currentLang),
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -185,7 +189,7 @@ class InvoiceCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
-                                  _buildTypeChip(),
+                                  _buildTypeChip(currentLang),
                                 ],
                               ),
                             ),
@@ -197,7 +201,7 @@ class InvoiceCard extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    invoice['invoiceNumber'] ?? 'غير محدد',
+                                    invoice['invoiceNumber'] ?? AppTranslations.get('not_specified', currentLang),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
@@ -205,7 +209,7 @@ class InvoiceCard extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 2),
-                                  _buildStatusChip(),
+                                  _buildStatusChip(currentLang),
                                 ],
                               ),
                             ),
@@ -217,7 +221,7 @@ class InvoiceCard extends StatelessWidget {
                             Icon(Icons.schedule, size: 14, color: Colors.grey.shade500),
                             const SizedBox(width: 4),
                             Text(
-                              invoice['date'] ?? 'غير محدد',
+                              invoice['date'] ?? AppTranslations.get('not_specified', currentLang),
                               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                             ),
                             const Spacer(),
@@ -251,11 +255,11 @@ class InvoiceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeChip() {
+  Widget _buildTypeChip(String currentLang) {
     final bool isLocal = invoice['isLocal'] ?? true;
     return Builder(
       builder: (context) => GestureDetector(
-        onTap: () => _showTypePopup(context, isLocal),
+        onTap: () => _showTypePopup(context, isLocal, currentLang),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
@@ -265,7 +269,7 @@ class InvoiceCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            isLocal ? 'محلي' : 'خارجي',
+            isLocal ? AppTranslations.get('local', currentLang) : AppTranslations.get('external', currentLang),
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w500,
@@ -277,10 +281,10 @@ class InvoiceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip() {
+  Widget _buildStatusChip(String currentLang) {
     return Builder(
       builder: (context) => GestureDetector(
-        onTap: () => _showStatusPopup(context),
+        onTap: () => _showStatusPopup(context, currentLang),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
@@ -291,7 +295,7 @@ class InvoiceCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                invoice['status'] ?? 'غير محدد',
+                invoice['status'] ?? AppTranslations.get('not_specified', currentLang),
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
@@ -307,7 +311,7 @@ class InvoiceCard extends StatelessWidget {
     );
   }
 
-  void _showStatusPopup(BuildContext context) {
+  void _showStatusPopup(BuildContext context, String currentLang) {
     final RenderBox button = context.findRenderObject() as RenderBox;
     final RenderBox overlay =
         Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
@@ -326,9 +330,9 @@ class InvoiceCard extends StatelessWidget {
       context: context,
       position: position,
       items: [
-        _buildStatusMenuItem('Terminée', Colors.green),
-        _buildStatusMenuItem('En attente', Colors.orange),
-        _buildStatusMenuItem('Brouillon', Colors.grey),
+        _buildStatusMenuItem('Terminée', Colors.green, currentLang),
+        _buildStatusMenuItem('En attente', Colors.orange, currentLang),
+        _buildStatusMenuItem('Brouillon', Colors.grey, currentLang),
       ],
     ).then((selectedStatus) {
       if (selectedStatus != null && onStatusUpdate != null) {
@@ -337,7 +341,7 @@ class InvoiceCard extends StatelessWidget {
     });
   }
 
-  PopupMenuItem<String> _buildStatusMenuItem(String status, Color color) {
+  PopupMenuItem<String> _buildStatusMenuItem(String status, Color color, String currentLang) {
     final bool isCurrentStatus = invoice['status'] == status;
     return PopupMenuItem<String>(
       value: status,
@@ -361,7 +365,7 @@ class InvoiceCard extends StatelessWidget {
     );
   }
 
-  void _showTypePopup(BuildContext context, bool isLocal) {
+  void _showTypePopup(BuildContext context, bool isLocal, String currentLang) {
     final RenderBox button = context.findRenderObject() as RenderBox;
     final RenderBox overlay =
         Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
@@ -380,8 +384,8 @@ class InvoiceCard extends StatelessWidget {
       context: context,
       position: position,
       items: [
-        _buildTypeMenuItem(true, 'محلي', Colors.green),
-        _buildTypeMenuItem(false, 'خارجي', Colors.blue),
+        _buildTypeMenuItem(true, AppTranslations.get('local', currentLang), Colors.green),
+        _buildTypeMenuItem(false, AppTranslations.get('external', currentLang), Colors.blue),
       ],
     ).then((selectedType) {
       if (selectedType != null && onTypeUpdate != null) {

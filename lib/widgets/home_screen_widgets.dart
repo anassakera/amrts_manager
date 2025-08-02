@@ -71,4 +71,21 @@ static Widget buildCustomTabBar(TabController controller, List<Tab> tabs) {
   );
 }
 
+// دالة مساعدة لإنشاء تبويب مع ترجمة
+static Tab buildTranslatedTab(BuildContext context, IconData icon, String translationKey) {
+  final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+  final currentLang = languageProvider.currentLanguage;
+  
+  return Tab(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 20),
+        SizedBox(height: 4),
+        Text(AppTranslations.get(translationKey, currentLang)),
+      ],
+    ),
+  );
+}
+
 }

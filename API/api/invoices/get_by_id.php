@@ -2,17 +2,17 @@
 require_once '../../config/cors.php';
 require_once '../../config/database.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit;
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
+$id = $_GET['id'] ?? null;
 
-if (!$input) {
+if (!$id) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Invalid JSON data']);
+    echo json_encode(['success' => false, 'message' => 'Invoice ID is required']);
     exit;
 }
 
@@ -20,76 +20,7 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    $pdo->beginTransaction();
-    
-    // إضافة الفاتورة الرئيسية
-    $invoiceQuery = "
-        INSERT INTO invoices (id, clientName, invoiceNumber, date, isLocal, totalAmount, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ";
-    
-    $invoiceStmt = $pdo->prepare($invoiceQuery);
-    $invoiceStmt->execute([
-        $input['id'],
-        $input['clientName'],
-        $input['invoiceNumber'],
-        $input['date'],
-        $input['isLocal'] ? 1 : 0,
-        $input['totalAmount'],
-        $input['status']
-    ]);
-    
-    // إضافة عناصر الفاتورة
-    if (isset($input['items']) && is_array($input['items'])) {
-        $itemQuery = "
-            INSERT INTO invoice_items (invoice_id, refFournisseur, articles, qte, poids, puPieces, exchangeRate, mt, prixAchat, autresCharges, cuHt)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ";
-        
-        $itemStmt = $pdo->prepare($itemQuery);
-        
-        foreach ($input['items'] as $item) {
-            $itemStmt->execute([
-                $input['id'],
-                $item['refFournisseur'],
-                $item['articles'],
-                $item['qte'],
-                $item['poids'],
-                $item['puPieces'],
-                $item['exchangeRate'],
-                $item['mt'],
-                $item['prixAchat'],
-                $item['autresCharges'],
-                $item['cuHt']
-            ]);
-        }
-    }
-    
-    // إضافة ملخص الفاتورة
-    if (isset($input['summary'])) {
-        $summaryQuery = "
-            INSERT INTO invoice_summary (invoice_id, factureNumber, transit, droitDouane, chequeChange, freiht, autres, total, txChange, poidsTotal)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ";
-        
-        $summaryStmt = $pdo->prepare($summaryQuery);
-        $summaryStmt->execute([
-            $input['id'],
-            $input['summary']['factureNumber'],
-            $input['summary']['transit'],
-            $input['summary']['droitDouane'],
-            $input['summary']['chequeChange'],
-            $input['summary']['freiht'],
-            $input['summary']['autres'],
-            $input['summary']['total'],
-            $input['summary']['txChange'],
-            $input['summary']['poidsTotal']
-        ]);
-    }
-    
-    $pdo->commit();
-    
-    // إرجاع الفاتورة المضافة
+    // جلب الفاتورة مع العناصر والملخص
     $query = "
         SELECT 
             i.*,
@@ -126,12 +57,20 @@ try {
     ";
     
     $stmt = $pdo->prepare($query);
-    $stmt->execute([$input['id']]);
+    $stmt->execute([$id]);
     $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
     
+    if (!$invoice) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Invoice not found']);
+        exit;
+    }
+    
+    // تحويل البيانات إلى التنسيق المطلوب
     $items = json_decode($invoice['items'], true);
     $summary = json_decode($invoice['summary'], true);
     
+    // إزالة العناصر الفارغة
     $items = array_filter($items, function($item) {
         return $item['refFournisseur'] !== null;
     });
@@ -150,23 +89,16 @@ try {
     
     echo json_encode([
         'success' => true,
-        'message' => 'Invoice created successfully',
         'data' => $formattedInvoice
     ]);
     
 } catch (PDOException $e) {
-    if (isset($pdo)) {
-        $pdo->rollback();
-    }
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Database error: ' . $e->getMessage()
     ]);
 } catch (Exception $e) {
-    if (isset($pdo)) {
-        $pdo->rollback();
-    }
     http_response_code(500);
     echo json_encode([
         'success' => false,
