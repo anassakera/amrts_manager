@@ -24,6 +24,7 @@ export '../screens/drawer_screen.dart';
 
 // services
 export '../services/calculation_service.dart';
+export '../services/number_formatting_service.dart';
 
 // widgets
 export '../widgets/home_screen_widgets.dart';

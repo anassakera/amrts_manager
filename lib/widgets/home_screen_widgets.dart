@@ -61,11 +61,20 @@ static Widget buildCustomTabBar(TabController controller, List<Tab> tabs) {
  static Tab buildCustomTab(IconData icon, String label) {
   return Tab(
     child: Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(icon, size: 20),
-        SizedBox(height: 4),
-        Text(label),
+        const SizedBox(height: 4),
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
       ],
     ),
   );
@@ -78,11 +87,20 @@ static Tab buildTranslatedTab(BuildContext context, IconData icon, String transl
   
   return Tab(
     child: Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(icon, size: 20),
-        SizedBox(height: 4),
-        Text(AppTranslations.get(translationKey, currentLang)),
+        const SizedBox(height: 4),
+        Flexible(
+          child: Text(
+            AppTranslations.get(translationKey, currentLang),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 10),
+          ),
+        ),
       ],
     ),
   );

@@ -148,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     // TabBar
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 15),
+                      margin: const EdgeInsets.symmetric(horizontal: 5),
                       child: _buildTabBar(),
                     ),
                     const SizedBox(height: 10),

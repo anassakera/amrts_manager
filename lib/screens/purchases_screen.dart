@@ -17,6 +17,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   List<Map<String, dynamic>> _invoices = [];
   bool _isSearching = false;
   String _searchQuery = '';
+  bool _showSearchBar = true; // للتحكم في إظهار/إخفاء صف البحث
 
   @override
   void initState() {
@@ -105,79 +106,130 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   }
 
   Widget _buildTopBar(String currentLang) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Row(
-        children: [
-          // TabBar
-          Expanded(
-            flex: 4,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blue.shade100),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TabBar(
-                controller: _tabController,
-                dividerColor: Colors.transparent,
-                indicator: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF1E40AF),
-                      Color(0xFF3B82F6),
-                      Color(0xFF60A5FA),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(15),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 768;
+
+    if (isDesktop) {
+      // تصميم الحاسوب - TabBar والبحث في نفس الصف
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          children: [
+            // TabBar
+            Expanded(
+              flex: 4,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.blue.shade100),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                      blurRadius: 8,
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: Colors.white,
-                unselectedLabelColor: const Color(0xFF64748B),
-                labelStyle: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.3,
-                ),
-                tabs: [
-                  Tab(text: AppTranslations.get('local_import', currentLang)),
-                  Tab(
-                    text: AppTranslations.get('external_import', currentLang),
+                child: TabBar(
+                  controller: _tabController,
+                  dividerColor: Colors.transparent,
+                  indicator: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF1E40AF),
+                        Color(0xFF3B82F6),
+                        Color(0xFF60A5FA),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: const Color(0xFF64748B),
+                  labelStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                  ),
+                  tabs: [
+                    Tab(text: AppTranslations.get('local_import', currentLang)),
+                    Tab(
+                      text: AppTranslations.get('external_import', currentLang),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          // صف البحث والفلتر
-          Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                // حقل البحث
-                Expanded(
-                  child: Container(
+            const SizedBox(width: 10),
+            // صف البحث والفلتر
+            Expanded(
+              flex: 3,
+              child: Row(
+                children: [
+                  // حقل البحث
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade100),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        onChanged: _filterInvoices,
+                        decoration: InputDecoration(
+                          hintText: AppTranslations.get(
+                            'search_invoice_or_client',
+                            currentLang,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Color(0xFF64748B),
+                          ),
+                          suffixIcon: _isSearching
+                              ? IconButton(
+                                  icon: Icon(
+                                    Icons.clear,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  onPressed: () {
+                                    _filterInvoices('');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // أيقونة الفلتر
+                  Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -190,39 +242,96 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                         ),
                       ],
                     ),
-                    child: TextField(
-                      onChanged: _filterInvoices,
-                      decoration: InputDecoration(
-                        hintText: AppTranslations.get(
-                          'search_invoice_or_client',
-                          currentLang,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Color(0xFF64748B),
-                        ),
-                        suffixIcon: _isSearching
-                            ? IconButton(
-                                icon: Icon(
-                                  Icons.clear,
-                                  color: Colors.grey.shade400,
-                                ),
-                                onPressed: () {
-                                  _filterInvoices('');
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
-                        ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.filter_list_rounded,
+                        color: Color(0xFF1E40AF),
                       ),
+                      tooltip: AppTranslations.get(
+                        'advanced_filter',
+                        currentLang,
+                      ),
+                      onPressed: () {
+                        // Removed print statement
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // تصميم الهاتف - TabBar في الأعلى والبحث في أسفله
+      return Column(
+        children: [
+          // صف TabBar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: [
+                // TabBar
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.blue.shade100),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      dividerColor: Colors.transparent,
+                      indicator: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF1E40AF),
+                            Color(0xFF3B82F6),
+                            Color(0xFF60A5FA),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: const Color(0xFF64748B),
+                      labelStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.3,
+                      ),
+                      tabs: [
+                        Tab(text: AppTranslations.get('local_import', currentLang)),
+                        Tab(
+                          text: AppTranslations.get('external_import', currentLang),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                // أيقونة الفلتر
+                const SizedBox(width: 8),
+                // أيقونة التحكم في إظهار/إخفاء البحث
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -237,25 +346,113 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                     ],
                   ),
                   child: IconButton(
-                    icon: const Icon(
-                      Icons.filter_list_rounded,
-                      color: Color(0xFF1E40AF),
+                    icon: Icon(
+                      _showSearchBar ? Icons.search_off : Icons.search,
+                      color: _showSearchBar ? Colors.red.shade600 : const Color(0xFF1E40AF),
                     ),
-                    tooltip: AppTranslations.get(
-                      'advanced_filter',
-                      currentLang,
-                    ),
+                    tooltip: _showSearchBar 
+                        ? AppTranslations.get('hide_search', currentLang)
+                        : AppTranslations.get('show_search', currentLang),
                     onPressed: () {
-                      print(_invoices);
+                      setState(() {
+                        _showSearchBar = !_showSearchBar;
+                        if (!_showSearchBar) {
+                          _filterInvoices(''); // مسح البحث عند الإخفاء
+                        }
+                      });
                     },
                   ),
                 ),
               ],
             ),
           ),
+          // صف البحث والفلتر (يظهر فقط عند _showSearchBar = true)
+          if (_showSearchBar)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  // حقل البحث
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade100),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        onChanged: _filterInvoices,
+                        decoration: InputDecoration(
+                          hintText: AppTranslations.get(
+                            'search_invoice_or_client',
+                            currentLang,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Color(0xFF64748B),
+                          ),
+                          suffixIcon: _isSearching
+                              ? IconButton(
+                                  icon: Icon(
+                                    Icons.clear,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  onPressed: () {
+                                    _filterInvoices('');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // أيقونة الفلتر
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade100),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.filter_list_rounded,
+                        color: Color(0xFF1E40AF),
+                      ),
+                      tooltip: AppTranslations.get(
+                        'advanced_filter',
+                        currentLang,
+                      ),
+                      onPressed: () {
+                        // Removed print statement
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
-      ),
-    );
+      );
+    }
   }
 
   Widget _buildInvoicesList({required bool isLocal}) {
@@ -435,7 +632,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         );
       }
     } catch (e) {
-      print('Error adding invoice: $e');
+      // Removed print statement
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -502,7 +699,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         );
       }
     } catch (e) {
-      print('Error updating invoice: $e');
+      // Removed print statement
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -537,7 +734,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         });
       }
     } catch (e) {
-      print('Error deleting invoice: $e');
+      // Removed print statement
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -606,7 +803,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         );
       }
     } catch (e) {
-      print('Error updating invoice status: $e');
+      // Removed print statement
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -682,7 +879,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         );
       }
     } catch (e) {
-      print('Error updating invoice type: $e');
+      // Removed print statement
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -714,7 +911,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         );
       }
     } catch (e) {
-      print('Error loading invoice details: $e');
+      // Removed print statement
       // استخدام البيانات المحلية في حال فشل جلب البيانات من API
       if (mounted) {
         showDialog(
@@ -741,7 +938,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         });
       }
     } catch (e) {
-      print('Error loading invoices: $e');
+      // Removed print statement
       // تظهر رسالة خطأ للمستخدم إذا فشل جلب البيانات
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -813,7 +1010,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
           AppTranslations.get(
             'do_you_want_to_print_invoice',
             currentLang,
-          ).replaceAll('{number}', invoice['invoiceNumber'] ?? ''),
+          ).replaceAll('{number}', (invoice['invoiceNumber'] ?? '').toString()),
         ),
         actions: [
           TextButton(
@@ -883,7 +1080,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${AppTranslations.get('invoice_number', currentLang)}: ${invoice['invoiceNumber']}',
+                    '${AppTranslations.get('invoice_number', currentLang)}: ${invoice['invoiceNumber']?.toString() ?? ''}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(
@@ -913,21 +1110,25 @@ class _InvoicesScreenState extends State<InvoicesScreen>
           ),
           ElevatedButton(
             onPressed: () async {
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
               await _deleteInvoiceById(invoice['id']);
               if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      AppTranslations.get(
-                        'invoice_deleted_successfully',
-                        currentLang,
+                navigator.pop();
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        AppTranslations.get(
+                          'invoice_deleted_successfully',
+                          currentLang,
+                        ),
                       ),
+                      backgroundColor: Colors.red.shade600,
+                      behavior: SnackBarBehavior.floating,
                     ),
-                    backgroundColor: Colors.red.shade600,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(

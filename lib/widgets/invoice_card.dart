@@ -105,7 +105,7 @@ class InvoiceCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                invoice['invoiceNumber'] ?? AppTranslations.get('not_specified', currentLang),
+                                (invoice['invoiceNumber']?.toString() ?? AppTranslations.get('not_specified', currentLang)),
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -116,7 +116,7 @@ class InvoiceCard extends StatelessWidget {
                               _buildStatusChip(currentLang),
                               const SizedBox(height: 18),
                               Text(
-                                '${(invoice['totalAmount'] ?? 0.0).toStringAsFixed(2)} DH',
+                                NumberFormattingService.formatCurrencySafe(invoice['totalAmount']),
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -201,7 +201,7 @@ class InvoiceCard extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    invoice['invoiceNumber'] ?? AppTranslations.get('not_specified', currentLang),
+                                    (invoice['invoiceNumber']?.toString() ?? AppTranslations.get('not_specified', currentLang)),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
@@ -226,7 +226,7 @@ class InvoiceCard extends StatelessWidget {
                             ),
                             const Spacer(),
                             Text(
-                              '${(invoice['totalAmount'] ?? 0.0).toStringAsFixed(2)} DH',
+                              NumberFormattingService.formatCurrencySafe(invoice['totalAmount']),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,

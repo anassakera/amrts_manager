@@ -1,6 +1,6 @@
 <?php
-require_once '../../config/cors.php';
-require_once '../../config/database.php';
+require_once __DIR__ . '/../../config/cors.php';
+require_once __DIR__ . '/../../config/database.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
     http_response_code(405);
@@ -17,7 +17,8 @@ if (!$id) {
 }
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $database = new Database();
+    $pdo = $database->getConnection();
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     // حذف الفاتورة (سيتم حذف العناصر والملخص تلقائياً بسبب CASCADE)

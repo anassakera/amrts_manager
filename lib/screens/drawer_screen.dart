@@ -63,141 +63,152 @@ class DrawerScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
-      child: Column(
-        children: [
-          // Profile Image
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        final currentLang = languageProvider.currentLanguage;
+        
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+          child: Column(
+            children: [
+              // Profile Image
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(40),
-              child: Image.asset(
-                'assets/images/photo.jpg',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.9),
-                          Colors.white.withValues(alpha: 0.7),
-                        ],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.person_rounded,
-                      size: 40,
-                      color: Color(0xFF1E40AF),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // User Info
-          const Text(
-            'أحمد محمد علي',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'مدير النظام',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-
-          // Status Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.circle, color: Color(0xFF10B981), size: 8),
-                SizedBox(width: 6),
-                Text(
-                  'متصل',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(40),
+                  child: Image.asset(
+                    'assets/images/photo.jpg',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white.withValues(alpha: 0.9),
+                              Colors.white.withValues(alpha: 0.7),
+                            ],
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          size: 40,
+                          color: Color(0xFF1E40AF),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+
+              // User Info
+              Text(
+                'Admin',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                AppTranslations.get('system_manager', currentLang),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+
+              // Status Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.circle, color: Color(0xFF10B981), size: 8),
+                    const SizedBox(width: 6),
+                    Text(
+                      AppTranslations.get('online', currentLang),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildNavigationSection() {
-    final navigationItems = [
-      {
-        'icon': Icons.shopping_cart_rounded,
-        'title': 'نقطة البيع',
-        'subtitle': 'بيع المنتجات للعملاء',
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'icon': Icons.inventory_2_rounded,
-        'title': 'المنتجات',
-        'subtitle': 'إدارة المخزون والمنتجات',
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'icon': Icons.receipt_rounded,
-        'title': 'فواتير المبيعات',
-        'subtitle': 'إدارة فواتير المبيعات',
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'icon': Icons.shopping_basket_rounded,
-        'title': 'فواتير الشراء',
-        'subtitle': 'إدارة فواتير الشراء',
-        'color': const Color(0xFFDC2626),
-      },
-      {
-        'icon': Icons.analytics_rounded,
-        'title': 'التقارير',
-        'subtitle': 'تقارير المبيعات والأرباح',
-        'color': const Color(0xFF8B5CF6),
-      },
-      {
-        'icon': Icons.people_alt_rounded,
-        'title': 'العملاء',
-        'subtitle': 'إدارة العملاء',
-        'color': const Color(0xFF2563EB),
-      },
-    ];
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        final currentLang = languageProvider.currentLanguage;
+        
+        final navigationItems = [
+          {
+            'icon': Icons.shopping_cart_rounded,
+            'title': AppTranslations.get('purchases', currentLang),
+            'subtitle': AppTranslations.get('purchases_subtitle', currentLang),
+            'color': const Color(0xFF3B82F6),
+            'key': 'purchases',
+          },
+          {
+            'icon': Icons.point_of_sale_rounded,
+            'title': AppTranslations.get('sales', currentLang),
+            'subtitle': AppTranslations.get('sales_subtitle', currentLang),
+            'color': const Color(0xFF10B981),
+            'key': 'sales',
+          },
+          {
+            'icon': Icons.inventory_2_rounded,
+            'title': AppTranslations.get('inventory', currentLang),
+            'subtitle': AppTranslations.get('inventory_subtitle', currentLang),
+            'color': const Color(0xFFF59E0B),
+            'key': 'inventory',
+          },
+          {
+            'icon': Icons.factory_rounded,
+            'title': AppTranslations.get('production', currentLang),
+            'subtitle': AppTranslations.get('production_subtitle', currentLang),
+            'color': const Color(0xFFDC2626),
+            'key': 'production',
+          },
+          {
+            'icon': Icons.account_balance_wallet_rounded,
+            'title': AppTranslations.get('financial_transactions', currentLang),
+            'subtitle': AppTranslations.get('financial_transactions_subtitle', currentLang),
+            'color': const Color(0xFF8B5CF6),
+            'key': 'financial_transactions',
+          },
+        ];
 
-    return Column(
-      children: navigationItems
-          .map((item) => _buildNavigationItem(item))
-          .toList(),
+        return Column(
+          children: navigationItems
+              .map((item) => _buildNavigationItem(item))
+              .toList(),
+        );
+      },
     );
   }
 
@@ -210,28 +221,25 @@ class DrawerScreen extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: () {
-              // Handle navigation based on title
-              String title = item['title'];
+              // Handle navigation based on key
+              String key = item['key'];
               int selectedIndex = 0;
 
-              switch (title) {
-                case 'نقطة البيع':
+              switch (key) {
+                case 'purchases':
                   selectedIndex = 0;
                   break;
-                case 'المنتجات':
+                case 'sales':
                   selectedIndex = 1;
                   break;
-                case 'فواتير المبيعات':
+                case 'inventory':
                   selectedIndex = 2;
                   break;
-                case 'فواتير الشراء':
+                case 'production':
                   selectedIndex = 3;
                   break;
-                case 'التقارير':
+                case 'financial_transactions':
                   selectedIndex = 4;
-                  break;
-                case 'العملاء':
-                  selectedIndex = 5;
                   break;
               }
 
@@ -299,35 +307,38 @@ class DrawerScreen extends StatelessWidget {
   }
 
   Widget _buildSettingsSection() {
-    final settingsItems = [
-      {
-        'icon': Icons.settings_rounded,
-        'title': 'الإعدادات',
-        'subtitle': 'إعدادات النظام',
-        'color': const Color(0xFF64748B),
-      },
-      {
-        'icon': Icons.notifications_rounded,
-        'title': 'الإشعارات',
-        'subtitle': 'إدارة الإشعارات',
-        'color': const Color(0xFFEF4444),
-        'badge': '3',
-      },
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        final currentLang = languageProvider.currentLanguage;
+        
+        final settingsItems = [
+          {
+            'icon': Icons.settings_rounded,
+            'title': AppTranslations.get('settings', currentLang),
+            'subtitle': 'إعدادات النظام',
+            'color': const Color(0xFF64748B),
+          },
+          {
+            'icon': Icons.notifications_rounded,
+            'title': AppTranslations.get('notifications', currentLang),
+            'subtitle': 'إدارة الإشعارات',
+            'color': const Color(0xFFEF4444),
+            'badge': '3',
+          },
+          {
+            'icon': Icons.help_rounded,
+            'title': AppTranslations.get('help', currentLang),
+            'subtitle': 'الدعم والمساعدة',
+            'color': const Color(0xFF7C3AED),
+          },
+        ];
 
-      {
-        'icon': Icons.help_rounded,
-        'title': 'المساعدة',
-        'subtitle': 'الدعم والمساعدة',
-        'color': const Color(0xFF7C3AED),
+        return Column(
+          children: settingsItems
+              .map((item) => _buildSettingsItem(context, item))
+              .toList(),
+        );
       },
-    ];
-
-    return Builder(
-      builder: (context) => Column(
-        children: settingsItems
-            .map((item) => _buildSettingsItem(context, item))
-            .toList(),
-      ),
     );
   }
 
@@ -341,30 +352,46 @@ class DrawerScreen extends StatelessWidget {
           onTap: () {
             // Handle settings navigation based on title
             String title = item['title'];
-            switch (title) {
-              case 'الإعدادات':
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-                break;
-              case 'الإشعارات':
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-                break;
-              case 'المساعدة':
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                );
-                break;
+            if (title == AppTranslations.get('settings', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            } else if (title == AppTranslations.get('notifications', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            } else if (title == AppTranslations.get('help', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
             }
+            //       ),
+            //     );
+            //     break;
+            //   case 'الإشعارات':
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => const SettingsScreen(),
+            //       ),
+            //     );
+            //     break;
+            //   case 'المساعدة':
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (context) => const SettingsScreen()),
+            //     );
+            //     break;
+            // }
           },
           child: Container(
             padding: const EdgeInsets.all(12),
@@ -441,80 +468,86 @@ class DrawerScreen extends StatelessWidget {
   }
 
   Widget _buildFooter(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          // Version Info
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.info_rounded, size: 16, color: Color(0xFF64748B)),
-                SizedBox(width: 8),
-                Text(
-                  'الإصدار 1.0.0',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                    fontWeight: FontWeight.w500,
-                  ),
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        final currentLang = languageProvider.currentLanguage;
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              // Version Info
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Logout Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // Handle logout
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('تسجيل الخروج'),
-                    content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('إلغاء'),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.info_rounded, size: 16, color: Color(0xFF64748B)),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppTranslations.get('version', currentLang),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // Handle logout logic
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEF4444),
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('تسجيل الخروج'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              icon: const Icon(Icons.logout_rounded, size: 18),
-              label: const Text('تسجيل الخروج'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(height: 16),
+
+              // Logout Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Handle logout
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text(AppTranslations.get('logout', currentLang)),
+                        content: Text(AppTranslations.get('logout_confirmation', currentLang)),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(AppTranslations.get('cancel', currentLang)),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              // Handle logout logic
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF4444),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: Text(AppTranslations.get('logout', currentLang)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: Text(AppTranslations.get('logout', currentLang)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'number_formatting_service.dart';
+
 class CalculationService {
   // حساب قيم العنصر الواحد
   Map<String, dynamic> calculateItemValues(
@@ -193,20 +195,38 @@ class CalculationService {
       errors['puPieces'] = 'سعر القطعة يجب أن يكون أكبر من صفر';
     }
 
-    return errors;
+        return errors;
   }
 
   // تنسيق الأرقام للعرض
   String formatCurrency(double amount) {
-    return amount.toStringAsFixed(2);
+    return NumberFormattingService.formatCurrency(amount);
+  }
+
+  // تنسيق العملة مع معالجة آمنة للأنواع المختلفة
+  String formatCurrencySafe(dynamic amount) {
+    return NumberFormattingService.formatCurrencySafe(amount);
   }
 
   String formatWeight(double weight) {
-    return weight.toStringAsFixed(2);
+    return NumberFormattingService.formatWeight(weight);
+  }
+
+  String formatWeightSafe(dynamic weight) {
+    return NumberFormattingService.formatWeightSafe(weight);
   }
 
   String formatQuantity(int quantity) {
-    return quantity.toString();
+    return NumberFormattingService.formatQuantity(quantity);
+  }
+
+  String formatQuantitySafe(dynamic quantity) {
+    return NumberFormattingService.formatQuantitySafe(quantity);
+  }
+
+  // دالة لتنسيق الأرقام الكبيرة بشكل مختصر (مثل 1.2M, 3.4K)
+  String formatCompactNumber(double number) {
+    return NumberFormattingService.formatCompact(number);
   }
 
   // حساب إحصائيات سريعة

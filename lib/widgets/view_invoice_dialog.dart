@@ -92,7 +92,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                     Icon(Icons.receipt_long, color: Colors.white, size: 28),
                     const SizedBox(width: 10),
                     Text(
-                      '${AppTranslations.get('invoice_number', currentLang)}: ${widget.invoice['invoiceNumber'] ?? AppTranslations.get('not_specified', currentLang)}',
+                                             '${AppTranslations.get('invoice_number', currentLang)}: ${widget.invoice['invoiceNumber']?.toString() ?? AppTranslations.get('not_specified', currentLang)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -188,7 +188,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                           Icon(Icons.attach_money, color: Colors.amber.shade700, size: 18),
                           const SizedBox(width: 4),
                           Text(
-                            '${(widget.invoice['totalAmount'] ?? 0.0).toStringAsFixed(2)} DH',
+                            NumberFormattingService.formatCurrencySafe(widget.invoice['totalAmount']),
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -262,12 +262,12 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                                       cells: [
                                         DataCell(Text(item['refFournisseur']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
                                         DataCell(Text(item['articles']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(item['qte']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(item['poids']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(item['puPieces']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(item['prixAchat']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(item['autresCharges']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(item['cuHt']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
+                                        DataCell(Text(NumberFormattingService.formatQuantitySafe(item['qte']), style: const TextStyle(fontSize: 11))),
+                                        DataCell(Text(NumberFormattingService.formatWeightSafe(item['poids']), style: const TextStyle(fontSize: 11))),
+                                        DataCell(Text(NumberFormattingService.formatCurrencySafe(item['puPieces']), style: const TextStyle(fontSize: 11))),
+                                        DataCell(Text(NumberFormattingService.formatCurrencySafe(item['prixAchat']), style: const TextStyle(fontSize: 11))),
+                                        DataCell(Text(NumberFormattingService.formatCurrencySafe(item['autresCharges']), style: const TextStyle(fontSize: 11))),
+                                        DataCell(Text(NumberFormattingService.formatCurrencySafe(item['cuHt']), style: const TextStyle(fontSize: 11))),
                                       ],
                                     ),
                                   )
@@ -347,6 +347,23 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
   }
 
   Widget _summaryItem(String label, dynamic value) {
+    String formattedValue = '-';
+    
+    if (value != null) {
+      // تحديد نوع التنسيق بناءً على نوع البيانات
+      if (label.contains('Poids') || label.contains('Weight') || label.contains('الوزن')) {
+        formattedValue = NumberFormattingService.formatWeightSafe(value);
+      } else if (label.contains('Total') || label.contains('Montant') || label.contains('الإجمالي') || 
+                 label.contains('Transport') || label.contains('Droit') || label.contains('Fret') || 
+                 label.contains('Autre') || label.contains('Cheque') || label.contains('النقل') || 
+                 label.contains('الجمرك') || label.contains('الشحن') || label.contains('أخرى') || 
+                 label.contains('الصرف')) {
+        formattedValue = NumberFormattingService.formatCurrencySafe(value);
+      } else {
+        formattedValue = value.toString();
+      }
+    }
+    
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -359,7 +376,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
           ),
         ),
         Text(
-          value?.toString() ?? '-',
+          formattedValue,
           style: const TextStyle(
             fontWeight: FontWeight.normal,
             fontSize: 12,

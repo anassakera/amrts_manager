@@ -836,7 +836,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
                             ).currentLanguage,
                           ),
                           value:
-                              '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} كغ',
+                              '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} Kg',
                           color: const Color(0xFF10B981),
                         ),
                       ),
@@ -1374,7 +1374,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
               _verticalDivider(height: 28),
               _buildDataCell(item['articles'].toString(), flex: 2),
               _verticalDivider(height: 28),
-              _buildDataCell(item['qte'].toString(), flex: 1),
+              _buildDataCell(_calculationService.formatQuantity(_safeParseInt(item['qte'])), flex: 1),
               _verticalDivider(height: 28),
               _buildDataCell(
                 _calculationService.formatWeight(
@@ -2147,6 +2147,21 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     }
     
     return 0.0;
+  }
+
+  // دالة مساعدة لتحويل البيانات إلى int بشكل آمن
+  int _safeParseInt(dynamic value) {
+    if (value == null) return 0;
+    
+    if (value is num) {
+      return value.toInt();
+    }
+    
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    
+    return 0;
   }
 }
 
