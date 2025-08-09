@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/cors.php';
-require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -18,23 +18,15 @@ if (!$input) {
 
 try {
     $database = new Database();
-    $pdo = $database->getConnection();
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    // إعداد PDO لإرجاع البيانات الرقمية كأرقام وليس كسلاسل نصية
-    $pdo->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-    
-    $pdo->beginTransaction();
+    $conn = $database->getConnection();
     
     // إضافة الفاتورة الرئيسية
     $invoiceQuery = "
-        INSERT INTO invoices (id, clientName, invoiceNumber, date, isLocal, totalAmount, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoices (id, clientName, invoiceNumber, date, isLocal, totalAmount, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
     ";
     
-    $invoiceStmt = $pdo->prepare($invoiceQuery);
-    $invoiceStmt->execute([
+    $database->executeQuery($invoiceQuery, [
         $input['id'],
         $input['clientName'],
         $input['invoiceNumber'],
@@ -51,10 +43,8 @@ try {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ";
         
-        $itemStmt = $pdo->prepare($itemQuery);
-        
         foreach ($input['items'] as $item) {
-            $itemStmt->execute([
+            $database->executeQuery($itemQuery, [
                 $input['id'],
                 $item['refFournisseur'],
                 $item['articles'],
@@ -77,8 +67,7 @@ try {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ";
         
-        $summaryStmt = $pdo->prepare($summaryQuery);
-        $summaryStmt->execute([
+        $database->executeQuery($summaryQuery, [
             $input['id'],
             $input['summary']['factureNumber'],
             $input['summary']['transit'],
@@ -92,31 +81,26 @@ try {
         ]);
     }
     
-    $pdo->commit();
-    
     // إرجاع الفاتورة المضافة
     $invoiceQuery = "SELECT * FROM invoices WHERE id = ?";
-    $invoiceStmt = $pdo->prepare($invoiceQuery);
-    $invoiceStmt->execute([$input['id']]);
-    $invoice = $invoiceStmt->fetch(PDO::FETCH_ASSOC);
+    $invoiceStmt = $database->executeQuery($invoiceQuery, [$input['id']]);
+    $invoice = $database->fetch($invoiceStmt);
     
     // جلب عناصر الفاتورة
     $itemsQuery = "SELECT * FROM invoice_items WHERE invoice_id = ?";
-    $itemsStmt = $pdo->prepare($itemsQuery);
-    $itemsStmt->execute([$input['id']]);
-    $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+    $itemsStmt = $database->executeQuery($itemsQuery, [$input['id']]);
+    $items = $database->fetchAll($itemsStmt);
     
     // جلب ملخص الفاتورة
     $summaryQuery = "SELECT * FROM invoice_summary WHERE invoice_id = ?";
-    $summaryStmt = $pdo->prepare($summaryQuery);
-    $summaryStmt->execute([$input['id']]);
-    $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC);
+    $summaryStmt = $database->executeQuery($summaryQuery, [$input['id']]);
+    $summary = $database->fetch($summaryStmt);
     
     // تحويل البيانات الرقمية بشكل صريح
     $totalAmount = is_numeric($invoice['totalAmount']) ? floatval($invoice['totalAmount']) : 0.0;
     
     $formattedInvoice = [
-        'id' => intval($invoice['id']),
+        'id' => $invoice['id'],
         'clientName' => $invoice['clientName'],
         'invoiceNumber' => $invoice['invoiceNumber'],
         'date' => $invoice['date'],
@@ -133,19 +117,7 @@ try {
         'data' => $formattedInvoice
     ], JSON_NUMERIC_CHECK);
     
-} catch (PDOException $e) {
-    if (isset($pdo)) {
-        $pdo->rollback();
-    }
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Database error: ' . $e->getMessage()
-    ]);
 } catch (Exception $e) {
-    if (isset($pdo)) {
-        $pdo->rollback();
-    }
     http_response_code(500);
     echo json_encode([
         'success' => false,

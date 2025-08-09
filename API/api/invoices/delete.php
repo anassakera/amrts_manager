@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/cors.php';
-require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
     http_response_code(405);
@@ -18,15 +18,13 @@ if (!$id) {
 
 try {
     $database = new Database();
-    $pdo = $database->getConnection();
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $conn = $database->getConnection();
     
     // حذف الفاتورة (سيتم حذف العناصر والملخص تلقائياً بسبب CASCADE)
     $query = "DELETE FROM invoices WHERE id = ?";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([$id]);
+    $stmt = $database->executeQuery($query, [$id]);
     
-    if ($stmt->rowCount() == 0) {
+    if ($database->rowCount($stmt) == 0) {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Invoice not found']);
         exit;
@@ -37,12 +35,6 @@ try {
         'message' => 'Invoice deleted successfully'
     ]);
     
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Database error: ' . $e->getMessage()
-    ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

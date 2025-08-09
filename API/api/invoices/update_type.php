@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/cors.php';
-require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
     http_response_code(405);
@@ -18,19 +18,13 @@ if (!$input || !isset($input['id']) || !isset($input['isLocal'])) {
 
 try {
     $database = new Database();
-    $pdo = $database->getConnection();
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    // إعداد PDO لإرجاع البيانات الرقمية كأرقام وليس كسلاسل نصية
-    $pdo->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+    $conn = $database->getConnection();
     
     // تحديث نوع الفاتورة
-    $query = "UPDATE invoices SET isLocal = ? WHERE id = ?";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([$input['isLocal'] ? 1 : 0, $input['id']]);
+    $query = "UPDATE invoices SET isLocal = ?, updated_at = GETDATE() WHERE id = ?";
+    $stmt = $database->executeQuery($query, [$input['isLocal'] ? 1 : 0, $input['id']]);
     
-    if ($stmt->rowCount() == 0) {
+    if ($database->rowCount($stmt) == 0) {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Invoice not found']);
         exit;
@@ -38,27 +32,24 @@ try {
     
     // إرجاع الفاتورة المحدثة
     $invoiceQuery = "SELECT * FROM invoices WHERE id = ?";
-    $invoiceStmt = $pdo->prepare($invoiceQuery);
-    $invoiceStmt->execute([$input['id']]);
-    $invoice = $invoiceStmt->fetch(PDO::FETCH_ASSOC);
+    $invoiceStmt = $database->executeQuery($invoiceQuery, [$input['id']]);
+    $invoice = $database->fetch($invoiceStmt);
     
     // جلب عناصر الفاتورة
     $itemsQuery = "SELECT * FROM invoice_items WHERE invoice_id = ?";
-    $itemsStmt = $pdo->prepare($itemsQuery);
-    $itemsStmt->execute([$input['id']]);
-    $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+    $itemsStmt = $database->executeQuery($itemsQuery, [$input['id']]);
+    $items = $database->fetchAll($itemsStmt);
     
     // جلب ملخص الفاتورة
     $summaryQuery = "SELECT * FROM invoice_summary WHERE invoice_id = ?";
-    $summaryStmt = $pdo->prepare($summaryQuery);
-    $summaryStmt->execute([$input['id']]);
-    $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC);
+    $summaryStmt = $database->executeQuery($summaryQuery, [$input['id']]);
+    $summary = $database->fetch($summaryStmt);
     
     // تحويل البيانات الرقمية بشكل صريح
     $totalAmount = is_numeric($invoice['totalAmount']) ? floatval($invoice['totalAmount']) : 0.0;
     
     $formattedInvoice = [
-        'id' => intval($invoice['id']),
+        'id' => $invoice['id'],
         'clientName' => $invoice['clientName'],
         'invoiceNumber' => $invoice['invoiceNumber'],
         'date' => $invoice['date'],
@@ -75,12 +66,6 @@ try {
         'data' => $formattedInvoice
     ], JSON_NUMERIC_CHECK);
     
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Database error: ' . $e->getMessage()
-    ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

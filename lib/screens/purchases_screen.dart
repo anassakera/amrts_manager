@@ -1,6 +1,4 @@
 import '../core/imports.dart';
-import '../services/print_invoice_service.dart';
-import '../model/api_services.dart';
 import 'package:printing/printing.dart';
 
 class InvoicesScreen extends StatefulWidget {
@@ -527,9 +525,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       onPrint: () => _printInvoice(invoice),
       onDelete: () => _deleteInvoice(invoice),
       onStatusUpdate: (String newStatus) =>
-          _updateInvoiceStatus(invoice['id'], newStatus),
+          _updateInvoiceStatus(invoice['id'].toString(), newStatus),
       onTypeUpdate: (bool newIsLocal) =>
-          _updateInvoiceType(invoice['id'], newIsLocal),
+          _updateInvoiceType(invoice['id'].toString(), newIsLocal),
     );
   }
 
@@ -667,7 +665,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       if (mounted) {
         setState(() {
           final index = _invoices.indexWhere(
-            (invoice) => invoice['id'] == updatedInvoice['id'],
+            (invoice) => invoice['id'].toString() == updatedInvoice['id'].toString(),
           );
           if (index != -1) {
             _invoices[index] = response;
@@ -676,12 +674,15 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               _filterInvoices(_searchQuery);
             } else {
               final filteredIndex = _filteredInvoices.indexWhere(
-                (invoice) => invoice['id'] == updatedInvoice['id'],
+                (invoice) => invoice['id'].toString() == updatedInvoice['id'].toString(),
               );
               if (filteredIndex != -1) {
                 _filteredInvoices[filteredIndex] = response;
               }
             }
+          } else {
+            // إذا لم يتم العثور على الفاتورة، إعادة تحميل القائمة
+            _loadInvoices();
           }
         });
 
@@ -729,8 +730,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
       if (mounted) {
         setState(() {
-          _invoices.removeWhere((invoice) => invoice['id'] == id);
-          _filteredInvoices.removeWhere((invoice) => invoice['id'] == id);
+          _invoices.removeWhere((invoice) => invoice['id'].toString() == id);
+          _filteredInvoices.removeWhere((invoice) => invoice['id'].toString() == id);
         });
       }
     } catch (e) {
@@ -767,7 +768,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
       if (mounted) {
         setState(() {
-          final index = _invoices.indexWhere((invoice) => invoice['id'] == id);
+          final index = _invoices.indexWhere((invoice) => invoice['id'].toString() == id);
           if (index != -1) {
             _invoices[index] = updatedInvoice;
             // تحديث القائمة المفلترة
@@ -775,7 +776,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               _filterInvoices(_searchQuery);
             } else {
               final filteredIndex = _filteredInvoices.indexWhere(
-                (invoice) => invoice['id'] == id,
+                (invoice) => invoice['id'].toString() == id,
               );
               if (filteredIndex != -1) {
                 _filteredInvoices[filteredIndex] = updatedInvoice;
@@ -836,7 +837,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
       if (mounted) {
         setState(() {
-          final index = _invoices.indexWhere((invoice) => invoice['id'] == id);
+          final index = _invoices.indexWhere((invoice) => invoice['id'].toString() == id);
           if (index != -1) {
             _invoices[index] = updatedInvoice;
             // تحديث القائمة المفلترة
@@ -844,7 +845,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               _filterInvoices(_searchQuery);
             } else {
               final filteredIndex = _filteredInvoices.indexWhere(
-                (invoice) => invoice['id'] == id,
+                (invoice) => invoice['id'].toString() == id,
               );
               if (filteredIndex != -1) {
                 _filteredInvoices[filteredIndex] = updatedInvoice;
@@ -1112,7 +1113,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             onPressed: () async {
               final scaffoldMessenger = ScaffoldMessenger.of(context);
               final navigator = Navigator.of(context);
-              await _deleteInvoiceById(invoice['id']);
+              await _deleteInvoiceById(invoice['id'].toString());
               if (mounted) {
                 navigator.pop();
                 if (mounted) {

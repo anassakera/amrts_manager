@@ -73,53 +73,64 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     });
   }
 
-  void _saveItem(int index, Map<String, dynamic> data) {
-    setState(() {
-      final filteredData = {
-        'refFournisseur': data['refFournisseur'],
-        'articles': data['articles'],
-        'qte': data['qte'],
-        'poids': data['poids'],
-        'puPieces': data['puPieces'],
-        'exchangeRate': data['exchangeRate'],
-      };
-      List<Map<String, dynamic>> tempItems = List.from(_items);
-      if (index == _items.length) {
-        final tempCalculated = _calculationService.calculateItemValues(
-          filteredData,
-          totalMt: 0.0,
-          poidsTotal: 0.0,
-          grandTotal: 0.0,
-        );
-        tempItems.add(tempCalculated);
-      } else if (index < _items.length) {
-        final tempCalculated = _calculationService.calculateItemValues(
-          filteredData,
-          totalMt: 0.0,
-          poidsTotal: 0.0,
-          grandTotal: 0.0,
-        );
-        tempItems[index] = tempCalculated;
-      }
-      final totals = _calculationService.calculateTotals(tempItems, _summary);
-      final totalMt = totals['totalMt'] ?? 0.0;
-      final poidsTotal = totals['poidsTotal'] ?? 0.0;
-      final grandTotal = totals['total'] ?? 0.0;
-      final calculatedData = _calculationService.calculateItemValues(
+void _saveItem(int index, Map<String, dynamic> data) {
+  setState(() {
+    final filteredData = {
+      'refFournisseur': data['refFournisseur'],
+      'articles': data['articles'],
+      'qte': data['qte'],
+      'poids': data['poids'],
+      'puPieces': data['puPieces'],
+      'exchangeRate': data['exchangeRate'],
+    };
+
+    // نسخة مؤقتة للحسابات
+    List<Map<String, dynamic>> tempItems = List.from(_items);
+
+    // حساب المجموعات المؤقتة
+    if (index < _items.length) {
+      tempItems[index] = _calculationService.calculateItemValues(
         filteredData,
-        totalMt: totalMt,
-        poidsTotal: poidsTotal,
-        grandTotal: grandTotal,
+        totalMt: 0.0,
+        poidsTotal: 0.0,
+        grandTotal: 0.0,
       );
-      if (index == _items.length) {
-        _items.add({...calculatedData, 'isEditing': false});
-      } else if (index < _items.length) {
-        _items[index] = {...calculatedData, 'isEditing': false};
-      }
-      _editingIndex = null;
-      _recalculateSummary();
-    });
-  }
+    } else {
+      tempItems.add(
+        _calculationService.calculateItemValues(
+          filteredData,
+          totalMt: 0.0,
+          poidsTotal: 0.0,
+          grandTotal: 0.0,
+        ),
+      );
+    }
+
+    // المجموعات النهائية
+    final totals = _calculationService.calculateTotals(tempItems, _summary);
+    final totalMt = totals['totalMt'] ?? 0.0;
+    final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final grandTotal = totals['total'] ?? 0.0;
+
+    // الحساب النهائي للعنصر
+    final calculatedData = _calculationService.calculateItemValues(
+      filteredData,
+      totalMt: totalMt,
+      poidsTotal: poidsTotal,
+      grandTotal: grandTotal,
+    );
+
+    // تحديث أو إضافة للائحة النهائية
+    if (index < _items.length) {
+      _items[index] = {...calculatedData, 'isEditing': false};
+    } else {
+      _items.add({...calculatedData, 'isEditing': false});
+    }
+
+    _editingIndex = null;
+    _recalculateSummary();
+  });
+}
 
   void _cancelEditing(int index) {
     setState(() {
@@ -347,14 +358,19 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
     };
   }
 
+  bool _isSaving = false;
   void _saveInvoice() {
+    if (_isSaving) return;
+    _isSaving = true;
     if (_editingIndex != null) {
+      _isSaving = false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('يرجى حفظ العنصر قيد التعديل أولاً')),
       );
       return;
     }
     if (_items.isEmpty) {
+      _isSaving = false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('لا يمكن حفظ فاتورة فارغة. يرجى إضافة عناصر أولاً'),
@@ -387,25 +403,28 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> {
       } else {
         resultInvoice['clientName'] = clientName;
       }
-      _showSuccessMessage('تم تحديث الفاتورة بنجاح', Icons.check_circle);
+  _showSuccessMessage('تم تحديث الفاتورة بنجاح', Icons.check_circle);
+  _isSaving = false;
     } else {
       resultInvoice = {
-        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        // 'id': DateTime.now().millisecondsSinceEpoch.toString(),
         'clientName': clientName,
         'invoiceNumber': widget.invoiceNumber ?? _summary['factureNumber'],
         'date': formattedDate,
         'isLocal': widget.isLocal,
         'totalAmount': totalAmount,
-        'status': 'Brouillon',
+        'status': 'En cours',
         'items': List<Map<String, dynamic>>.from(_items),
         'summary': Map<String, dynamic>.from(_summary),
       };
-      _showSuccessMessage('تم إنشاء الفاتورة بنجاح', Icons.add_circle);
+  _showSuccessMessage('تم إنشاء الفاتورة بنجاح', Icons.add_circle);
+  _isSaving = false;
     }
 
-    _clearControllers();
-    _reset();
-    Navigator.of(context).pop(resultInvoice);
+  _clearControllers();
+  _reset();
+  Navigator.of(context).pop(resultInvoice);
+  _isSaving = false;
   }
 
   String _getClientName(

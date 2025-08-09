@@ -313,6 +313,12 @@ class DrawerScreen extends StatelessWidget {
         
         final settingsItems = [
           {
+            'icon': Icons.people_rounded,
+            'title': 'إدارة المستخدمين',
+            'subtitle': 'إضافة وتعديل وحذف المستخدمين',
+            'color': const Color(0xFF1E3A8A),
+          },
+          {
             'icon': Icons.settings_rounded,
             'title': AppTranslations.get('settings', currentLang),
             'subtitle': 'إعدادات النظام',
@@ -352,7 +358,14 @@ class DrawerScreen extends StatelessWidget {
           onTap: () {
             // Handle settings navigation based on title
             String title = item['title'];
-            if (title == AppTranslations.get('settings', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
+            if (title == 'إدارة المستخدمين') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UsersManagementScreen(),
+                ),
+              );
+            } else if (title == AppTranslations.get('settings', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -374,24 +387,6 @@ class DrawerScreen extends StatelessWidget {
                 ),
               );
             }
-            //       ),
-            //     );
-            //     break;
-            //   case 'الإشعارات':
-            //     Navigator.push(
-            //       context,
-            //       MaterialPageRoute(
-            //         builder: (context) => const SettingsScreen(),
-            //       ),
-            //     );
-            //     break;
-            //   case 'المساعدة':
-            //     Navigator.push(
-            //       context,
-            //       MaterialPageRoute(builder: (context) => const SettingsScreen()),
-            //     );
-            //     break;
-            // }
           },
           child: Container(
             padding: const EdgeInsets.all(12),
@@ -436,12 +431,9 @@ class DrawerScreen extends StatelessWidget {
                 ),
                 if (item['badge'] != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444),
+                      color: item['color'],
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -453,7 +445,6 @@ class DrawerScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                const SizedBox(width: 8),
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,

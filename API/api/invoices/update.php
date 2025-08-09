@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/cors.php';
-require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
     http_response_code(405);
@@ -18,24 +18,16 @@ if (!$input || !isset($input['id'])) {
 
 try {
     $database = new Database();
-    $pdo = $database->getConnection();
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    // إعداد PDO لإرجاع البيانات الرقمية كأرقام وليس كسلاسل نصية
-    $pdo->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-    
-    $pdo->beginTransaction();
+    $conn = $database->getConnection();
     
     // تحديث الفاتورة الرئيسية
     $invoiceQuery = "
         UPDATE invoices 
-        SET clientName = ?, invoiceNumber = ?, date = ?, isLocal = ?, totalAmount = ?, status = ?
+        SET clientName = ?, invoiceNumber = ?, date = ?, isLocal = ?, totalAmount = ?, status = ?, updated_at = GETDATE()
         WHERE id = ?
     ";
     
-    $invoiceStmt = $pdo->prepare($invoiceQuery);
-    $invoiceStmt->execute([
+    $database->executeQuery($invoiceQuery, [
         $input['clientName'],
         $input['invoiceNumber'],
         $input['date'],
@@ -45,10 +37,12 @@ try {
         $input['id']
     ]);
     
-    // حذف العناصر القديمة
+    // حذف العناصر والملخص القديمة
     $deleteItemsQuery = "DELETE FROM invoice_items WHERE invoice_id = ?";
-    $deleteItemsStmt = $pdo->prepare($deleteItemsQuery);
-    $deleteItemsStmt->execute([$input['id']]);
+    $database->executeQuery($deleteItemsQuery, [$input['id']]);
+    
+    $deleteSummaryQuery = "DELETE FROM invoice_summary WHERE invoice_id = ?";
+    $database->executeQuery($deleteSummaryQuery, [$input['id']]);
     
     // إضافة العناصر الجديدة
     if (isset($input['items']) && is_array($input['items'])) {
@@ -57,10 +51,8 @@ try {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ";
         
-        $itemStmt = $pdo->prepare($itemQuery);
-        
         foreach ($input['items'] as $item) {
-            $itemStmt->execute([
+            $database->executeQuery($itemQuery, [
                 $input['id'],
                 $item['refFournisseur'],
                 $item['articles'],
@@ -76,16 +68,15 @@ try {
         }
     }
     
-    // تحديث ملخص الفاتورة
+    // إضافة ملخص الفاتورة الجديد
     if (isset($input['summary'])) {
         $summaryQuery = "
-            UPDATE invoice_summary 
-            SET factureNumber = ?, transit = ?, droitDouane = ?, chequeChange = ?, freiht = ?, autres = ?, total = ?, txChange = ?, poidsTotal = ?
-            WHERE invoice_id = ?
+            INSERT INTO invoice_summary (invoice_id, factureNumber, transit, droitDouane, chequeChange, freiht, autres, total, txChange, poidsTotal)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ";
         
-        $summaryStmt = $pdo->prepare($summaryQuery);
-        $summaryStmt->execute([
+        $database->executeQuery($summaryQuery, [
+            $input['id'],
             $input['summary']['factureNumber'],
             $input['summary']['transit'],
             $input['summary']['droitDouane'],
@@ -94,58 +85,30 @@ try {
             $input['summary']['autres'],
             $input['summary']['total'],
             $input['summary']['txChange'],
-            $input['summary']['poidsTotal'],
-            $input['id']
+            $input['summary']['poidsTotal']
         ]);
-        
-        // إذا لم يكن هناك ملخص موجود، قم بإنشاؤه
-        if ($summaryStmt->rowCount() == 0) {
-            $insertSummaryQuery = "
-                INSERT INTO invoice_summary (invoice_id, factureNumber, transit, droitDouane, chequeChange, freiht, autres, total, txChange, poidsTotal)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ";
-            
-            $insertSummaryStmt = $pdo->prepare($insertSummaryQuery);
-            $insertSummaryStmt->execute([
-                $input['id'],
-                $input['summary']['factureNumber'],
-                $input['summary']['transit'],
-                $input['summary']['droitDouane'],
-                $input['summary']['chequeChange'],
-                $input['summary']['freiht'],
-                $input['summary']['autres'],
-                $input['summary']['total'],
-                $input['summary']['txChange'],
-                $input['summary']['poidsTotal']
-            ]);
-        }
     }
-    
-    $pdo->commit();
     
     // إرجاع الفاتورة المحدثة
     $invoiceQuery = "SELECT * FROM invoices WHERE id = ?";
-    $invoiceStmt = $pdo->prepare($invoiceQuery);
-    $invoiceStmt->execute([$input['id']]);
-    $invoice = $invoiceStmt->fetch(PDO::FETCH_ASSOC);
+    $invoiceStmt = $database->executeQuery($invoiceQuery, [$input['id']]);
+    $invoice = $database->fetch($invoiceStmt);
     
     // جلب عناصر الفاتورة
     $itemsQuery = "SELECT * FROM invoice_items WHERE invoice_id = ?";
-    $itemsStmt = $pdo->prepare($itemsQuery);
-    $itemsStmt->execute([$input['id']]);
-    $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+    $itemsStmt = $database->executeQuery($itemsQuery, [$input['id']]);
+    $items = $database->fetchAll($itemsStmt);
     
     // جلب ملخص الفاتورة
     $summaryQuery = "SELECT * FROM invoice_summary WHERE invoice_id = ?";
-    $summaryStmt = $pdo->prepare($summaryQuery);
-    $summaryStmt->execute([$input['id']]);
-    $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC);
+    $summaryStmt = $database->executeQuery($summaryQuery, [$input['id']]);
+    $summary = $database->fetch($summaryStmt);
     
     // تحويل البيانات الرقمية بشكل صريح
     $totalAmount = is_numeric($invoice['totalAmount']) ? floatval($invoice['totalAmount']) : 0.0;
     
     $formattedInvoice = [
-        'id' => intval($invoice['id']),
+        'id' => $invoice['id'],
         'clientName' => $invoice['clientName'],
         'invoiceNumber' => $invoice['invoiceNumber'],
         'date' => $invoice['date'],
@@ -162,19 +125,7 @@ try {
         'data' => $formattedInvoice
     ], JSON_NUMERIC_CHECK);
     
-} catch (PDOException $e) {
-    if (isset($pdo)) {
-        $pdo->rollback();
-    }
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Database error: ' . $e->getMessage()
-    ]);
 } catch (Exception $e) {
-    if (isset($pdo)) {
-        $pdo->rollback();
-    }
     http_response_code(500);
     echo json_encode([
         'success' => false,

@@ -19,9 +19,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Tajawal'),
-
-      home:HomeScreen  (),
-      //home: const InvoicesScreen(),
+      home: const AuthScreen(),
+      // home: const UsersManagementScreen(),
     );
   }
 }
