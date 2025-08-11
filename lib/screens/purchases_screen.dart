@@ -1,3 +1,5 @@
+import 'package:amrts_manager/screens/edit_invoice_screen_buy.dart';
+
 import '../core/imports.dart';
 import 'package:printing/printing.dart';
 
@@ -104,10 +106,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   }
 
   Widget _buildTopBar(String currentLang) {
-    final screenWidth = MediaQuery.of(context).size.width;
+     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 768;
 
-    if (isDesktop) {
+     if (isDesktop) {
+  
       // تصميم الحاسوب - TabBar والبحث في نفس الصف
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -249,8 +252,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                         'advanced_filter',
                         currentLang,
                       ),
-                      onPressed: () {
-                        // Removed print statement
+                      onPressed: () { // anass
+                
                       },
                     ),
                   ),
@@ -596,7 +599,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     );
   }
 
+  bool _isAddingInvoice = false;
   Future<void> _addInvoice(Map<String, dynamic> invoice) async {
+    if (_isAddingInvoice) return;
+    _isAddingInvoice = true;
+    
     final languageProvider = Provider.of<LanguageProvider>(
       context,
       listen: false,
@@ -604,50 +611,56 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     final currentLang = languageProvider.currentLanguage;
 
     try {
-      final addedInvoice = await ApiServices.createInvoice(invoice);
+      // التحقق من عدم وجود فاتورة بنفس الرقم أو نفس البيانات
+      final invoiceNumber = invoice['invoiceNumber']?.toString() ?? '';
+      final clientName = invoice['clientName']?.toString() ?? '';
+      final date = invoice['date']?.toString() ?? '';
+      
+      final existingInvoice = _invoices.any((inv) => 
+        inv['invoiceNumber']?.toString() == invoiceNumber &&
+        inv['clientName']?.toString() == clientName &&
+        inv['date']?.toString() == date
+      );
+      
+      if (existingInvoice) {
+        if (mounted) {
+          _showSuccessMessage('الفاتورة موجودة بالفعل', Icons.error);
+        }
+        return;
+      }
+      
+      final _ = await ApiServices.createInvoice(invoice);
       if (mounted) {
-        setState(() {
-          _invoices.insert(0, addedInvoice);
-          // تحديث القائمة المفلترة إذا كان البحث نشط
-          if (_isSearching) {
-            _filterInvoices(_searchQuery);
-          } else {
-            _filteredInvoices.insert(0, addedInvoice);
-          }
-        });
+        // إعادة تحميل البيانات من قاعدة البيانات بدلاً من الإضافة المحلية
+        await _loadInvoices();
+  
+         _showSuccessMessage(AppTranslations.get('invoice_added_successfully', currentLang), Icons.check_circle);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppTranslations.get('invoice_added_successfully', currentLang),
-            ),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
       }
     } catch (e) {
-      // Removed print statement
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppTranslations.get('error_adding_invoice', currentLang),
-            ),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
+        _showSuccessMessage(AppTranslations.get('error_adding_invoice', currentLang), Icons.error);
       }
+    } finally {
+      _isAddingInvoice = false;
     }
   }
-
+  void _showSuccessMessage(String message, IconData icon) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
   Future<void> _updateInvoice(Map<String, dynamic> updatedInvoice) async {
     final languageProvider = Provider.of<LanguageProvider>(
       context,
@@ -933,9 +946,27 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     try {
       final invoices = await ApiServices.getAllInvoices();
       if (mounted) {
+        // إزالة الفواتير المكررة بناءً على ID و invoiceNumber
+        final uniqueInvoices = <Map<String, dynamic>>[];
+        final seenIds = <int>{};
+        final seenInvoiceNumbers = <String>{};
+        
+        for (final invoice in invoices) {
+          final id = invoice['id'] as int?;
+          final invoiceNumber = invoice['invoiceNumber']?.toString() ?? '';
+          final date = invoice['date']?.toString() ?? '';
+          final uniqueKey = '$invoiceNumber-$date';
+          
+          if (id != null && !seenIds.contains(id) && !seenInvoiceNumbers.contains(uniqueKey)) {
+            seenIds.add(id);
+            seenInvoiceNumbers.add(uniqueKey);
+            uniqueInvoices.add(invoice);
+          }
+        }
+        
         setState(() {
-          _invoices = invoices;
-          _filteredInvoices = invoices;
+          _invoices = uniqueInvoices;
+          _filteredInvoices = uniqueInvoices;
         });
       }
     } catch (e) {
@@ -971,23 +1002,28 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       _addInvoice(newInvoice);
     }
   }
-
-  void _editInvoice(Map<String, dynamic> invoice) async {
-    final updatedInvoice = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SmartDocumentScreen(
-          invoice: invoice,
-          isLocal: invoice['isLocal'],
-          clientName: invoice['clientName'],
-        ),
-      ),
-    );
-
-    if (updatedInvoice != null && mounted) {
-      _updateInvoice(updatedInvoice);
-    }
+void _editInvoice(Map<String, dynamic> invoice) async {
+  final updatedInvoice = await Navigator.push<Map<String, dynamic>>(
+    context,
+    MaterialPageRoute(
+      builder: (context) => invoice['isLocal'] == true 
+        ? SmartDocumentScreenBuy(  // للفواتير المحلية
+            invoice: invoice,
+            isLocal: invoice['isLocal'],
+            clientName: invoice['clientName'],
+          )
+        : SmartDocumentScreen(   // للفواتير غير المحلية
+            invoice: invoice,
+            isLocal: invoice['isLocal'],
+            clientName: invoice['clientName'],
+          ),
+    ),
+  );
+  
+  if (updatedInvoice != null && mounted) {
+    _updateInvoice(updatedInvoice);
   }
+}
 
   void _printInvoice(Map<String, dynamic> invoice) async {
     final languageProvider = Provider.of<LanguageProvider>(

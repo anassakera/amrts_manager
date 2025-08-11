@@ -258,23 +258,20 @@ class InvoiceCard extends StatelessWidget {
   Widget _buildTypeChip(String currentLang) {
     final bool isLocal = invoice['isLocal'] ?? true;
     return Builder(
-      builder: (context) => GestureDetector(
-        onTap: () => _showTypePopup(context, isLocal, currentLang),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: isLocal
-                ? Colors.green.withValues(alpha: 0.1)
-                : Colors.blue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            isLocal ? AppTranslations.get('local', currentLang) : AppTranslations.get('external', currentLang),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: isLocal ? Colors.green.shade700 : Colors.blue.shade700,
-            ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: isLocal
+              ? Colors.green.withValues(alpha: 0.1)
+              : Colors.blue.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          isLocal ? AppTranslations.get('local', currentLang) : AppTranslations.get('external', currentLang),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: isLocal ? Colors.green.shade700 : Colors.blue.shade700,
           ),
         ),
       ),
@@ -365,62 +362,7 @@ class InvoiceCard extends StatelessWidget {
     );
   }
 
-  void _showTypePopup(BuildContext context, bool isLocal, String currentLang) {
-    final RenderBox button = context.findRenderObject() as RenderBox;
-    final RenderBox overlay =
-        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(
-          button.size.bottomRight(Offset.zero),
-          ancestor: overlay,
-        ),
-      ),
-      Offset.zero & overlay.size,
-    );
 
-    showMenu<bool>(
-      context: context,
-      position: position,
-      items: [
-        _buildTypeMenuItem(true, AppTranslations.get('local', currentLang), Colors.green),
-        _buildTypeMenuItem(false, AppTranslations.get('external', currentLang), Colors.blue),
-      ],
-    ).then((selectedType) {
-      if (selectedType != null && onTypeUpdate != null) {
-        onTypeUpdate!(selectedType);
-      }
-    });
-  }
-
-  PopupMenuItem<bool> _buildTypeMenuItem(
-    bool value,
-    String label,
-    Color color,
-  ) {
-    final bool isCurrent = (invoice['isLocal'] ?? true) == value;
-    return PopupMenuItem<bool>(
-      value: value,
-      child: Row(
-        children: [
-          Icon(
-            isCurrent ? Icons.check_circle : Icons.circle_outlined,
-            size: 16,
-            color: isCurrent ? color : Colors.grey,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: isCurrent ? color : Colors.black87,
-              fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildGridAction(IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(

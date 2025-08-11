@@ -94,7 +94,7 @@ class PrintInvoiceService {
                               crossAxisAlignment: pdf.CrossAxisAlignment.start,
                               children: [
                                 _buildInfoRow(
-                                  'Nom du client:', 
+                                  'Nom du fournisseur:', 
                                   invoice['clientName'] ?? '',
                                   poppinsFont,
                                   poppinsBoldFont,
@@ -326,7 +326,7 @@ class PrintInvoiceService {
       'Qté',
       'Poids',
       'P.U(\$)',
-      'M.Total',
+      // 'M.Total',
       'P.Achat',
       'A.Frais',
       'C.U',
@@ -339,7 +339,7 @@ class PrintInvoiceService {
       0.8, // Qté
       1.0, // Poids
       1.0, // P.U.
-      1.2, // Total
+      // 1.2, // Total
       1.0, // Achat
       1.0, // Frais
       1.0, // Coût
@@ -496,21 +496,21 @@ class PrintInvoiceService {
                       ),
                     ),
                     // Montant total
-                    pdf.Expanded(
-                      flex: (columnWidths[5] * 10).round(),
-                      child: pdf.Container(
-                        padding: const pdf.EdgeInsets.all(6),
-                        child: pdf.Text(
-                          NumberFormattingService.formatCurrencySafe(item['mt']),
-                          style: pdf.TextStyle(
-                            font: boldFont,
-                            fontSize: 8,
-                            color: PdfColor.fromHex('#1E3A8A'),
-                          ),
-                          textAlign: pdf.TextAlign.right,
-                        ),
-                      ),
-                    ),
+                    // pdf.Expanded(
+                    //   flex: (columnWidths[5] * 10).round(),
+                    //   child: pdf.Container(
+                    //     padding: const pdf.EdgeInsets.all(6),
+                    //     child: pdf.Text(
+                    //       NumberFormattingService.formatCurrencySafe(item['mt']),
+                    //       style: pdf.TextStyle(
+                    //         font: boldFont,
+                    //         fontSize: 8,
+                    //         color: PdfColor.fromHex('#1E3A8A'),
+                    //       ),
+                    //       textAlign: pdf.TextAlign.right,
+                    //     ),
+                    //   ),
+                    // ),
                     // Prix d'achat
                     pdf.Expanded(
                       flex: (columnWidths[6] * 10).round(),
@@ -537,7 +537,7 @@ class PrintInvoiceService {
                     ),
                     // Coût de l'article
                     pdf.Expanded(
-                      flex: (columnWidths[8] * 10).round(),
+                      flex: (columnWidths[7] * 10).round(),
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
                         child: pdf.Text(

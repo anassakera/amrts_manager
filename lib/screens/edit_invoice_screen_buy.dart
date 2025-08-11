@@ -1,14 +1,14 @@
 // ignore_for_file: avoid_print
 import '../core/imports.dart';
 
-class SmartDocumentScreen extends StatefulWidget {
+class SmartDocumentScreenBuy extends StatefulWidget {
   final Map<String, dynamic>? invoice;
   final bool isLocal;
   final String? clientName;
   final String? invoiceNumber;
   final DateTime? date;
 
-  const SmartDocumentScreen({
+  const SmartDocumentScreenBuy({
     super.key,
     this.invoice,
     this.isLocal = true,
@@ -18,10 +18,10 @@ class SmartDocumentScreen extends StatefulWidget {
   });
 
   @override
-  SmartDocumentScreenState createState() => SmartDocumentScreenState();
+  SmartDocumentScreenBuyState createState() => SmartDocumentScreenBuyState();
 }
 
-class SmartDocumentScreenState extends State<SmartDocumentScreen> with SingleTickerProviderStateMixin {
+class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with SingleTickerProviderStateMixin {
   final Map<String, TextEditingController> _controllers = {};
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final CalculationService _calculationService = CalculationService();
@@ -37,7 +37,6 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> with SingleTic
     'chequeChange': 0.0,
     'freiht': 0.0,
     'autres': 0.0,
-    'total': 0.0,
     'txChange': 11.2,
     'poidsTotal': 0.0,
   };
@@ -211,7 +210,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
     final totals = _calculationService.calculateTotals(_items, newSummary);
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
-    final grandTotal = totals['total'] ?? 0.0;
     
     _items = _items.map((item) {
       final itemData = {
@@ -226,7 +224,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
         itemData,
         totalMt: totalMt,
         poidsTotal: poidsTotal,
-        grandTotal: grandTotal,
+        grandTotal: 0.0,
       );
     }).toList();
   }
@@ -234,7 +232,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
   void _recalculateSummary() {
     final totals = _calculationService.calculateTotals(_items, _summary);
     final newSummary = Map<String, dynamic>.from(_summary);
-    newSummary['total'] = totals['total'];
     newSummary['poidsTotal'] = totals['poidsTotal'];
     _summary = newSummary;
   }
@@ -252,7 +249,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
         'chequeChange': 0.0,
         'freiht': 0.0,
         'autres': 0.0,
-        'total': 0.0,
         'txChange': 11.2,
         'poidsTotal': 0.0,
       };
@@ -286,9 +282,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
       'poids',
       'puPieces',
       'mt',
-      'prixAchat',
-      'autresCharges',
-      'cuHt',
       'exchangeRate',
     ];
 
@@ -314,9 +307,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
     _controllers['poids']?.text = item['poids'].toString();
     _controllers['puPieces']?.text = item['puPieces'].toString();
     _controllers['mt']?.text = item['mt'].toString();
-    _controllers['prixAchat']?.text = item['prixAchat'].toString();
-    _controllers['autresCharges']?.text = item['autresCharges'].toString();
-    _controllers['cuHt']?.text = item['cuHt'].toString();
     final exchangeRate = _safeParseDouble(item['exchangeRate']);
     if ((exchangeRate == 1.0 || exchangeRate == 0.0) &&
         defaultExchangeRate != null) {
@@ -479,7 +469,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
             children: [
               _buildSmartHeader(totals),
               Expanded(child: _buildSmartTable()),
-              _buildSummaryFooter(totals),
+           const SizedBox(height: 5),
             ],
           ),
         ),
@@ -810,17 +800,13 @@ void _saveItem(int index, Map<String, dynamic> data) {
     final totals = _calculationService.calculateTotals(tempItems, _summary);
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
-    final grandTotal = totals['total'] ?? 0.0;
     final calculated = _calculationService.calculateItemValues(
       data,
       totalMt: totalMt,
       poidsTotal: poidsTotal,
-      grandTotal: grandTotal,
+      grandTotal: 0.0,
     );
     _controllers['mt']?.text = calculated['mt'].toString();
-    _controllers['prixAchat']?.text = calculated['prixAchat'].toString();
-    _controllers['autresCharges']?.text = calculated['autresCharges'].toString();
-    _controllers['cuHt']?.text = calculated['cuHt'].toString();
   }
 
   Widget _buildSmartHeader(Map<String, double> totals) {
@@ -971,16 +957,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
                           color: const Color(0xFF10B981),
                         ),
                       ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: _buildInfoCard(
-                          icon: Icons.attach_money,
-                          label: AppTranslations.get('total_expenses', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                          value: totals['total']?.toStringAsFixed(2) ?? '0.00',
-                          color: const Color(0xFFF59E0B),
-                        ),
-                      ),
-                      const SizedBox(width: 5),
+ const SizedBox(width: 5),
                       Expanded(
                         child: _buildInfoCard(
                           icon: Icons.inventory,
@@ -1124,12 +1101,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
           _verticalDivider(height: 28),
           _buildHeaderCell(AppTranslations.get('total_amount', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
           _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('purchase_price', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
-          _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('other_expenses', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
-          _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('item_cost', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
-          _verticalDivider(height: 28),
           _buildHeaderCell(AppTranslations.get('actions', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 1),
         ],
       ),
@@ -1174,7 +1145,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
                   child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
                 ),
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 10),
               _buildDataCell(item['refFournisseur'].toString(), flex: 2),
               _verticalDivider(height: 28),
               _buildDataCell(item['articles'].toString(), flex: 2),
@@ -1186,12 +1157,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
               _buildDataCell(_calculationService.formatCurrency(_safeParseDouble(item['puPieces'])), flex: 2),
               _verticalDivider(height: 28),
               _buildDataCell(_calculationService.formatCurrency(_safeParseDouble(item['mt'])), flex: 2),
-              _verticalDivider(height: 28),
-              _buildDataCell(_calculationService.formatCurrency(_safeParseDouble(item['prixAchat'])), flex: 2),
-              _verticalDivider(height: 28),
-              _buildDataCell(_calculationService.formatCurrency(_safeParseDouble(item['autresCharges'])), flex: 2),
-              _verticalDivider(height: 28),
-              _buildDataCell(_calculationService.formatCurrency(_safeParseDouble(item['cuHt'])), flex: 2),
+              const SizedBox(width: 45),
               SizedBox(
                 width: 60,
                 child: Row(
@@ -1213,6 +1179,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
                   ],
                 ),
               ),
+               const SizedBox(width: 20),
             ],
           ),
         ),
@@ -1252,12 +1219,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
             _buildEditField('puPieces', AppTranslations.get('unit_price', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, isNumber: true, isDecimal: true),
             _verticalDivider(height: 28),
             _buildEditField('mt', AppTranslations.get('total_amount', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, isNumber: true, isDecimal: true, readOnly: true),
-            _verticalDivider(height: 28),
-            _buildEditField('prixAchat', AppTranslations.get('purchase_price', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, isNumber: true, isDecimal: true, readOnly: true),
-            _verticalDivider(height: 28),
-            _buildEditField('autresCharges', AppTranslations.get('other_expenses', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, isNumber: true, isDecimal: true, readOnly: true),
-            _verticalDivider(height: 28),
-            _buildEditField('cuHt', AppTranslations.get('item_cost', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, isNumber: true, isDecimal: true, readOnly: true),
+            const SizedBox(width: 30),
             SizedBox(
               width: 60,
               child: Row(
@@ -1283,145 +1245,13 @@ void _saveItem(int index, Map<String, dynamic> data) {
                 ],
               ),
             ),
+             const SizedBox(width: 30),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSummaryFooter(Map<String, double> totals) {
-    return Container(
-      margin: const EdgeInsets.all(5),
-      padding: const EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(width: 1, color: Colors.black.withValues(alpha: 0.2)),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF60A5FA).withValues(alpha: 0.10),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(children: [Expanded(child: _buildSummaryGrid())]),
-    );
-  }
-
-  Widget _buildSummaryGrid() {
-    final editingField = ValueNotifier<String?>(null);
-    return StatefulBuilder(
-      builder: (context, setState) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppTranslations.get('expense_details', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: EditableSummaryItem(
-                  label: AppTranslations.get('transit', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                  value: _safeParseDouble(_summary['transit']),
-                  icon: Icons.local_shipping,
-                  calculationService: _calculationService,
-                  isEditing: editingField.value == 'النقل',
-                  onEdit: () => setState(() => editingField.value = 'النقل'),
-                  onValueChanged: (v) {
-                    _updateSummaryField('النقل', v);
-                    setState(() => editingField.value = null);
-                  },
-                  onCancel: () => setState(() => editingField.value = null),
-                ),
-              ),
-              Expanded(
-                child: EditableSummaryItem(
-                  label: AppTranslations.get('customs', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                  value: _safeParseDouble(_summary['droitDouane']),
-                  icon: Icons.account_balance,
-                  calculationService: _calculationService,
-                  isEditing: editingField.value == 'حق الجمرك',
-                  onEdit: () => setState(() => editingField.value = 'حق الجمرك'),
-                  onValueChanged: (v) {
-                    _updateSummaryField('حق الجمرك', v);
-                    setState(() => editingField.value = null);
-                  },
-                  onCancel: () => setState(() => editingField.value = null),
-                ),
-              ),
-              Expanded(
-                child: EditableSummaryItem(
-                  label: AppTranslations.get('exchange_cheque', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                  value: _safeParseDouble(_summary['chequeChange']),
-                  icon: Icons.money,
-                  calculationService: _calculationService,
-                  isEditing: editingField.value == 'شيك الصرف',
-                  onEdit: () => setState(() => editingField.value = 'شيك الصرف'),
-                  onValueChanged: (v) {
-                    _updateSummaryField('شيك الصرف', v);
-                    setState(() => editingField.value = null);
-                  },
-                  onCancel: () => setState(() => editingField.value = null),
-                ),
-              ),
-              Expanded(
-                child: EditableSummaryItem(
-                  label: AppTranslations.get('freight', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                  value: _safeParseDouble(_summary['freiht']),
-                  icon: Icons.flight_takeoff,
-                  calculationService: _calculationService,
-                  isEditing: editingField.value == 'الشحن',
-                  onEdit: () => setState(() => editingField.value = 'الشحن'),
-                  onValueChanged: (v) {
-                    _updateSummaryField('الشحن', v);
-                    setState(() => editingField.value = null);
-                  },
-                  onCancel: () => setState(() => editingField.value = null),
-                ),
-              ),
-              Expanded(
-                child: EditableSummaryItem(
-                  label: AppTranslations.get('other', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                  value: _safeParseDouble(_summary['autres']),
-                  icon: Icons.more_horiz,
-                  calculationService: _calculationService,
-                  isEditing: editingField.value == 'أخرى',
-                  onEdit: () => setState(() => editingField.value = 'أخرى'),
-                  onValueChanged: (v) {
-                    _updateSummaryField('أخرى', v);
-                    setState(() => editingField.value = null);
-                  },
-                  onCancel: () => setState(() => editingField.value = null),
-                ),
-              ),
-              Expanded(
-                child: EditableSummaryItem(
-                  label: AppTranslations.get('exchange_rate', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                  value: _safeParseDouble(_summary['txChange']),
-                  isCurrency: false,
-                  icon: Icons.currency_exchange,
-                  calculationService: _calculationService,
-                  isEditing: editingField.value == 'سعر الصرف',
-                  onEdit: () => setState(() => editingField.value = 'سعر الصرف'),
-                  onValueChanged: (v) {
-                    _updateSummaryField('سعر الصرف', v);
-                    if (_controllers['exchangeRate'] != null) {
-                      _controllers['exchangeRate']?.text = v.toString();
-                    }
-                    setState(() => editingField.value = null);
-                  },
-                  onCancel: () => setState(() => editingField.value = null),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showDeleteConfirmation(BuildContext context) {
     showDialog(
@@ -1611,14 +1441,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: _buildPhoneInfoChip(
-                  Icons.attach_money,
-                  'المجموع',
-                  _calculationService.formatCurrency(totals['total'] ?? 0),
-                  Colors.red,
-                ),
-              ),
+
             ],
           ),
         ],
@@ -1873,12 +1696,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
                   Expanded(
                     child: _buildPhoneItemDetail('المجموع', _calculationService.formatCurrency(_safeParseDouble(item['mt']))),
                   ),
-                  Expanded(
-                    child: _buildPhoneItemDetail('سعر الشراء', _calculationService.formatCurrency(_safeParseDouble(item['prixAchat']))),
-                  ),
-                  Expanded(
-                    child: _buildPhoneItemDetail('المصاريف', _calculationService.formatCurrency(_safeParseDouble(item['autresCharges']))),
-                  ),
                 ],
               ),
             ],
@@ -1942,9 +1759,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
                     Expanded(
                       child: _buildPhoneTotalItem('مجموع البضائع', _calculationService.formatCurrency(totals['totalMt'] ?? 0)),
                     ),
-                    Expanded(
-                      child: _buildPhoneTotalItem('مجموع المصاريف', _calculationService.formatCurrency(totals['total'] ?? 0)),
-                    ),
+                    
                   ],
                 ),
                 const SizedBox(height: 8),

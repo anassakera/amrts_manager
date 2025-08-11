@@ -1,5 +1,5 @@
 import '../core/imports.dart';
-
+import '../screens/edit_invoice_screen_buy.dart';
 
 class AddInvoiceDialog extends StatefulWidget {
   final bool isLocal;
@@ -107,7 +107,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
   Widget build(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context);
     final currentLang = languageProvider.currentLanguage;
-    
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: ScaleTransition(
@@ -177,9 +177,15 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                             ),
                           ),
                           Text(
-                            widget.isLocal 
-                                ? AppTranslations.get('local_import', currentLang) 
-                                : AppTranslations.get('external_import', currentLang),
+                            widget.isLocal
+                                ? AppTranslations.get(
+                                    'local_import',
+                                    currentLang,
+                                  )
+                                : AppTranslations.get(
+                                    'external_import',
+                                    currentLang,
+                                  ),
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.white.withValues(alpha: 0.9),
@@ -210,7 +216,10 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                         icon: Icons.person_outline,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return AppTranslations.get('please_enter_client_name', currentLang);
+                            return AppTranslations.get(
+                              'please_enter_client_name',
+                              currentLang,
+                            );
                           }
                           return null;
                         },
@@ -221,11 +230,17 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                       // حقل رقم الفاتورة
                       _buildTextField(
                         controller: _invoiceNumberController,
-                        label: AppTranslations.get('invoice_number', currentLang),
+                        label: AppTranslations.get(
+                          'invoice_number',
+                          currentLang,
+                        ),
                         icon: Icons.numbers_outlined,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return AppTranslations.get('please_enter_invoice_number', currentLang);
+                            return AppTranslations.get(
+                              'please_enter_invoice_number',
+                              currentLang,
+                            );
                           }
                           return null;
                         },
@@ -260,7 +275,10 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              AppTranslations.get('invoice_date_time', currentLang),
+                                              AppTranslations.get(
+                                                'invoice_date_time',
+                                                currentLang,
+                                              ),
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: Colors.grey.shade600,
@@ -295,7 +313,10 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                     ? Colors.green.shade600
                                     : Colors.blue.shade600,
                               ),
-                              tooltip: AppTranslations.get('edit_date_time', currentLang),
+                              tooltip: AppTranslations.get(
+                                'edit_date_time',
+                                currentLang,
+                              ),
                             ),
                           ],
                         ),
@@ -339,16 +360,25 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                       >(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) =>
-                                              SmartDocumentScreen(
-                                                isLocal: widget.isLocal,
-                                                clientName:
-                                                    _clientNameController.text,
-                                                invoiceNumber:
-                                                    _invoiceNumberController
-                                                        .text,
-                                                date: _selectedDate,
-                                              ),
+                                          builder: (context) => widget.isLocal
+                                              ? SmartDocumentScreenBuy(
+                                                  isLocal: widget.isLocal,
+                                                  clientName:
+                                                      _clientNameController.text,
+                                                  invoiceNumber:
+                                                      _invoiceNumberController
+                                                          .text,
+                                                  date: _selectedDate,
+                                                )
+                                              : SmartDocumentScreen(
+                                                  isLocal: widget.isLocal,
+                                                  clientName:
+                                                      _clientNameController.text,
+                                                  invoiceNumber:
+                                                      _invoiceNumberController
+                                                          .text,
+                                                  date: _selectedDate,
+                                                ),
                                         ),
                                       );
                                   if (!(context.mounted)) return;
@@ -369,7 +399,10 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                 ),
                               ),
                               child: Text(
-                                AppTranslations.get('create_invoice', currentLang),
+                                AppTranslations.get(
+                                  'create_invoice',
+                                  currentLang,
+                                ),
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
