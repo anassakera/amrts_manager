@@ -20,6 +20,17 @@ try {
     $database = new Database();
     $conn = $database->getConnection();
     
+    // إنشاء ID تسلسلي بسيط (1, 2, 3...)
+    
+    // الحصول على أعلى ID موجود
+    $maxIdQuery = "SELECT MAX(CAST(id AS INT)) as max_id FROM invoices WHERE ISNUMERIC(id) = 1";
+    $maxIdStmt = $database->executeQuery($maxIdQuery, []);
+    $maxIdResult = $database->fetch($maxIdStmt);
+    
+    // تحديد ID التالي
+    $nextId = ($maxIdResult && $maxIdResult['max_id']) ? $maxIdResult['max_id'] + 1 : 1;
+    $invoiceId = (string)$nextId;
+    
     // إضافة الفاتورة الرئيسية
     $invoiceQuery = "
         INSERT INTO invoices (id, clientName, invoiceNumber, date, isLocal, totalAmount, status, created_at, updated_at)
@@ -27,7 +38,7 @@ try {
     ";
     
     $database->executeQuery($invoiceQuery, [
-        $input['id'],
+        $invoiceId, // استخدام ID المُولد تلقائياً
         $input['clientName'],
         $input['invoiceNumber'],
         $input['date'],
@@ -45,7 +56,7 @@ try {
         
         foreach ($input['items'] as $item) {
             $database->executeQuery($itemQuery, [
-                $input['id'],
+                $invoiceId, // استخدام ID المُولد
                 $item['refFournisseur'],
                 $item['articles'],
                 $item['qte'],
@@ -68,14 +79,14 @@ try {
         ";
         
         $database->executeQuery($summaryQuery, [
-            $input['id'],
+            $invoiceId, // استخدام ID المُولد
             $input['summary']['factureNumber'],
             $input['summary']['transit'],
             $input['summary']['droitDouane'],
             $input['summary']['chequeChange'],
             $input['summary']['freiht'],
             $input['summary']['autres'],
-            $input['summary']['total'],
+            $input['summary']['total'] ?? 0.0,
             $input['summary']['txChange'],
             $input['summary']['poidsTotal']
         ]);
@@ -83,17 +94,17 @@ try {
     
     // إرجاع الفاتورة المضافة
     $invoiceQuery = "SELECT * FROM invoices WHERE id = ?";
-    $invoiceStmt = $database->executeQuery($invoiceQuery, [$input['id']]);
+    $invoiceStmt = $database->executeQuery($invoiceQuery, [$invoiceId]);
     $invoice = $database->fetch($invoiceStmt);
     
     // جلب عناصر الفاتورة
     $itemsQuery = "SELECT * FROM invoice_items WHERE invoice_id = ?";
-    $itemsStmt = $database->executeQuery($itemsQuery, [$input['id']]);
+    $itemsStmt = $database->executeQuery($itemsQuery, [$invoiceId]);
     $items = $database->fetchAll($itemsStmt);
     
     // جلب ملخص الفاتورة
     $summaryQuery = "SELECT * FROM invoice_summary WHERE invoice_id = ?";
-    $summaryStmt = $database->executeQuery($summaryQuery, [$input['id']]);
+    $summaryStmt = $database->executeQuery($summaryQuery, [$invoiceId]);
     $summary = $database->fetch($summaryStmt);
     
     // تحويل البيانات الرقمية بشكل صريح
@@ -124,4 +135,4 @@ try {
         'message' => 'Server error: ' . $e->getMessage()
     ]);
 }
-?> 
+?>

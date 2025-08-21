@@ -3,6 +3,7 @@ import 'package:amrts_manager/screens/edit_invoice_screen_buy.dart';
 import '../core/imports.dart';
 import 'package:printing/printing.dart';
 
+
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
 
@@ -24,6 +25,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadInvoices();
+  }
+
+  // دالة لتحديث البيانات - يمكن استدعاؤها من الخارج
+  Future<void> refresh() async {
+    await _loadInvoices();
   }
 
   @override
@@ -106,11 +112,10 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   }
 
   Widget _buildTopBar(String currentLang) {
-     final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 768;
 
-     if (isDesktop) {
-  
+    if (isDesktop) {
       // تصميم الحاسوب - TabBar والبحث في نفس الصف
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -252,8 +257,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                         'advanced_filter',
                         currentLang,
                       ),
-                      onPressed: () { // anass
-                
+                      onPressed: () {
+                        // anass
                       },
                     ),
                   ),
@@ -303,7 +308,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -323,9 +330,17 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                         letterSpacing: 0.3,
                       ),
                       tabs: [
-                        Tab(text: AppTranslations.get('local_import', currentLang)),
                         Tab(
-                          text: AppTranslations.get('external_import', currentLang),
+                          text: AppTranslations.get(
+                            'local_import',
+                            currentLang,
+                          ),
+                        ),
+                        Tab(
+                          text: AppTranslations.get(
+                            'external_import',
+                            currentLang,
+                          ),
                         ),
                       ],
                     ),
@@ -349,9 +364,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                   child: IconButton(
                     icon: Icon(
                       _showSearchBar ? Icons.search_off : Icons.search,
-                      color: _showSearchBar ? Colors.red.shade600 : const Color(0xFF1E40AF),
+                      color: _showSearchBar
+                          ? Colors.red.shade600
+                          : const Color(0xFF1E40AF),
                     ),
-                    tooltip: _showSearchBar 
+                    tooltip: _showSearchBar
                         ? AppTranslations.get('hide_search', currentLang)
                         : AppTranslations.get('show_search', currentLang),
                     onPressed: () {
@@ -463,7 +480,10 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         .where((inv) => inv['isLocal'] == isLocal)
         .toList();
     if (invoices.isEmpty) {
-      return _buildEmptyState(isLocal, currentLang);
+      return RefreshIndicator(
+        onRefresh: _loadInvoices,
+        child: _buildEmptyState(isLocal, currentLang),
+      );
     }
     // إظهار عدد النتائج إذا كان البحث نشط
     if (_isSearching) {
@@ -471,25 +491,31 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         children: [
           _buildSearchResultsHeader(invoices.length, currentLang),
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.all(8),
-              itemCount: invoices.length,
-              itemBuilder: (context, index) {
-                final invoice = invoices[index];
-                return _buildInvoiceCard(invoice);
-              },
+            child: RefreshIndicator(
+              onRefresh: _loadInvoices,
+              child: ListView.builder(
+                padding: EdgeInsets.all(8),
+                itemCount: invoices.length,
+                itemBuilder: (context, index) {
+                  final invoice = invoices[index];
+                  return _buildInvoiceCard(invoice);
+                },
+              ),
             ),
           ),
         ],
       );
     }
-    return ListView.builder(
-      padding: EdgeInsets.all(8),
-      itemCount: invoices.length,
-      itemBuilder: (context, index) {
-        final invoice = invoices[index];
-        return _buildInvoiceCard(invoice);
-      },
+    return RefreshIndicator(
+      onRefresh: _loadInvoices,
+      child: ListView.builder(
+        padding: EdgeInsets.all(8),
+        itemCount: invoices.length,
+        itemBuilder: (context, index) {
+          final invoice = invoices[index];
+          return _buildInvoiceCard(invoice);
+        },
+      ),
     );
   }
 
@@ -603,7 +629,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   Future<void> _addInvoice(Map<String, dynamic> invoice) async {
     if (_isAddingInvoice) return;
     _isAddingInvoice = true;
-    
+
     final languageProvider = Provider.of<LanguageProvider>(
       context,
       listen: false,
@@ -615,36 +641,43 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       final invoiceNumber = invoice['invoiceNumber']?.toString() ?? '';
       final clientName = invoice['clientName']?.toString() ?? '';
       final date = invoice['date']?.toString() ?? '';
-      
-      final existingInvoice = _invoices.any((inv) => 
-        inv['invoiceNumber']?.toString() == invoiceNumber &&
-        inv['clientName']?.toString() == clientName &&
-        inv['date']?.toString() == date
+
+      final existingInvoice = _invoices.any(
+        (inv) =>
+            inv['invoiceNumber']?.toString() == invoiceNumber &&
+            inv['clientName']?.toString() == clientName &&
+            inv['date']?.toString() == date,
       );
-      
+
       if (existingInvoice) {
         if (mounted) {
           _showSuccessMessage('الفاتورة موجودة بالفعل', Icons.error);
         }
         return;
       }
-      
+
       final _ = await ApiServices.createInvoice(invoice);
       if (mounted) {
         // إعادة تحميل البيانات من قاعدة البيانات بدلاً من الإضافة المحلية
         await _loadInvoices();
-  
-         _showSuccessMessage(AppTranslations.get('invoice_added_successfully', currentLang), Icons.check_circle);
 
+        _showSuccessMessage(
+          AppTranslations.get('invoice_added_successfully', currentLang),
+          Icons.check_circle,
+        );
       }
     } catch (e) {
       if (mounted) {
-        _showSuccessMessage(AppTranslations.get('error_adding_invoice', currentLang), Icons.error);
+        _showSuccessMessage(
+          AppTranslations.get('error_adding_invoice', currentLang),
+          Icons.error,
+        );
       }
     } finally {
       _isAddingInvoice = false;
     }
   }
+
   void _showSuccessMessage(String message, IconData icon) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -661,6 +694,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       ),
     );
   }
+
   Future<void> _updateInvoice(Map<String, dynamic> updatedInvoice) async {
     final languageProvider = Provider.of<LanguageProvider>(
       context,
@@ -678,7 +712,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       if (mounted) {
         setState(() {
           final index = _invoices.indexWhere(
-            (invoice) => invoice['id'].toString() == updatedInvoice['id'].toString(),
+            (invoice) =>
+                invoice['id'].toString() == updatedInvoice['id'].toString(),
           );
           if (index != -1) {
             _invoices[index] = response;
@@ -687,7 +722,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               _filterInvoices(_searchQuery);
             } else {
               final filteredIndex = _filteredInvoices.indexWhere(
-                (invoice) => invoice['id'].toString() == updatedInvoice['id'].toString(),
+                (invoice) =>
+                    invoice['id'].toString() == updatedInvoice['id'].toString(),
               );
               if (filteredIndex != -1) {
                 _filteredInvoices[filteredIndex] = response;
@@ -744,7 +780,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       if (mounted) {
         setState(() {
           _invoices.removeWhere((invoice) => invoice['id'].toString() == id);
-          _filteredInvoices.removeWhere((invoice) => invoice['id'].toString() == id);
+          _filteredInvoices.removeWhere(
+            (invoice) => invoice['id'].toString() == id,
+          );
         });
       }
     } catch (e) {
@@ -781,7 +819,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
       if (mounted) {
         setState(() {
-          final index = _invoices.indexWhere((invoice) => invoice['id'].toString() == id);
+          final index = _invoices.indexWhere(
+            (invoice) => invoice['id'].toString() == id,
+          );
           if (index != -1) {
             _invoices[index] = updatedInvoice;
             // تحديث القائمة المفلترة
@@ -850,7 +890,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
       if (mounted) {
         setState(() {
-          final index = _invoices.indexWhere((invoice) => invoice['id'].toString() == id);
+          final index = _invoices.indexWhere(
+            (invoice) => invoice['id'].toString() == id,
+          );
           if (index != -1) {
             _invoices[index] = updatedInvoice;
             // تحديث القائمة المفلترة
@@ -943,6 +985,14 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     );
     final currentLang = languageProvider.currentLanguage;
 
+    // تفريغ القوائم أولاً لإظهار حالة التحميل
+    if (mounted) {
+      setState(() {
+        _invoices = [];
+        _filteredInvoices = [];
+      });
+    }
+
     try {
       final invoices = await ApiServices.getAllInvoices();
       if (mounted) {
@@ -950,20 +1000,22 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         final uniqueInvoices = <Map<String, dynamic>>[];
         final seenIds = <int>{};
         final seenInvoiceNumbers = <String>{};
-        
+
         for (final invoice in invoices) {
           final id = invoice['id'] as int?;
           final invoiceNumber = invoice['invoiceNumber']?.toString() ?? '';
           final date = invoice['date']?.toString() ?? '';
           final uniqueKey = '$invoiceNumber-$date';
-          
-          if (id != null && !seenIds.contains(id) && !seenInvoiceNumbers.contains(uniqueKey)) {
+
+          if (id != null &&
+              !seenIds.contains(id) &&
+              !seenInvoiceNumbers.contains(uniqueKey)) {
             seenIds.add(id);
             seenInvoiceNumbers.add(uniqueKey);
             uniqueInvoices.add(invoice);
           }
         }
-        
+
         setState(() {
           _invoices = uniqueInvoices;
           _filteredInvoices = uniqueInvoices;
@@ -1002,28 +1054,31 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       _addInvoice(newInvoice);
     }
   }
-void _editInvoice(Map<String, dynamic> invoice) async {
-  final updatedInvoice = await Navigator.push<Map<String, dynamic>>(
-    context,
-    MaterialPageRoute(
-      builder: (context) => invoice['isLocal'] == true 
-        ? SmartDocumentScreenBuy(  // للفواتير المحلية
-            invoice: invoice,
-            isLocal: invoice['isLocal'],
-            clientName: invoice['clientName'],
-          )
-        : SmartDocumentScreen(   // للفواتير غير المحلية
-            invoice: invoice,
-            isLocal: invoice['isLocal'],
-            clientName: invoice['clientName'],
-          ),
-    ),
-  );
-  
-  if (updatedInvoice != null && mounted) {
-    _updateInvoice(updatedInvoice);
+
+  void _editInvoice(Map<String, dynamic> invoice) async {
+    final updatedInvoice = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => invoice['isLocal'] == true
+            ? SmartDocumentScreenBuy(
+                // للفواتير المحلية
+                invoice: invoice,
+                isLocal: invoice['isLocal'],
+                clientName: invoice['clientName'],
+              )
+            : SmartDocumentScreen(
+                // للفواتير غير المحلية
+                invoice: invoice,
+                isLocal: invoice['isLocal'],
+                clientName: invoice['clientName'],
+              ),
+      ),
+    );
+
+    if (updatedInvoice != null && mounted) {
+      _updateInvoice(updatedInvoice);
+    }
   }
-}
 
   void _printInvoice(Map<String, dynamic> invoice) async {
     final languageProvider = Provider.of<LanguageProvider>(
@@ -1060,9 +1115,9 @@ void _editInvoice(Map<String, dynamic> invoice) async {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final pdfData = await PrintInvoiceService.generateInvoicesPdf([
-                invoice,
-              ]);
+              final pdfData = invoice['isLocal'] == true
+                  ? await PrintInvoiceServiceBuy.generateInvoicesPdf([invoice])
+                  : await PrintInvoiceService.generateInvoicesPdf([invoice]);
               await Printing.layoutPdf(onLayout: (format) async => pdfData);
             },
             style: ElevatedButton.styleFrom(

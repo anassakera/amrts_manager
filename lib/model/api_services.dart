@@ -1,49 +1,75 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:network_info_plus/network_info_plus.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 class ApiServices {
-  static const String baseUrl = 'http://192.168.1.10/amrts_manager';
-  
-  // خدمات المصادقة
-  static Future<Map<String, dynamic>> signIn(String email, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/signin.php'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
-          'email': email,
-          'password': password,
-        }),
-      );
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          return Map<String, dynamic>.from(data);
-        } else {
-          throw Exception(data['message'] ?? 'حدث خطأ في تسجيل الدخول');
-        }
-      } else if (response.statusCode == 400) {
-        final data = json.decode(response.body);
-        throw Exception(data['message'] ?? 'بيانات غير صحيحة');
-      } else if (response.statusCode == 405) {
-        throw Exception('طريقة الطلب غير مسموحة');
-      } else {
-        throw Exception('فشل في الاتصال بالخادم (${response.statusCode})');
-      }
-    } catch (e) {
-      if (e is FormatException) {
-        throw Exception('خطأ في تنسيق البيانات المستلمة');
-      } else if (e is Exception) {
-        rethrow;
-      } else {
-        throw Exception('حدث خطأ غير متوقع: $e');
-      }
+  static String? baseUrl;
+
+  static Future<String> _getLocalIp() async {
+    // تجنّب البلجن على الويب وويندوز/لينكس، واستخدم البلجن فقط على الموبايل
+    if (kIsWeb) {
+      return 'localhost';
     }
+
+    try {
+      if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+        final info = NetworkInfo();
+        final ip = await info.getWifiIP();
+        if (ip != null && ip.isNotEmpty) return ip;
+      }
+    } catch (_) {
+      // تجاهل أي استثناء من البلجن، سنعتمد على البديل أدناه
+    }
+
+    try {
+      final interfaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+      for (final interface in interfaces) {
+        for (final addr in interface.addresses) {
+          if (!addr.isLoopback && addr.type == InternetAddressType.IPv4) {
+            return addr.address;
+          }
+        }
+      }
+    } catch (_) {}
+
+    return '127.0.0.1';
   }
+
+  static Future<void> initBaseUrl() async {
+    final ip = await _getLocalIp();
+    baseUrl = 'http://$ip/amrts_manager';
+    // ignore: avoid_print
+    print(baseUrl);
+  }
+
+  static Future<Map<String, dynamic>> signIn(String email, String password) async {
+    if (baseUrl == null) {
+      await initBaseUrl();
+    }
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/signin.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: json.encode({
+        'email': email,
+        'password': password,
+      }),
+    );
+
+    return json.decode(response.body);
+  }
+
+
+
+
 
   // خدمات المستخدمين
   static Future<List<Map<String, dynamic>>> getAllUsers() async {

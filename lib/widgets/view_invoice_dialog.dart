@@ -279,7 +279,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                       ],
 
                       // ملخص الفاتورة
-                      if (summary.isNotEmpty) ...[
+                      if (summary.isNotEmpty && isLocal == false) ...[
                         Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           child: Text(

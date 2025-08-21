@@ -51,12 +51,20 @@ class Database {
 
         $stmt = sqlsrv_prepare($this->conn, $query, $params);
         if ($stmt === false) {
-            throw new Exception('Query preparation failed');
+            $errors = sqlsrv_errors(SQLSRV_ERR_ERRORS);
+            $errorMessages = array_map(function($error) {
+                return "SQLSTATE " . $error['SQLSTATE'] . ": " . $error['message'];
+            }, $errors);
+            throw new Exception('Query preparation failed: ' . implode(', ', $errorMessages));
         }
 
         $result = sqlsrv_execute($stmt);
         if ($result === false) {
-            throw new Exception('Query execution failed');
+            $errors = sqlsrv_errors(SQLSRV_ERR_ERRORS);
+            $errorMessages = array_map(function($error) {
+                return "SQLSTATE " . $error['SQLSTATE'] . ": " . $error['message'];
+            }, $errors);
+            throw new Exception('Query execution failed: ' . implode(', ', $errorMessages));
         }
 
         return $stmt;

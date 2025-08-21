@@ -4,7 +4,7 @@ import 'package:pdf/widgets.dart' as pdf;
 import 'package:flutter/services.dart' show rootBundle;
 import 'number_formatting_service.dart';
 
-class PrintInvoiceService {
+class PrintInvoiceServiceBuy {
   static Future<Uint8List> generateInvoicesPdf(
     List<Map<String, dynamic>> invoices,
   ) async {
@@ -94,7 +94,7 @@ class PrintInvoiceService {
                               crossAxisAlignment: pdf.CrossAxisAlignment.start,
                               children: [
                                 _buildInfoRow(
-                                  'Nom du fournisseur:', 
+                                  'Nom du fournisseur:',
                                   invoice['clientName'] ?? '',
                                   poppinsFont,
                                   poppinsBoldFont,
@@ -102,7 +102,7 @@ class PrintInvoiceService {
                                 pdf.SizedBox(height: 4),
                                 _buildInfoRow(
                                   'Numéro de facture:',
-                                                                     invoice['invoiceNumber']?.toString() ?? '',
+                                  invoice['invoiceNumber']?.toString() ?? '',
                                   poppinsFont,
                                   poppinsBoldFont,
                                 ),
@@ -226,7 +226,8 @@ class PrintInvoiceService {
                                     pdf.SizedBox(height: 4),
                                     _buildInfoRow(
                                       'Numéro de la facture:',
-                                      invoice['invoiceNumber']?.toString() ?? '',
+                                      invoice['invoiceNumber']?.toString() ??
+                                          '',
                                       poppinsFont,
                                       poppinsBoldFont,
                                     ),
@@ -325,10 +326,11 @@ class PrintInvoiceService {
       'Article',
       'Qté',
       'Poids',
-      'P.U(\$)',
-      'P.Achat',
-      'A.Frais',
-      'C.U',
+      'P.U',
+      'M.Total',
+      // 'P.Achat',
+      // 'A.Frais',
+      // 'C.U',
     ];
 
     // Largeurs personnalisées pour chaque colonne
@@ -338,9 +340,10 @@ class PrintInvoiceService {
       0.8, // Qté
       1.0, // Poids
       1.0, // P.U.
-      1.0, // Achat
-      1.0, // Frais
-      1.0, // Coût
+      1.2, // Total
+      // 1.0, // Achat
+      // 1.0, // Frais
+      // 1.0, // Coût
     ];
 
     return pdf.Container(
@@ -452,7 +455,7 @@ class PrintInvoiceService {
                         child: pdf.Text(
                           '${item['articles'] ?? ''}',
                           style: pdf.TextStyle(font: font, fontSize: 8),
-                          textAlign: pdf.TextAlign.left,
+                          textAlign: pdf.TextAlign.center,
                           maxLines: 2,
                         ),
                       ),
@@ -463,7 +466,9 @@ class PrintInvoiceService {
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
                         child: pdf.Text(
-                          NumberFormattingService.formatQuantitySafe(item['qte']),
+                          NumberFormattingService.formatQuantitySafe(
+                            item['qte'],
+                          ),
                           style: pdf.TextStyle(font: font, fontSize: 8),
                           textAlign: pdf.TextAlign.center,
                         ),
@@ -475,7 +480,9 @@ class PrintInvoiceService {
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
                         child: pdf.Text(
-                          NumberFormattingService.formatWeightSafe(item['poids']),
+                          NumberFormattingService.formatWeightSafe(
+                            item['poids'],
+                          ),
                           style: pdf.TextStyle(font: font, fontSize: 8),
                           textAlign: pdf.TextAlign.center,
                         ),
@@ -486,50 +493,31 @@ class PrintInvoiceService {
                       flex: (columnWidths[4] * 10).round(),
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
-                    child: pdf.Text(
-                      NumberFormattingService.formatCurrencySafe(item['puPieces'], symbol: ''),
+                        child: pdf.Text(
+                          NumberFormattingService.formatCurrencySafe(
+                            item['puPieces'],
+                            symbol: '',
+                          ),
                           style: pdf.TextStyle(font: font, fontSize: 8),
                           textAlign: pdf.TextAlign.center,
                         ),
                       ),
                     ),
-                    // Prix d'achat
+                    // Montant total
                     pdf.Expanded(
-                      flex: (columnWidths[6] * 10).round(),
+                      flex: (columnWidths[5] * 10).round(),
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
-                    child: pdf.Text(
-                      NumberFormattingService.formatCurrencySafe(item['prixAchat'], symbol: ''),
-                          style: pdf.TextStyle(font: font, fontSize: 8),
-                          textAlign: pdf.TextAlign.center,
-                        ),
-                      ),
-                    ),
-                    // Autres frais
-                    pdf.Expanded(
-                      flex: (columnWidths[7] * 10).round(),
-                      child: pdf.Container(
-                        padding: const pdf.EdgeInsets.all(6),
-                    child: pdf.Text(
-                      NumberFormattingService.formatCurrencySafe(item['autresCharges'], symbol: ''),
-                          style: pdf.TextStyle(font: font, fontSize: 8),
-                          textAlign: pdf.TextAlign.center,
-                        ),
-                      ),
-                    ),
-                    // Coût de l'article
-                    pdf.Expanded(
-                      flex: (columnWidths[7] * 10).round(),
-                      child: pdf.Container(
-                        padding: const pdf.EdgeInsets.all(6),
-                    child: pdf.Text(
-                      NumberFormattingService.formatCurrencySafe(item['cuHt'], symbol: ''),
+                        child: pdf.Text(
+                          NumberFormattingService.formatCurrencySafe(
+                            item['mt'],
+                          ),
                           style: pdf.TextStyle(
                             font: boldFont,
                             fontSize: 8,
-                            color: PdfColor.fromHex('#059669'),
+                            color: PdfColor.fromHex('#1E3A8A'),
                           ),
-                          textAlign: pdf.TextAlign.center,
+                          textAlign: pdf.TextAlign.right,
                         ),
                       ),
                     ),
@@ -552,13 +540,19 @@ class PrintInvoiceService {
 
     final summaryFields = [
       // ['Facture douanière:', summary['factureNumber'] ?? ''],
-      ['Transport:', NumberFormattingService.formatCurrencySafe(summary['transit'])],
-      ['Droit de douane:', NumberFormattingService.formatCurrencySafe(summary['droitDouane'])],
-      ['Fret:', NumberFormattingService.formatCurrencySafe(summary['freiht'])],
-      ['Autre:', NumberFormattingService.formatCurrencySafe(summary['autres'])],
-      ['Poids total:', NumberFormattingService.formatWeightSafe(summary['poidsTotal'])],
-      ['Total des dépenses:', NumberFormattingService.formatCurrencySafe(summary['total'])],
-      ['Total marchandises:', NumberFormattingService.formatCurrencySafe(totalAmount)],
+      // ['Transport:', NumberFormattingService.formatCurrencySafe(summary['transit'])],
+      // ['Droit de douane:', NumberFormattingService.formatCurrencySafe(summary['droitDouane'])],
+      // ['Fret:', NumberFormattingService.formatCurrencySafe(summary['freiht'])],
+      // ['Autre:', NumberFormattingService.formatCurrencySafe(summary['autres'])],
+      [
+        'Poids total:',
+        NumberFormattingService.formatWeightSafe(summary['poidsTotal']),
+      ],
+      // ['Total des dépenses:', NumberFormattingService.formatCurrencySafe(summary['total'])],
+      [
+        'Total marchandises:',
+        NumberFormattingService.formatCurrencySafe(totalAmount),
+      ],
       // ['Taux de change:', summary['txChange']?.toString() ?? ''],
     ];
 

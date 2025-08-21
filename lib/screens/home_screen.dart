@@ -11,8 +11,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late TabController _tabController;
   int _selectedIndex = 0;
 
-  // late GlobalKey<State<SalesInterfaceScreen>> _salesInterfaceKey;
-  // late GlobalKey<State<ProductManagementScreen>> _productManagementKey;
   late List<Widget> _screens;
 
   // قائمة بأسماء الشاشات
@@ -56,6 +54,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _getCurrentScreenTitle(BuildContext context) {
     return _screenTitles(context)[_selectedIndex];
   }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         ),
+
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,

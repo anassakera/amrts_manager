@@ -279,13 +279,14 @@ class InvoiceCard extends StatelessWidget {
   }
 
   Widget _buildStatusChip(String currentLang) {
+    final bool isStatusDisabled = invoice['status'] == 'Envoyer au stockage';
     return Builder(
       builder: (context) => GestureDetector(
-        onTap: () => _showStatusPopup(context, currentLang),
+        onTap: isStatusDisabled ? null : () => _showStatusPopup(context, currentLang),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: _getStatusColor().withValues(alpha: 0.1),
+            color: _getStatusColor().withValues(alpha: isStatusDisabled ? 0.05 : 0.1),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Row(
@@ -296,11 +297,15 @@ class InvoiceCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
-                  color: _getStatusColor(),
+                  color: isStatusDisabled ? Colors.grey.shade400 : _getStatusColor(),
                 ),
               ),
               const SizedBox(width: 2),
-              Icon(Icons.arrow_drop_down, size: 12, color: _getStatusColor()),
+              Icon(
+                Icons.arrow_drop_down, 
+                size: 12, 
+                color: isStatusDisabled ? Colors.grey.shade400 : _getStatusColor(),
+              ),
             ],
           ),
         ),
@@ -327,15 +332,154 @@ class InvoiceCard extends StatelessWidget {
       context: context,
       position: position,
       items: [
-        _buildStatusMenuItem('Terminée', Colors.green, currentLang),
-        _buildStatusMenuItem('En attente', Colors.orange, currentLang),
+        _buildStatusMenuItem('Envoyer au stockage', Colors.blue, currentLang),
         _buildStatusMenuItem('Brouillon', Colors.grey, currentLang),
       ],
     ).then((selectedStatus) {
       if (selectedStatus != null && onStatusUpdate != null) {
-        onStatusUpdate!(selectedStatus);
+        if (selectedStatus == 'Envoyer au stockage') {
+          _showConfirmationDialog(context, currentLang);
+        } else {
+          onStatusUpdate!(selectedStatus);
+        }
       }
     });
+  }
+
+  void _showConfirmationDialog(BuildContext context, String currentLang) {
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.blue.shade200,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    size: 48,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Title
+                Text(
+                  'Confirmation',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Message
+                Text(
+                  'Êtes-vous sûr de vouloir envoyer cette facture au stockage ?\n\nCette action ne peut pas être annulée.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(dialogContext).pop(),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Annuler',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(dialogContext).pop();
+                          onStatusUpdate!('Envoyer au stockage');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade600,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Confirmer',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   PopupMenuItem<String> _buildStatusMenuItem(String status, Color color, String currentLang) {
@@ -365,27 +509,40 @@ class InvoiceCard extends StatelessWidget {
 
 
   Widget _buildGridAction(IconData icon, Color color, VoidCallback onTap) {
+    final bool isDisabled = _isActionDisabled(icon);
     return GestureDetector(
-      onTap: onTap,
+      onTap: isDisabled ? null : onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha:0.10),
+          color: isDisabled 
+              ? Colors.grey.withValues(alpha: 0.05)
+              : color.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, size: 20, color: color),
+        child: Icon(
+          icon, 
+          size: 20, 
+          color: isDisabled ? Colors.grey.shade400 : color,
+        ),
       ),
     );
+  }
+
+  bool _isActionDisabled(IconData icon) {
+    if (invoice['status'] == 'Envoyer au stockage') {
+      // تعطيل أزرار التعديل والحذف فقط
+      return icon == Icons.edit || icon == Icons.delete;
+    }
+    return false;
   }
 
   Color _getStatusColor() {
     final String status = invoice['status'] ?? '';
     switch (status) {
-      case 'Terminée':
-        return Colors.green.shade600;
-      case 'En attente':
-        return Colors.orange.shade600;
+      case 'Envoyer au stockage':
+        return Colors.blue.shade600;
       case 'Brouillon':
         return Colors.grey.shade600;
       default:

@@ -313,6 +313,12 @@ class DrawerScreen extends StatelessWidget {
         
         final settingsItems = [
           {
+            'icon': Icons.business_rounded,
+            'title': AppTranslations.get('company_profile', currentLang),
+            'subtitle': AppTranslations.get('company_info', currentLang),
+            'color': const Color(0xFF1E40AF),
+          },
+          {
             'icon': Icons.people_rounded,
             'title': 'إدارة المستخدمين',
             'subtitle': 'إضافة وتعديل وحذف المستخدمين',
@@ -324,19 +330,19 @@ class DrawerScreen extends StatelessWidget {
             'subtitle': 'إعدادات النظام',
             'color': const Color(0xFF64748B),
           },
-          {
-            'icon': Icons.notifications_rounded,
-            'title': AppTranslations.get('notifications', currentLang),
-            'subtitle': 'إدارة الإشعارات',
-            'color': const Color(0xFFEF4444),
-            'badge': '3',
-          },
-          {
-            'icon': Icons.help_rounded,
-            'title': AppTranslations.get('help', currentLang),
-            'subtitle': 'الدعم والمساعدة',
-            'color': const Color(0xFF7C3AED),
-          },
+          // {
+          //   'icon': Icons.notifications_rounded,
+          //   'title': AppTranslations.get('notifications', currentLang),
+          //   'subtitle': 'إدارة الإشعارات',
+          //   'color': const Color(0xFFEF4444),
+          //   'badge': '3',
+          // },
+                      // {
+            //   'icon': Icons.help_rounded,
+            //   'title': AppTranslations.get('help', currentLang),
+            //   'subtitle': 'الدعم والمساعدة',
+            //   'color': const Color(0xFF7C3AED),
+            // },
         ];
 
         return Column(
@@ -358,7 +364,14 @@ class DrawerScreen extends StatelessWidget {
           onTap: () {
             // Handle settings navigation based on title
             String title = item['title'];
-            if (title == 'إدارة المستخدمين') {
+            if (title == AppTranslations.get('company_profile', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileScreen(),
+                ),
+              );
+            } else if (title == 'إدارة المستخدمين') {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -372,21 +385,22 @@ class DrawerScreen extends StatelessWidget {
                   builder: (context) => const SettingsScreen(),
                 ),
               );
-            } else if (title == AppTranslations.get('notifications', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
-                ),
-              );
-            } else if (title == AppTranslations.get('help', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
-                ),
-              );
             }
+            // } else if (title == AppTranslations.get('notifications', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
+            //   Navigator.push(
+            //     context,
+            //     MaterialPageRoute(
+            //       builder: (context) => const SettingsScreen(),
+            //     ),
+            //   );
+            // } else if (title == AppTranslations.get('help', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)) {
+            //   Navigator.push(
+            //     context,
+            //     MaterialPageRoute(
+            //       builder: (context) => const SettingsScreen(),
+            //     ),
+            //   );
+            // }
           },
           child: Container(
             padding: const EdgeInsets.all(12),

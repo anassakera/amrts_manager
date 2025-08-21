@@ -38,7 +38,7 @@ class SmartDocumentScreenState extends State<SmartDocumentScreen> with SingleTic
     'freiht': 0.0,
     'autres': 0.0,
     'total': 0.0,
-    'txChange': 11.2,
+    'txChange': 0.0,
     'poidsTotal': 0.0,
   };
   int? _editingIndex;
@@ -253,7 +253,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
         'freiht': 0.0,
         'autres': 0.0,
         'total': 0.0,
-        'txChange': 11.2,
+        'txChange': 0.0,
         'poidsTotal': 0.0,
       };
     });

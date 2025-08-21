@@ -37,12 +37,9 @@ try {
         $input['id']
     ]);
     
-    // حذف العناصر والملخص القديمة
+    // حذف العناصر القديمة
     $deleteItemsQuery = "DELETE FROM invoice_items WHERE invoice_id = ?";
     $database->executeQuery($deleteItemsQuery, [$input['id']]);
-    
-    $deleteSummaryQuery = "DELETE FROM invoice_summary WHERE invoice_id = ?";
-    $database->executeQuery($deleteSummaryQuery, [$input['id']]);
     
     // إضافة العناصر الجديدة
     if (isset($input['items']) && is_array($input['items'])) {
@@ -68,15 +65,15 @@ try {
         }
     }
     
-    // إضافة ملخص الفاتورة الجديد
+    // تحديث ملخص الفاتورة
     if (isset($input['summary'])) {
         $summaryQuery = "
-            INSERT INTO invoice_summary (invoice_id, factureNumber, transit, droitDouane, chequeChange, freiht, autres, total, txChange, poidsTotal)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            UPDATE invoice_summary 
+            SET factureNumber = ?, transit = ?, droitDouane = ?, chequeChange = ?, freiht = ?, autres = ?, total = ?, txChange = ?, poidsTotal = ?
+            WHERE invoice_id = ?
         ";
         
-        $database->executeQuery($summaryQuery, [
-            $input['id'],
+        $summaryStmt = $database->executeQuery($summaryQuery, [
             $input['summary']['factureNumber'],
             $input['summary']['transit'],
             $input['summary']['droitDouane'],
@@ -85,8 +82,30 @@ try {
             $input['summary']['autres'],
             $input['summary']['total'],
             $input['summary']['txChange'],
-            $input['summary']['poidsTotal']
+            $input['summary']['poidsTotal'],
+            $input['id']
         ]);
+        
+        // إذا لم يكن هناك ملخص موجود، قم بإنشاؤه
+        if ($database->rowCount($summaryStmt) == 0) {
+            $insertSummaryQuery = "
+                INSERT INTO invoice_summary (invoice_id, factureNumber, transit, droitDouane, chequeChange, freiht, autres, total, txChange, poidsTotal)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ";
+            
+            $database->executeQuery($insertSummaryQuery, [
+                $input['id'],
+                $input['summary']['factureNumber'],
+                $input['summary']['transit'],
+                $input['summary']['droitDouane'],
+                $input['summary']['chequeChange'],
+                $input['summary']['freiht'],
+                $input['summary']['autres'],
+                $input['summary']['total'],
+                $input['summary']['txChange'],
+                $input['summary']['poidsTotal']
+            ]);
+        }
     }
     
     // إرجاع الفاتورة المحدثة

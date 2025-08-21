@@ -37,7 +37,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     'chequeChange': 0.0,
     'freiht': 0.0,
     'autres': 0.0,
-    'txChange': 11.2,
+    'txChange': 0.0,
     'poidsTotal': 0.0,
   };
   int? _editingIndex;
@@ -76,7 +76,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
       _editingIndex = index;
     });
   }
-void _saveItem(int index, Map<String, dynamic> data) {
+  void _saveItem(int index, Map<String, dynamic> data) {
   setState(() {
     final filteredData = {
       'refFournisseur': data['refFournisseur'],
@@ -84,7 +84,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
       'qte': data['qte'],
       'poids': data['poids'],
       'puPieces': data['puPieces'],
-      'exchangeRate': data['exchangeRate'],
     };
 
     // التحقق من أن العنصر لا يحتوي على بيانات فارغة
@@ -193,9 +192,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
         case 'أخرى':
           newSummary['autres'] = value;
           break;
-        case 'سعر الصرف':
-          newSummary['txChange'] = value;
-          break;
       }
       _summary = newSummary;
       
@@ -218,7 +214,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
         'qte': item['qte'],
         'poids': item['poids'],
         'puPieces': item['puPieces'],
-        'exchangeRate': _safeParseDouble(newSummary['txChange']),
       };
       return _calculationService.calculateItemValues(
         itemData,
@@ -249,7 +244,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
         'chequeChange': 0.0,
         'freiht': 0.0,
         'autres': 0.0,
-        'txChange': 11.2,
         'poidsTotal': 0.0,
       };
     });
@@ -282,7 +276,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
       'poids',
       'puPieces',
       'mt',
-      'exchangeRate',
     ];
 
     for (String field in fields) {
@@ -292,28 +285,20 @@ void _saveItem(int index, Map<String, dynamic> data) {
     _controllers['qte']?.addListener(_updateCalculatedFieldsWithService);
     _controllers['poids']?.addListener(_updateCalculatedFieldsWithService);
     _controllers['puPieces']?.addListener(_updateCalculatedFieldsWithService);
-    _controllers['exchangeRate']?.addListener(
-      _updateCalculatedFieldsWithService,
-    );
   }
 
   void _populateControllers(
     Map<String, dynamic> item, {
     double? defaultExchangeRate,
   }) {
+    // defaultExchangeRate parameter is intentionally unused
+    // as it's part of the method signature for future use
     _controllers['refFournisseur']?.text = item['refFournisseur'].toString();
     _controllers['articles']?.text = item['articles'].toString();
     _controllers['qte']?.text = item['qte'].toString();
     _controllers['poids']?.text = item['poids'].toString();
     _controllers['puPieces']?.text = item['puPieces'].toString();
     _controllers['mt']?.text = item['mt'].toString();
-    final exchangeRate = _safeParseDouble(item['exchangeRate']);
-    if ((exchangeRate == 1.0 || exchangeRate == 0.0) &&
-        defaultExchangeRate != null) {
-      _controllers['exchangeRate']?.text = defaultExchangeRate.toString();
-    } else {
-      _controllers['exchangeRate']?.text = exchangeRate.toString();
-    }
   }
 
   void _clearControllers() {
@@ -329,9 +314,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
       'qte': int.tryParse(_controllers['qte']?.text ?? '0') ?? 0,
       'poids': double.tryParse(_controllers['poids']?.text ?? '0') ?? 0.0,
       'puPieces': double.tryParse(_controllers['puPieces']?.text ?? '0') ?? 0.0,
-      'exchangeRate':
-          double.tryParse(_controllers['exchangeRate']?.text.trim() ?? '') ??
-          1.0,
     };
   }
 
@@ -444,9 +426,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
     _controllers['qte']?.removeListener(_updateCalculatedFieldsWithService);
     _controllers['poids']?.removeListener(_updateCalculatedFieldsWithService);
     _controllers['puPieces']?.removeListener(
-      _updateCalculatedFieldsWithService,
-    );
-    _controllers['exchangeRate']?.removeListener(
       _updateCalculatedFieldsWithService,
     );
     _controllers.forEach((key, controller) {
@@ -1188,13 +1167,8 @@ void _saveItem(int index, Map<String, dynamic> data) {
   }
 
   Widget _buildEditRow(int index) {
-    final exchangeRateFromSummary = _safeParseDouble(_summary['txChange']);
-    final isNew = index == _items.length;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isNew || (_controllers['exchangeRate']?.text.isEmpty ?? true)) {
-        _controllers['exchangeRate']?.text = exchangeRateFromSummary.toString();
-      }
-    });
+    // isNew variable is intentionally unused
+    // final isNew = index == _items.length;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -1499,14 +1473,7 @@ void _saveItem(int index, Map<String, dynamic> data) {
   }
 
   Widget _buildPhoneEditForm() {
-    final exchangeRateFromSummary = _safeParseDouble(_summary['txChange']);
     final isNew = _editingIndex == _items.length;
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isNew || (_controllers['exchangeRate']?.text.isEmpty ?? true)) {
-        _controllers['exchangeRate']?.text = exchangeRateFromSummary.toString();
-      }
-    });
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -1541,8 +1508,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
             Row(
               children: [
                 Expanded(child: _buildPhoneEditField('puPieces', 'سعر الوحدة', isNumber: true, isDecimal: true)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildPhoneEditField('exchangeRate', 'سعر الصرف', isNumber: true, isDecimal: true)),
               ],
             ),
             const SizedBox(height: 16),
@@ -1737,7 +1702,6 @@ void _saveItem(int index, Map<String, dynamic> data) {
           _buildPhoneExpenseCard('شيك الصرف', _safeParseDouble(_summary['chequeChange']), Icons.money),
           _buildPhoneExpenseCard('الشحن', _safeParseDouble(_summary['freiht']), Icons.flight_takeoff),
           _buildPhoneExpenseCard('أخرى', _safeParseDouble(_summary['autres']), Icons.more_horiz),
-          _buildPhoneExpenseCard('سعر الصرف', _safeParseDouble(_summary['txChange']), Icons.currency_exchange, isCurrency: false),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
