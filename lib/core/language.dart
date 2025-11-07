@@ -146,10 +146,12 @@ class AppTranslations {
       'search_invoice_or_client': 'بحث عن فاتورة أو عميل...',
       'advanced_filter': 'فلترة متقدمة',
       'add_invoice': 'إضافة فاتورة',
-      'found_results_for_search': 'تم العثور على {count} نتيجة للبحث: "{query}"',
+      'found_results_for_search':
+          'تم العثور على {count} نتيجة للبحث: "{query}"',
       'no_invoices': 'لا توجد فواتير',
       'no_local_invoices_created': 'لم يتم إنشاء أي فاتورة استيراد محلي بعد',
-      'no_external_invoices_created': 'لم يتم إنشاء أي فاتورة استيراد خارجي بعد',
+      'no_external_invoices_created':
+          'لم يتم إنشاء أي فاتورة استيراد خارجي بعد',
       'add_local_invoice': 'إضافة فاتورة محلية',
       'add_external_invoice': 'إضافة فاتورة خارجية',
       'invoice_added_successfully': 'تمت إضافة الفاتورة بنجاح',
@@ -318,8 +320,10 @@ class AppTranslations {
       'add_invoice': 'Add Invoice',
       'found_results_for_search': 'Found {count} results for search: "{query}"',
       'no_invoices': 'No invoices',
-      'no_local_invoices_created': 'No local import invoices have been created yet',
-      'no_external_invoices_created': 'No external import invoices have been created yet',
+      'no_local_invoices_created':
+          'No local import invoices have been created yet',
+      'no_external_invoices_created':
+          'No external import invoices have been created yet',
       'add_local_invoice': 'Add Local Invoice',
       'add_external_invoice': 'Add External Invoice',
       'invoice_added_successfully': 'Invoice added successfully',
@@ -329,16 +333,21 @@ class AppTranslations {
       'invoice_deleted_successfully': 'Invoice deleted successfully',
       'error_deleting_invoice': 'Error occurred while deleting invoice',
       'invoice_status_updated_to': 'Invoice status updated to: {status}',
-      'error_updating_invoice_status': 'Error occurred while updating invoice status',
+      'error_updating_invoice_status':
+          'Error occurred while updating invoice status',
       'invoice_type_updated_to': 'Invoice type updated to: {type}',
-      'error_updating_invoice_type': 'Error occurred while updating invoice type',
+      'error_updating_invoice_type':
+          'Error occurred while updating invoice type',
       'print_invoice': 'Print Invoice',
-      'do_you_want_to_print_invoice': 'Do you want to print invoice number {number}?',
+      'do_you_want_to_print_invoice':
+          'Do you want to print invoice number {number}?',
       'confirm_delete_invoice': 'Confirm Delete',
-      'are_you_sure_delete_invoice': 'Are you sure you want to delete this invoice?',
+      'are_you_sure_delete_invoice':
+          'Are you sure you want to delete this invoice?',
       'warning_cannot_undo': 'Warning: This action cannot be undone',
       'error_loading_invoices': 'Error occurred while loading invoices',
-      'error_loading_invoice_details': 'Error occurred while loading invoice details',
+      'error_loading_invoice_details':
+          'Error occurred while loading invoice details',
       // Company profile translations
       'company_profile': 'Company Profile',
       'company_info': 'Company Information',
@@ -444,7 +453,7 @@ class AppTranslations {
       'clear_value': 'Effacer la valeur',
       // Nouvelles traductions des fichiers widgets
       'invoice_number': 'Numéro de facture',
-      'client_name': 'Nom du client',
+      'client_name': 'Nom du fournisseur',
       'invoice_date': 'Date de facture',
       'invoice_type': 'Type de facture',
       'local': 'Local',
@@ -460,7 +469,8 @@ class AppTranslations {
       'close': 'Fermer',
       'scroll_left': 'Défiler à gauche',
       'scroll_right': 'Défiler à droite',
-      'use_buttons_to_navigate': 'Utilisez les boutons pour naviguer entre les colonnes',
+      'use_buttons_to_navigate':
+          'Utilisez les boutons pour naviguer entre les colonnes',
       'items': 'Articles',
       'invoice_summary': 'Résumé de la facture',
       'customs_invoice_number': 'Numéro de facture douanière',
@@ -486,10 +496,13 @@ class AppTranslations {
       'search_invoice_or_client': 'Rechercher une facture ou un client...',
       'advanced_filter': 'Filtre avancé',
       'add_invoice': 'Ajouter une facture',
-      'found_results_for_search': 'Trouvé {count} résultats pour la recherche : "{query}"',
+      'found_results_for_search':
+          'Trouvé {count} résultats pour la recherche : "{query}"',
       'no_invoices': 'Aucune facture',
-      'no_local_invoices_created': 'Aucune facture d\'import local n\'a été créée',
-      'no_external_invoices_created': 'Aucune facture d\'import externe n\'a été créée',
+      'no_local_invoices_created':
+          'Aucune facture d\'import local n\'a été créée',
+      'no_external_invoices_created':
+          'Aucune facture d\'import externe n\'a été créée',
       'add_local_invoice': 'Ajouter une facture locale',
       'add_external_invoice': 'Ajouter une facture externe',
       'invoice_added_successfully': 'Facture ajoutée avec succès',
@@ -498,17 +511,24 @@ class AppTranslations {
       'error_updating_invoice': 'Erreur lors de la mise à jour de la facture',
       'invoice_deleted_successfully': 'Facture supprimée avec succès',
       'error_deleting_invoice': 'Erreur lors de la suppression de la facture',
-      'invoice_status_updated_to': 'Statut de la facture mis à jour vers : {status}',
-      'error_updating_invoice_status': 'Erreur lors de la mise à jour du statut de la facture',
+      'invoice_status_updated_to':
+          'Statut de la facture mis à jour vers : {status}',
+      'error_updating_invoice_status':
+          'Erreur lors de la mise à jour du statut de la facture',
       'invoice_type_updated_to': 'Type de facture mis à jour vers : {type}',
-      'error_updating_invoice_type': 'Erreur lors de la mise à jour du type de facture',
+      'error_updating_invoice_type':
+          'Erreur lors de la mise à jour du type de facture',
       'print_invoice': 'Imprimer la facture',
-      'do_you_want_to_print_invoice': 'Voulez-vous imprimer la facture numéro {number} ?',
+      'do_you_want_to_print_invoice':
+          'Voulez-vous imprimer la facture numéro {number} ?',
       'confirm_delete_invoice': 'Confirmer la suppression',
-      'are_you_sure_delete_invoice': 'Êtes-vous sûr de vouloir supprimer cette facture ?',
-      'warning_cannot_undo': 'Attention : Cette action ne peut pas être annulée',
+      'are_you_sure_delete_invoice':
+          'Êtes-vous sûr de vouloir supprimer cette facture ?',
+      'warning_cannot_undo':
+          'Attention : Cette action ne peut pas être annulée',
       'error_loading_invoices': 'Erreur lors du chargement des factures',
-      'error_loading_invoice_details': 'Erreur lors du chargement des détails de la facture',
+      'error_loading_invoice_details':
+          'Erreur lors du chargement des détails de la facture',
       // Traductions du profil de l'entreprise
       'company_profile': 'Profil de l\'Entreprise',
       'company_info': 'Informations de l\'Entreprise',

@@ -44,8 +44,10 @@ class _InventoryScreenState extends State<InventoryScreen>
       } else {
         final searchQuery = query.trim().toLowerCase();
         _filteredInventory = _inventory.where((item) {
-          final articleName = item['articleName']?.toString().toLowerCase() ?? '';
-          final supplierRef = item['supplierRef']?.toString().toLowerCase() ?? '';
+          final articleName =
+              item['articleName']?.toString().toLowerCase() ?? '';
+          final supplierRef =
+              item['supplierRef']?.toString().toLowerCase() ?? '';
           final category = item['category']?.toString().toLowerCase() ?? '';
           final location = item['location']?.toString().toLowerCase() ?? '';
 
@@ -79,7 +81,7 @@ class _InventoryScreenState extends State<InventoryScreen>
           'status': 'متوفر',
           'supplierName': 'شركة الأقمشة المتحدة',
           'invoiceNumber': 'INV-2024-001',
-          'notes': 'جودة ممتازة - مناسبة للملابس الصيفية'
+          'notes': 'جودة ممتازة - مناسبة للملابس الصيفية',
         },
         {
           'id': '2',
@@ -98,7 +100,7 @@ class _InventoryScreenState extends State<InventoryScreen>
           'status': 'متوفر',
           'supplierName': 'مصنع الخيوط الحديث',
           'invoiceNumber': 'INV-2024-002',
-          'notes': 'مقاومة للحرارة - مناسبة للصناعات الثقيلة'
+          'notes': 'مقاومة للحرارة - مناسبة للصناعات الثقيلة',
         },
         {
           'id': '3',
@@ -117,7 +119,7 @@ class _InventoryScreenState extends State<InventoryScreen>
           'status': 'متوفر',
           'supplierName': 'شركة الإكسسوارات العالمية',
           'invoiceNumber': 'INV-2024-003',
-          'notes': 'ألوان متنوعة - أحجام مختلفة'
+          'notes': 'ألوان متنوعة - أحجام مختلفة',
         },
         {
           'id': '4',
@@ -136,7 +138,7 @@ class _InventoryScreenState extends State<InventoryScreen>
           'status': 'منخفض',
           'supplierName': 'مصنع السحابات المتطور',
           'invoiceNumber': 'INV-2024-004',
-          'notes': 'مطلوب طلب جديد - الكمية منخفضة'
+          'notes': 'مطلوب طلب جديد - الكمية منخفضة',
         },
         {
           'id': '5',
@@ -155,8 +157,8 @@ class _InventoryScreenState extends State<InventoryScreen>
           'status': 'نفذ',
           'supplierName': 'شركة الأقمشة المتحدة',
           'invoiceNumber': 'INV-2024-005',
-          'notes': 'مطلوب طلب عاجل - نفذ المخزون'
-        }
+          'notes': 'مطلوب طلب عاجل - نفذ المخزون',
+        },
       ];
       _filteredInventory = _inventory;
     });
@@ -166,10 +168,11 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget build(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context);
     final currentLang = languageProvider.currentLanguage;
-    
+
     return Scaffold(
       body: Column(
         children: [
+          SizedBox(height: 125),
           _buildTopBar(currentLang),
           Expanded(
             child: TabBarView(
@@ -384,7 +387,9 @@ class _InventoryScreenState extends State<InventoryScreen>
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -528,7 +533,7 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   Widget _buildInventoryList() {
     final inventory = _filteredInventory;
-    
+
     if (inventory.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadInventory,
@@ -604,8 +609,6 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
   }
 
-
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -663,7 +666,7 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   Widget _buildCategoriesTab() {
     final categories = _getCategories();
-    
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: categories.length,
@@ -680,10 +683,7 @@ class _InventoryScreenState extends State<InventoryScreen>
             subtitle: Text('${category['count']} عنصر'),
             trailing: Text(
               '${category['totalValue']?.toStringAsFixed(0)} د.ك',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             onTap: () => _showCategoryDetails(category),
           ),
@@ -737,7 +737,13 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
   }
 
-  Widget _buildReportCard(String title, String value, String unit, IconData icon, Color color) {
+  Widget _buildReportCard(
+    String title,
+    String value,
+    String unit,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -759,10 +765,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -784,7 +787,7 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   List<Map<String, dynamic>> _getCategories() {
     final categories = <String, Map<String, dynamic>>{};
-    
+
     for (final item in _inventory) {
       final category = item['category'] as String? ?? 'غير محدد';
       if (!categories.containsKey(category)) {
@@ -796,15 +799,21 @@ class _InventoryScreenState extends State<InventoryScreen>
           'icon': Icons.category,
         };
       }
-      categories[category]!['count'] = (categories[category]!['count'] as int) + 1;
-      categories[category]!['totalValue'] = (categories[category]!['totalValue'] as double) + (item['totalValue'] as double? ?? 0.0);
+      categories[category]!['count'] =
+          (categories[category]!['count'] as int) + 1;
+      categories[category]!['totalValue'] =
+          (categories[category]!['totalValue'] as double) +
+          (item['totalValue'] as double? ?? 0.0);
     }
-    
+
     return categories.values.toList();
   }
 
   double _getTotalValue() {
-    return _inventory.fold(0.0, (sum, item) => sum + (item['totalValue'] as double? ?? 0.0));
+    return _inventory.fold(
+      0.0,
+      (sum, item) => sum + (item['totalValue'] as double? ?? 0.0),
+    );
   }
 
   int _getAvailableItemsCount() {
@@ -883,9 +892,7 @@ class _InventoryScreenState extends State<InventoryScreen>
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -936,8 +943,10 @@ class _InventoryScreenState extends State<InventoryScreen>
   }
 
   void _showCategoryDetails(Map<String, dynamic> category) {
-    final categoryItems = _inventory.where((item) => item['category'] == category['name']).toList();
-    
+    final categoryItems = _inventory
+        .where((item) => item['category'] == category['name'])
+        .toList();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

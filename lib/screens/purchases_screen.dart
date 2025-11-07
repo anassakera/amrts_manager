@@ -3,7 +3,6 @@ import 'package:amrts_manager/screens/edit_invoice_screen_buy.dart';
 import '../core/imports.dart';
 import 'package:printing/printing.dart';
 
-
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
 
@@ -79,6 +78,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     return Scaffold(
       body: Column(
         children: [
+          SizedBox(height: 125),
           _buildTopBar(currentLang),
           // باقي الشاشة
           Expanded(
@@ -838,26 +838,42 @@ class _InvoicesScreenState extends State<InvoicesScreen>
           }
         });
 
-        // إظهار رسالة تأكيد
+        // إظهار رسالة تأكيد مع معلومات المخزون إذا كانت متوفرة
+        String message = AppTranslations.get(
+          'invoice_status_updated_to',
+          currentLang,
+        ).replaceAll('{status}', newStatus);
+
+        // إضافة معلومات المخزون إذا كانت متوفرة
+        if (newStatus == 'Envoyer au stockage' && updatedInvoice['inventory'] != null) {
+          final inventory = updatedInvoice['inventory'];
+          final itemsProcessed = inventory['items_processed'] ?? 0;
+          final totalItems = inventory['total_items'] ?? 0;
+
+          if (itemsProcessed > 0) {
+            message += '\n✓ تم إضافة $itemsProcessed من أصل $totalItems منتج إلى المخزون';
+          }
+
+          if (inventory['errors'] != null && (inventory['errors'] as List).isNotEmpty) {
+            message += '\n⚠ بعض المنتجات لم يتم إضافتها بشكل صحيح';
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              AppTranslations.get(
-                'invoice_status_updated_to',
-                currentLang,
-              ).replaceAll('{status}', newStatus),
-            ),
-            backgroundColor: Colors.green.shade600,
+            content: Text(message),
+            backgroundColor: newStatus == 'Envoyer au stockage'
+                ? Colors.blue.shade600
+                : Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
     } catch (e) {
-      // Removed print statement
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

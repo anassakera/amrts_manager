@@ -21,7 +21,8 @@ class SmartDocumentScreenBuy extends StatefulWidget {
   SmartDocumentScreenBuyState createState() => SmartDocumentScreenBuyState();
 }
 
-class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with SingleTickerProviderStateMixin {
+class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
+    with SingleTickerProviderStateMixin {
   final Map<String, TextEditingController> _controllers = {};
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final CalculationService _calculationService = CalculationService();
@@ -76,45 +77,47 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
       _editingIndex = index;
     });
   }
+
   void _saveItem(int index, Map<String, dynamic> data) {
-  setState(() {
-    final filteredData = {
-      'refFournisseur': data['refFournisseur'],
-      'articles': data['articles'],
-      'qte': data['qte'],
-      'poids': data['poids'],
-      'puPieces': data['puPieces'],
-    };
+    setState(() {
+      final filteredData = {
+        'refFournisseur': data['refFournisseur'],
+        'articles': data['articles'],
+        'qte': data['qte'],
+        'poids': data['poids'],
+        'puPieces': data['puPieces'],
+      };
 
-    // التحقق من أن العنصر لا يحتوي على بيانات فارغة
-    if (filteredData['refFournisseur'].toString().trim().isEmpty ||
-        filteredData['articles'].toString().trim().isEmpty) {
-      return;
-    }
-
-    // تحديث أو إضافة العنصر
-    if (index < _items.length) {
-      // تحديث عنصر موجود
-      _items[index] = {...filteredData, 'isEditing': false};
-    } else {
-      // إضافة عنصر جديد فقط إذا لم يكن موجوداً بالفعل
-      bool itemExists = _items.any((item) => 
-        item['refFournisseur'] == filteredData['refFournisseur'] &&
-        item['articles'] == filteredData['articles']
-      );
-      
-      if (!itemExists) {
-        _items.add({...filteredData, 'isEditing': false});
+      // التحقق من أن العنصر لا يحتوي على بيانات فارغة
+      if (filteredData['refFournisseur'].toString().trim().isEmpty ||
+          filteredData['articles'].toString().trim().isEmpty) {
+        return;
       }
-    }
 
-    _editingIndex = null;
-    
-    // إعادة حساب جميع العناصر في القائمة مع القيم الجديدة
-    _recalculateAllItemsWithNewSummary(_summary);
-    _recalculateSummary();
-  });
-}
+      // تحديث أو إضافة العنصر
+      if (index < _items.length) {
+        // تحديث عنصر موجود
+        _items[index] = {...filteredData, 'isEditing': false};
+      } else {
+        // إضافة عنصر جديد فقط إذا لم يكن موجوداً بالفعل
+        bool itemExists = _items.any(
+          (item) =>
+              item['refFournisseur'] == filteredData['refFournisseur'] &&
+              item['articles'] == filteredData['articles'],
+        );
+
+        if (!itemExists) {
+          _items.add({...filteredData, 'isEditing': false});
+        }
+      }
+
+      _editingIndex = null;
+
+      // إعادة حساب جميع العناصر في القائمة مع القيم الجديدة
+      _recalculateAllItemsWithNewSummary(_summary);
+      _recalculateSummary();
+    });
+  }
 
   void _cancelEditing(int index) {
     setState(() {
@@ -194,19 +197,18 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
           break;
       }
       _summary = newSummary;
-      
+
       // إعادة حساب جميع العناصر مع القيم الجديدة
       _recalculateAllItemsWithNewSummary(newSummary);
       _recalculateSummary();
     });
   }
 
-
   void _recalculateAllItemsWithNewSummary(Map<String, dynamic> newSummary) {
     final totals = _calculationService.calculateTotals(_items, newSummary);
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
-    
+
     _items = _items.map((item) {
       final itemData = {
         'refFournisseur': item['refFournisseur'],
@@ -287,10 +289,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     _controllers['puPieces']?.addListener(_updateCalculatedFieldsWithService);
   }
 
-  void _populateControllers(
-    Map<String, dynamic> item, {
-    double? defaultExchangeRate,
-  }) {
+  void _populateControllers(Map<String, dynamic> item) {
     // defaultExchangeRate parameter is intentionally unused
     // as it's part of the method signature for future use
     _controllers['refFournisseur']?.text = item['refFournisseur'].toString();
@@ -323,7 +322,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     if (_isSaving || _hasSaved) return;
     _isSaving = true;
     _hasSaved = true;
-    
+
     if (_editingIndex != null) {
       _isSaving = false;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -331,7 +330,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
       );
       return;
     }
-    
+
     if (_items.isEmpty) {
       _isSaving = false;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -379,7 +378,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     _clearControllers();
     _reset();
     print(resultInvoice);
-    
+
     // إرسال البيانات إلى purchases_screen.dart
     Navigator.of(context).pop(resultInvoice);
     _isSaving = false;
@@ -418,8 +417,6 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     return itemsTotal;
   }
 
-
-
   @override
   void dispose() {
     _tabController.dispose();
@@ -437,9 +434,9 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
   @override
   Widget build(BuildContext context) {
     final totals = _calculationService.calculateTotals(_items, _summary);
-   // final isDesktop = MediaQuery.of(context).size.width > 768;
-    
-   // if (isDesktop) {
+    // final isDesktop = MediaQuery.of(context).size.width > 768;
+
+    // if (isDesktop) {
     if (1 == 1) {
       return Scaffold(
         body: Container(
@@ -448,7 +445,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
             children: [
               _buildSmartHeader(totals),
               Expanded(child: _buildSmartTable()),
-           const SizedBox(height: 5),
+              const SizedBox(height: 5),
             ],
           ),
         ),
@@ -509,26 +506,29 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
             letterSpacing: 0.3,
           ),
         ),
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          animationDuration: const Duration(milliseconds: 200),
-        ).copyWith(
-          backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-            if (states.contains(WidgetState.pressed)) return pressedColor;
-            if (states.contains(WidgetState.hovered)) return hoverColor;
-            return color;
-          }),
-          overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
-            if (states.contains(WidgetState.pressed)) {
-              return Colors.white.withValues(alpha: 0.1);
-            }
-            return null;
-          }),
-        ),
+        style:
+            ElevatedButton.styleFrom(
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              animationDuration: const Duration(milliseconds: 200),
+            ).copyWith(
+              backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                if (states.contains(WidgetState.pressed)) return pressedColor;
+                if (states.contains(WidgetState.hovered)) return hoverColor;
+                return color;
+              }),
+              overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return Colors.white.withValues(alpha: 0.1);
+                }
+                return null;
+              }),
+            ),
       ),
     );
   }
@@ -612,7 +612,11 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     );
   }
 
-  Widget _buildHeaderCell(String title, {int flex = 1, bool showDivider = false}) {
+  Widget _buildHeaderCell(
+    String title, {
+    int flex = 1,
+    bool showDivider = false,
+  }) {
     return Expanded(
       flex: flex,
       child: Container(
@@ -721,7 +725,10 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: Colors.blueAccent),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 5,
+                vertical: 5,
+              ),
               filled: true,
               fillColor: Colors.white,
             ),
@@ -729,7 +736,10 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               if (!readOnly && (value == null || value.isEmpty)) {
                 return AppTranslations.get(
                   'required',
-                  Provider.of<LanguageProvider>(context, listen: false).currentLanguage,
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: false,
+                  ).currentLanguage,
                 );
               }
               if (isNumber && value != null && value.isNotEmpty) {
@@ -737,14 +747,20 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                   if (double.tryParse(value) == null) {
                     return AppTranslations.get(
                       'invalid_number',
-                      Provider.of<LanguageProvider>(context, listen: false).currentLanguage,
+                      Provider.of<LanguageProvider>(
+                        context,
+                        listen: false,
+                      ).currentLanguage,
                     );
                   }
                 } else {
                   if (int.tryParse(value) == null) {
                     return AppTranslations.get(
                       'integer_only',
-                      Provider.of<LanguageProvider>(context, listen: false).currentLanguage,
+                      Provider.of<LanguageProvider>(
+                        context,
+                        listen: false,
+                      ).currentLanguage,
                     );
                   }
                 }
@@ -820,7 +836,10 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                   children: [
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             begin: Alignment.topLeft,
@@ -830,13 +849,17 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+                              color: const Color(
+                                0xFF3B82F6,
+                              ).withValues(alpha: 0.08),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
                           ],
                           border: Border.all(
-                            color: const Color(0xFF3B82F6).withValues(alpha: 0.10),
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.10),
                             width: 1.2,
                           ),
                         ),
@@ -846,41 +869,80 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.receipt_long_rounded, color: Color(0xFF1E3A8A), size: 26),
+                                const Icon(
+                                  Icons.receipt_long_rounded,
+                                  color: Color(0xFF1E3A8A),
+                                  size: 26,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  AppTranslations.get('smart_invoice', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1E3A8A), letterSpacing: -0.5),
+                                  AppTranslations.get(
+                                    'smart_invoice',
+                                    Provider.of<LanguageProvider>(
+                                      context,
+                                      listen: true,
+                                    ).currentLanguage,
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF1E3A8A),
+                                    letterSpacing: -0.5,
+                                  ),
                                 ),
                               ],
                             ),
                             Row(
                               children: [
-                                const Icon(Icons.confirmation_number_rounded, color: Color(0xFF3B82F6), size: 20),
+                                const Icon(
+                                  Icons.confirmation_number_rounded,
+                                  color: Color(0xFF3B82F6),
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${AppTranslations.get('number', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)}: ${_summary['factureNumber']}',
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF3B82F6)),
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF3B82F6),
+                                  ),
                                 ),
                               ],
                             ),
                             Row(
                               children: [
-                                const Icon(Icons.person_pin_rounded, color: Color(0xFF10B981), size: 20),
+                                const Icon(
+                                  Icons.person_pin_rounded,
+                                  color: Color(0xFF10B981),
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   _getClientName(_items, widget.clientName),
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF10B981)),
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF10B981),
+                                  ),
                                 ),
                               ],
                             ),
                             Row(
                               children: [
-                                const Icon(Icons.calendar_month_rounded, color: Color(0xFFF59E0B), size: 20),
+                                const Icon(
+                                  Icons.calendar_month_rounded,
+                                  color: Color(0xFFF59E0B),
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   _getFormattedDate(),
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFFF59E0B)),
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFF59E0B),
+                                  ),
                                 ),
                               ],
                             ),
@@ -892,7 +954,13 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                     _buildActionButton(
                       onPressed: () => Navigator.pop(context),
                       icon: Icons.cancel_rounded,
-                      label: AppTranslations.get('cancel', Provider.of<LanguageProvider>(context, listen: false).currentLanguage),
+                      label: AppTranslations.get(
+                        'cancel',
+                        Provider.of<LanguageProvider>(
+                          context,
+                          listen: false,
+                        ).currentLanguage,
+                      ),
                       color: const Color(0xFFE57373),
                       hoverColor: const Color(0xFFEF5350),
                       pressedColor: const Color(0xFFEF9A9A),
@@ -901,7 +969,13 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                     _buildActionButton(
                       onPressed: _saveInvoice,
                       icon: Icons.save_rounded,
-                      label: AppTranslations.get('save', Provider.of<LanguageProvider>(context, listen: false).currentLanguage),
+                      label: AppTranslations.get(
+                        'save',
+                        Provider.of<LanguageProvider>(
+                          context,
+                          listen: false,
+                        ).currentLanguage,
+                      ),
                       color: const Color(0xFF66BB6A),
                       hoverColor: const Color(0xFF4CAF50),
                       pressedColor: const Color(0xFF81C784),
@@ -914,7 +988,10 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -922,7 +999,13 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                       Expanded(
                         child: _buildInfoCard(
                           icon: Icons.inventory,
-                          label: AppTranslations.get('items_count', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+                          label: AppTranslations.get(
+                            'items_count',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: true,
+                            ).currentLanguage,
+                          ),
                           value: _items.length.toString(),
                           color: const Color(0xFF3B82F6),
                         ),
@@ -931,17 +1014,32 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                       Expanded(
                         child: _buildInfoCard(
                           icon: Icons.scale,
-                          label: AppTranslations.get('total_weight', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                          value: '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} Kg',
+                          label: AppTranslations.get(
+                            'total_weight',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: true,
+                            ).currentLanguage,
+                          ),
+                          value:
+                              '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} Kg',
                           color: const Color(0xFF10B981),
                         ),
                       ),
- const SizedBox(width: 5),
+                      const SizedBox(width: 5),
                       Expanded(
                         child: _buildInfoCard(
                           icon: Icons.inventory,
-                          label: AppTranslations.get('goods_total', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                          value: _calculationService.formatCurrency(totals['totalMt'] ?? 0),
+                          label: AppTranslations.get(
+                            'goods_total',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: true,
+                            ).currentLanguage,
+                          ),
+                          value: _calculationService.formatCurrency(
+                            totals['totalMt'] ?? 0,
+                          ),
                           color: const Color(0xFF1E3A8A),
                         ),
                       ),
@@ -953,10 +1051,15 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(15),
-                            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                            border: Border.all(
+                              color: const Color(0xFFE2E8F0),
+                              width: 1.5,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF64748B).withValues(alpha: 0.06),
+                                color: const Color(
+                                  0xFF64748B,
+                                ).withValues(alpha: 0.06),
                                 blurRadius: 16,
                                 offset: const Offset(0, 4),
                               ),
@@ -971,13 +1074,25 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                               physics: const NeverScrollableScrollPhysics(),
                               children: [
                                 _buildTooltipButton(
-                                  tooltip: AppTranslations.get('select_all', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+                                  tooltip: AppTranslations.get(
+                                    'select_all',
+                                    Provider.of<LanguageProvider>(
+                                      context,
+                                      listen: true,
+                                    ).currentLanguage,
+                                  ),
                                   onTap: _selectAll,
                                   icon: Icons.select_all_rounded,
                                   color: const Color(0xFF8B5CF6),
                                 ),
                                 _buildTooltipButton(
-                                  tooltip: AppTranslations.get('add_new', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+                                  tooltip: AppTranslations.get(
+                                    'add_new',
+                                    Provider.of<LanguageProvider>(
+                                      context,
+                                      listen: true,
+                                    ).currentLanguage,
+                                  ),
                                   onTap: () {
                                     _addItem();
                                     _clearControllers();
@@ -987,14 +1102,27 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                                 ),
                                 if (_hasSelection)
                                   _buildTooltipButton(
-                                    tooltip: AppTranslations.get('delete_selected', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
-                                    onTap: () => _showDeleteConfirmation(context),
+                                    tooltip: AppTranslations.get(
+                                      'delete_selected',
+                                      Provider.of<LanguageProvider>(
+                                        context,
+                                        listen: true,
+                                      ).currentLanguage,
+                                    ),
+                                    onTap: () =>
+                                        _showDeleteConfirmation(context),
                                     icon: Icons.delete_sweep_rounded,
                                     color: const Color(0xFFEF4444),
                                   ),
                                 if (_hasSelection)
                                   _buildTooltipButton(
-                                    tooltip: AppTranslations.get('clear_selection', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+                                    tooltip: AppTranslations.get(
+                                      'clear_selection',
+                                      Provider.of<LanguageProvider>(
+                                        context,
+                                        listen: true,
+                                      ).currentLanguage,
+                                    ),
                                     onTap: _clearSelection,
                                     icon: Icons.clear_all_rounded,
                                     color: const Color(0xFF6B7280),
@@ -1023,7 +1151,10 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(width: 1, color: Colors.black.withValues(alpha: 0.2)),
+        border: Border.all(
+          width: 1,
+          color: Colors.black.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         children: [
@@ -1063,24 +1194,90 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
         ),
-        border: Border(bottom: BorderSide(color: Color(0xFF3B82F6), width: 1.5)),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFF3B82F6), width: 1.5),
+        ),
       ),
       child: Row(
         children: [
           const SizedBox(width: 30),
-          _buildHeaderCell(AppTranslations.get('supplier_ref', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, showDivider: true),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'supplier_ref',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+            showDivider: true,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('article', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'article',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('quantity', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 1),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'quantity',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 1,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('weight', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'weight',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('unit_price', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'unit_price',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('total_amount', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'total_amount',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
           _verticalDivider(height: 28),
-          _buildHeaderCell(AppTranslations.get('actions', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 1),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'actions',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 1,
+          ),
         ],
       ),
     );
@@ -1097,9 +1294,13 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF60A5FA).withValues(alpha: 0.13) : Colors.transparent,
+        color: isSelected
+            ? const Color(0xFF60A5FA).withValues(alpha: 0.13)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        border: isSelected ? Border.all(color: const Color(0xFF3B82F6), width: 2) : null,
+        border: isSelected
+            ? Border.all(color: const Color(0xFF3B82F6), width: 2)
+            : null,
       ),
       child: InkWell(
         onTap: () => _toggleSelection(index),
@@ -1114,14 +1315,20 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF1E3A8A) : Colors.transparent,
+                    color: isSelected
+                        ? const Color(0xFF1E3A8A)
+                        : Colors.transparent,
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF1E3A8A) : const Color(0xFF60A5FA),
+                      color: isSelected
+                          ? const Color(0xFF1E3A8A)
+                          : const Color(0xFF60A5FA),
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                  child: isSelected
+                      ? const Icon(Icons.check, color: Colors.white, size: 14)
+                      : null,
                 ),
               ),
               const SizedBox(width: 10),
@@ -1129,13 +1336,31 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               _verticalDivider(height: 28),
               _buildDataCell(item['articles'].toString(), flex: 2),
               _verticalDivider(height: 28),
-              _buildDataCell(_calculationService.formatQuantity(_safeParseInt(item['qte'])), flex: 1),
+              _buildDataCell(
+                _calculationService.formatQuantity(_safeParseInt(item['qte'])),
+                flex: 1,
+              ),
               _verticalDivider(height: 28),
-              _buildDataCell(_calculationService.formatWeight(_safeParseDouble(item['poids'])), flex: 2),
+              _buildDataCell(
+                _calculationService.formatWeight(
+                  _safeParseDouble(item['poids']),
+                ),
+                flex: 2,
+              ),
               _verticalDivider(height: 28),
-              _buildDataCell(_calculationService.formatCurrency(_safeParseDouble(item['puPieces'])), flex: 2),
+              _buildDataCell(
+                _calculationService.formatCurrency(
+                  _safeParseDouble(item['puPieces']),
+                ),
+                flex: 2,
+              ),
               _verticalDivider(height: 28),
-              _buildDataCell(_calculationService.formatCurrency(_safeParseDouble(item['mt'])), flex: 2),
+              _buildDataCell(
+                _calculationService.formatCurrency(
+                  _safeParseDouble(item['mt']),
+                ),
+                flex: 2,
+              ),
               const SizedBox(width: 45),
               SizedBox(
                 width: 60,
@@ -1152,13 +1377,14 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                     ),
                     _buildActionIconButton(
                       icon: Icons.delete_outline,
-                      onPressed: () => _showDeleteSingleConfirmation(context, index),
+                      onPressed: () =>
+                          _showDeleteSingleConfirmation(context, index),
                       color: Colors.red.shade400,
                     ),
                   ],
                 ),
               ),
-               const SizedBox(width: 20),
+              const SizedBox(width: 20),
             ],
           ),
         ),
@@ -1182,17 +1408,86 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
         child: Row(
           children: [
             const SizedBox(width: 20),
-            _buildEditField('refFournisseur', AppTranslations.get('supplier_ref', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
+            _buildEditField(
+              'refFournisseur',
+              AppTranslations.get(
+                'supplier_ref',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+            ),
             _verticalDivider(height: 28),
-            _buildEditField('articles', AppTranslations.get('article', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2),
+            _buildEditField(
+              'articles',
+              AppTranslations.get(
+                'article',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+            ),
             _verticalDivider(height: 28),
-            _buildEditField('qte', AppTranslations.get('quantity', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 1, isNumber: true, isDecimal: false),
+            _buildEditField(
+              'qte',
+              AppTranslations.get(
+                'quantity',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 1,
+              isNumber: true,
+              isDecimal: false,
+            ),
             _verticalDivider(height: 28),
-            _buildEditField('poids', AppTranslations.get('weight', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, isNumber: true, isDecimal: true),
+            _buildEditField(
+              'poids',
+              AppTranslations.get(
+                'weight',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+              isNumber: true,
+              isDecimal: true,
+            ),
             _verticalDivider(height: 28),
-            _buildEditField('puPieces', AppTranslations.get('unit_price', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, isNumber: true, isDecimal: true),
+            _buildEditField(
+              'puPieces',
+              AppTranslations.get(
+                'unit_price',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+              isNumber: true,
+              isDecimal: true,
+            ),
             _verticalDivider(height: 28),
-            _buildEditField('mt', AppTranslations.get('total_amount', Provider.of<LanguageProvider>(context, listen: true).currentLanguage), flex: 2, isNumber: true, isDecimal: true, readOnly: true),
+            _buildEditField(
+              'mt',
+              AppTranslations.get(
+                'total_amount',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+              isNumber: true,
+              isDecimal: true,
+              readOnly: true,
+            ),
             const SizedBox(width: 30),
             SizedBox(
               width: 60,
@@ -1219,25 +1514,42 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                 ],
               ),
             ),
-             const SizedBox(width: 30),
+            const SizedBox(width: 30),
           ],
         ),
       ),
     );
   }
 
-
   void _showDeleteConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(AppTranslations.get('confirm_delete', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)),
-          content: Text('${AppTranslations.get('delete_selected_items', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)} (${_selectedIndices.length})؟'),
+          title: Text(
+            AppTranslations.get(
+              'confirm_delete',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+          ),
+          content: Text(
+            '${AppTranslations.get('delete_selected_items', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)} (${_selectedIndices.length})؟',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(AppTranslations.get('cancel', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)),
+              child: Text(
+                AppTranslations.get(
+                  'cancel',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1246,7 +1558,13 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               child: Text(
-                AppTranslations.get('delete', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+                AppTranslations.get(
+                  'delete',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
                 style: const TextStyle(color: Colors.white),
               ),
             ),
@@ -1261,12 +1579,36 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(AppTranslations.get('confirm_delete', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)),
-          content: Text(AppTranslations.get('delete_this_item', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)),
+          title: Text(
+            AppTranslations.get(
+              'confirm_delete',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+          ),
+          content: Text(
+            AppTranslations.get(
+              'delete_this_item',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(AppTranslations.get('cancel', Provider.of<LanguageProvider>(context, listen: true).currentLanguage)),
+              child: Text(
+                AppTranslations.get(
+                  'cancel',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1275,7 +1617,13 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               child: Text(
-                AppTranslations.get('delete', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+                AppTranslations.get(
+                  'delete',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: true,
+                  ).currentLanguage,
+                ),
                 style: const TextStyle(color: Colors.white),
               ),
             ),
@@ -1296,30 +1644,30 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
   // دالة مساعدة لتحويل البيانات إلى double بشكل آمن
   double _safeParseDouble(dynamic value) {
     if (value == null) return 0.0;
-    
+
     if (value is num) {
       return value.toDouble();
     }
-    
+
     if (value is String) {
       return double.tryParse(value) ?? 0.0;
     }
-    
+
     return 0.0;
   }
 
   // دالة مساعدة لتحويل البيانات إلى int بشكل آمن
   int _safeParseInt(dynamic value) {
     if (value == null) return 0;
-    
+
     if (value is num) {
       return value.toInt();
     }
-    
+
     if (value is String) {
       return int.tryParse(value) ?? 0;
     }
-    
+
     return 0;
   }
 
@@ -1327,7 +1675,10 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
   PreferredSizeWidget _buildPhoneAppBar() {
     return AppBar(
       title: Text(
-        AppTranslations.get('smart_invoice', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+        AppTranslations.get(
+          'smart_invoice',
+          Provider.of<LanguageProvider>(context, listen: true).currentLanguage,
+        ),
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       backgroundColor: const Color(0xFF1E3A8A),
@@ -1341,23 +1692,38 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
         tabs: [
           Tab(
             icon: const Icon(Icons.list),
-            text: AppTranslations.get('items', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+            text: AppTranslations.get(
+              'items',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
           ),
           Tab(
             icon: const Icon(Icons.calculate),
-            text: AppTranslations.get('summary', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+            text: AppTranslations.get(
+              'summary',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
           ),
           Tab(
             icon: const Icon(Icons.settings),
-            text: AppTranslations.get('actions', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+            text: AppTranslations.get(
+              'actions',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
           ),
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.save),
-          onPressed: _saveInvoice,
-        ),
+        IconButton(icon: const Icon(Icons.save), onPressed: _saveInvoice),
         IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
@@ -1415,7 +1781,6 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                 ),
               ),
               const SizedBox(width: 8),
-
             ],
           ),
         ],
@@ -1423,7 +1788,12 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     );
   }
 
-  Widget _buildPhoneInfoChip(IconData icon, String label, String value, Color color) {
+  Widget _buildPhoneInfoChip(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -1440,14 +1810,22 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               const SizedBox(width: 4),
               Text(
                 label,
-                style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: color,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 2),
           Text(
             value,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -1493,21 +1871,46 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildPhoneEditField('refFournisseur', 'مرجع المورد', isNumber: false),
+            _buildPhoneEditField(
+              'refFournisseur',
+              'مرجع المورد',
+              isNumber: false,
+            ),
             const SizedBox(height: 8),
             _buildPhoneEditField('articles', 'السلعة', isNumber: false),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _buildPhoneEditField('qte', 'الكمية', isNumber: true, isDecimal: false)),
+                Expanded(
+                  child: _buildPhoneEditField(
+                    'qte',
+                    'الكمية',
+                    isNumber: true,
+                    isDecimal: false,
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: _buildPhoneEditField('poids', 'الوزن', isNumber: true, isDecimal: true)),
+                Expanded(
+                  child: _buildPhoneEditField(
+                    'poids',
+                    'الوزن',
+                    isNumber: true,
+                    isDecimal: true,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _buildPhoneEditField('puPieces', 'سعر الوحدة', isNumber: true, isDecimal: true)),
+                Expanded(
+                  child: _buildPhoneEditField(
+                    'puPieces',
+                    'سعر الوحدة',
+                    isNumber: true,
+                    isDecimal: true,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -1552,11 +1955,18 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     );
   }
 
-  Widget _buildPhoneEditField(String key, String label, {bool isNumber = false, bool isDecimal = false}) {
+  Widget _buildPhoneEditField(
+    String key,
+    String label, {
+    bool isNumber = false,
+    bool isDecimal = false,
+  }) {
     return TextFormField(
       controller: _controllers[key],
       keyboardType: isNumber
-          ? (isDecimal ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.number)
+          ? (isDecimal
+                ? const TextInputType.numberWithOptions(decimal: true)
+                : TextInputType.number)
           : TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
@@ -1583,7 +1993,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
 
   Widget _buildPhoneItemCard(Map<String, dynamic> item, int index) {
     final isSelected = _selectedIndices.contains(index);
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       color: isSelected ? Colors.blue.shade50 : null,
@@ -1621,14 +2031,8 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
                   ),
                   PopupMenuButton(
                     itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: const Text('تعديل'),
-                      ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: const Text('حذف'),
-                      ),
+                      PopupMenuItem(value: 'edit', child: const Text('تعديل')),
+                      PopupMenuItem(value: 'delete', child: const Text('حذف')),
                     ],
                     onSelected: (value) {
                       if (value == 'edit') {
@@ -1645,13 +2049,28 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               Row(
                 children: [
                   Expanded(
-                    child: _buildPhoneItemDetail('الكمية', _calculationService.formatQuantity(_safeParseInt(item['qte']))),
+                    child: _buildPhoneItemDetail(
+                      'الكمية',
+                      _calculationService.formatQuantity(
+                        _safeParseInt(item['qte']),
+                      ),
+                    ),
                   ),
                   Expanded(
-                    child: _buildPhoneItemDetail('الوزن', _calculationService.formatWeight(_safeParseDouble(item['poids']))),
+                    child: _buildPhoneItemDetail(
+                      'الوزن',
+                      _calculationService.formatWeight(
+                        _safeParseDouble(item['poids']),
+                      ),
+                    ),
                   ),
                   Expanded(
-                    child: _buildPhoneItemDetail('السعر', _calculationService.formatCurrency(_safeParseDouble(item['puPieces']))),
+                    child: _buildPhoneItemDetail(
+                      'السعر',
+                      _calculationService.formatCurrency(
+                        _safeParseDouble(item['puPieces']),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1659,7 +2078,12 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               Row(
                 children: [
                   Expanded(
-                    child: _buildPhoneItemDetail('المجموع', _calculationService.formatCurrency(_safeParseDouble(item['mt']))),
+                    child: _buildPhoneItemDetail(
+                      'المجموع',
+                      _calculationService.formatCurrency(
+                        _safeParseDouble(item['mt']),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1678,10 +2102,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
           label,
           style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -1693,15 +2114,41 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppTranslations.get('expense_details', Provider.of<LanguageProvider>(context, listen: true).currentLanguage),
+            AppTranslations.get(
+              'expense_details',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          _buildPhoneExpenseCard('النقل', _safeParseDouble(_summary['transit']), Icons.local_shipping),
-          _buildPhoneExpenseCard('حق الجمرك', _safeParseDouble(_summary['droitDouane']), Icons.account_balance),
-          _buildPhoneExpenseCard('شيك الصرف', _safeParseDouble(_summary['chequeChange']), Icons.money),
-          _buildPhoneExpenseCard('الشحن', _safeParseDouble(_summary['freiht']), Icons.flight_takeoff),
-          _buildPhoneExpenseCard('أخرى', _safeParseDouble(_summary['autres']), Icons.more_horiz),
+          _buildPhoneExpenseCard(
+            'النقل',
+            _safeParseDouble(_summary['transit']),
+            Icons.local_shipping,
+          ),
+          _buildPhoneExpenseCard(
+            'حق الجمرك',
+            _safeParseDouble(_summary['droitDouane']),
+            Icons.account_balance,
+          ),
+          _buildPhoneExpenseCard(
+            'شيك الصرف',
+            _safeParseDouble(_summary['chequeChange']),
+            Icons.money,
+          ),
+          _buildPhoneExpenseCard(
+            'الشحن',
+            _safeParseDouble(_summary['freiht']),
+            Icons.flight_takeoff,
+          ),
+          _buildPhoneExpenseCard(
+            'أخرى',
+            _safeParseDouble(_summary['autres']),
+            Icons.more_horiz,
+          ),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
@@ -1715,25 +2162,38 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
               children: [
                 Text(
                   'المجاميع',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
-                      child: _buildPhoneTotalItem('مجموع البضائع', _calculationService.formatCurrency(totals['totalMt'] ?? 0)),
+                      child: _buildPhoneTotalItem(
+                        'مجموع البضائع',
+                        _calculationService.formatCurrency(
+                          totals['totalMt'] ?? 0,
+                        ),
+                      ),
                     ),
-                    
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
-                      child: _buildPhoneTotalItem('الوزن الإجمالي', '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} Kg'),
+                      child: _buildPhoneTotalItem(
+                        'الوزن الإجمالي',
+                        '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} Kg',
+                      ),
                     ),
                     Expanded(
-                      child: _buildPhoneTotalItem('عدد العناصر', _items.length.toString()),
+                      child: _buildPhoneTotalItem(
+                        'عدد العناصر',
+                        _items.length.toString(),
+                      ),
                     ),
                   ],
                 ),
@@ -1745,14 +2205,21 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     );
   }
 
-  Widget _buildPhoneExpenseCard(String label, double value, IconData icon, {bool isCurrency = true}) {
+  Widget _buildPhoneExpenseCard(
+    String label,
+    double value,
+    IconData icon, {
+    bool isCurrency = true,
+  }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         leading: Icon(icon, color: Colors.blue),
         title: Text(label),
         subtitle: Text(
-          isCurrency ? _calculationService.formatCurrency(value) : value.toString(),
+          isCurrency
+              ? _calculationService.formatCurrency(value)
+              : value.toString(),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         trailing: IconButton(
@@ -1801,10 +2268,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         Text(
           value,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -1848,7 +2312,12 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> with Sin
     );
   }
 
-  Widget _buildPhoneActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildPhoneActionCard(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(

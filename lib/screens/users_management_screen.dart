@@ -1,4 +1,3 @@
-
 import '../core/imports.dart';
 
 class UsersManagementScreen extends StatefulWidget {
@@ -65,7 +64,9 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
         user: user,
         onUserUpdated: (updatedUser) {
           setState(() {
-            final index = _users.indexWhere((u) => u['id'] == updatedUser['id']);
+            final index = _users.indexWhere(
+              (u) => u['id'] == updatedUser['id'],
+            );
             if (index != -1) {
               _users[index] = updatedUser;
             }
@@ -131,17 +132,14 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshUsers,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshUsers),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _isError
-              ? _buildErrorWidget()
-              : _buildUsersList(),
+          ? _buildErrorWidget()
+          : _buildUsersList(),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddUserDialog,
         backgroundColor: const Color(0xFF1E3A8A),
@@ -155,11 +153,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.red[300],
-          ),
+          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
           const SizedBox(height: 16),
           Text(
             'حدث خطأ في تحميل المستخدمين',
@@ -191,11 +185,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.people_outline,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'لا يوجد مستخدمين',
@@ -247,10 +237,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
         ),
         title: Text(
           user['full_name'] ?? 'غير محدد',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,7 +437,9 @@ class _AddUserDialogState extends State<_AddUserDialog> {
                   if (value == null || value.isEmpty) {
                     return 'يرجى إدخال البريد الإلكتروني';
                   }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  if (!RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(value)) {
                     return 'يرجى إدخال بريد إلكتروني صحيح';
                   }
                   return null;
@@ -490,7 +479,7 @@ class _AddUserDialogState extends State<_AddUserDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: const InputDecoration(
                   labelText: 'الدور',
                   border: OutlineInputBorder(),
@@ -544,10 +533,7 @@ class _EditUserDialog extends StatefulWidget {
   final Map<String, dynamic> user;
   final Function(Map<String, dynamic>) onUserUpdated;
 
-  const _EditUserDialog({
-    required this.user,
-    required this.onUserUpdated,
-  });
+  const _EditUserDialog({required this.user, required this.onUserUpdated});
 
   @override
   State<_EditUserDialog> createState() => _EditUserDialogState();
@@ -566,9 +552,13 @@ class _EditUserDialogState extends State<_EditUserDialog> {
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: widget.user['username'] ?? '');
+    _usernameController = TextEditingController(
+      text: widget.user['username'] ?? '',
+    );
     _emailController = TextEditingController(text: widget.user['email'] ?? '');
-    _fullNameController = TextEditingController(text: widget.user['full_name'] ?? '');
+    _fullNameController = TextEditingController(
+      text: widget.user['full_name'] ?? '',
+    );
     _selectedRole = widget.user['role'] ?? 'user';
     _isActive = widget.user['is_active'] == 1;
   }
@@ -670,7 +660,9 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                   if (value == null || value.isEmpty) {
                     return 'يرجى إدخال البريد الإلكتروني';
                   }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  if (!RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(value)) {
                     return 'يرجى إدخال بريد إلكتروني صحيح';
                   }
                   return null;
@@ -707,7 +699,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: const InputDecoration(
                   labelText: 'الدور',
                   border: OutlineInputBorder(),

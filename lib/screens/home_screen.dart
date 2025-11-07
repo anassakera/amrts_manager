@@ -1,3 +1,5 @@
+import 'package:amrts_manager/screens/coming_soon_screen.dart';
+
 import '../core/imports.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -29,13 +31,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
+    // _screens = [
+    //   InvoicesScreen(),
+    //   SalesScreen(),
+    //  InventoryScreen(),
+    //   ProductionScreen(),
+    //   FinancialTransactionsScreen(),
+    // ];
     _screens = [
       InvoicesScreen(),
       SalesScreen(),
       InventoryScreen(),
       ProductionScreen(),
-      FinancialTransactionsScreen(),
+      ComingSoonScreen(),
     ];
+
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() {
       setState(() {
@@ -55,12 +65,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return _screenTitles(context)[_selectedIndex];
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       drawer: DrawerScreen(
         onNavigationItemSelected: (index) {
           setState(() {
@@ -70,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
       ),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        // backgroundColor: Colors.red,
         elevation: 0,
         centerTitle: true,
         flexibleSpace: Container(
@@ -141,8 +150,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ],
         ),
-      
-       
+
         bottom: MediaQuery.of(context).size.width > 768
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(70),
@@ -165,11 +173,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(child: _screens[_selectedIndex])
-        ],
-      ),
+      body: Column(children: [Expanded(child: _screens[_selectedIndex])]),
     );
   }
 

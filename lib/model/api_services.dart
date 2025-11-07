@@ -470,7 +470,7 @@ class ApiServices {
         Uri.parse('$baseUrl/API/test_connection.php'),
         headers: {'Accept': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['success'] == true;
@@ -478,6 +478,72 @@ class ApiServices {
       return false;
     } catch (e) {
       return false;
+    }
+  }
+
+  // خدمات المخزون (Inventory)
+  static Future<List<Map<String, dynamic>>> getAllInventory() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/inventory/inventory_read_all.php'),
+        headers: {'Accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        } else {
+          throw Exception(data['message'] ?? 'فشل في تحميل المخزون');
+        }
+      } else {
+        throw Exception('فشل في تحميل المخزون (${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is FormatException) {
+        throw Exception('خطأ في تنسيق البيانات المستلمة');
+      } else if (e is Exception) {
+        rethrow;
+      } else {
+        throw Exception('حدث خطأ غير متوقع: $e');
+      }
+    }
+  }
+
+  static Future<Map<String, dynamic>> sendInvoiceToInventory(String invoiceId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/inventory/inventory_create_from_invoice.php'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({'invoice_id': invoiceId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return Map<String, dynamic>.from(data['data'] ?? {});
+        } else {
+          throw Exception(data['message'] ?? 'فشل في إرسال الفاتورة للمخزون');
+        }
+      } else if (response.statusCode == 400) {
+        final data = json.decode(response.body);
+        throw Exception(data['message'] ?? 'بيانات غير صحيحة');
+      } else if (response.statusCode == 404) {
+        throw Exception('الفاتورة غير موجودة');
+      } else {
+        throw Exception('فشل في إرسال الفاتورة للمخزون (${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is FormatException) {
+        throw Exception('خطأ في تنسيق البيانات المستلمة');
+      } else if (e is Exception) {
+        rethrow;
+      } else {
+        throw Exception('حدث خطأ غير متوقع: $e');
+      }
     }
   }
 }

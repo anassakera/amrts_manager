@@ -4,13 +4,15 @@ class FinancialTransactionsScreen extends StatefulWidget {
   const FinancialTransactionsScreen({super.key});
 
   @override
-  State<FinancialTransactionsScreen> createState() => _FinancialTransactionsScreenState();
+  State<FinancialTransactionsScreen> createState() =>
+      _FinancialTransactionsScreenState();
 }
 
-class _FinancialTransactionsScreenState extends State<FinancialTransactionsScreen> {
+class _FinancialTransactionsScreenState
+    extends State<FinancialTransactionsScreen> {
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
+    return Scaffold(
       body: Center(
         child: Text('Welcome to the Financial Transactions Screen!'),
       ),

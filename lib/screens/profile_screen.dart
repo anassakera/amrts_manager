@@ -63,12 +63,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       // Get all companies (should be only one)
       final companies = await CompanyInfoService.getAllCompanies();
-      
+
       if (companies.isNotEmpty) {
         // Take the first company (should be the only one)
         final companyData = companies.first;
         _companyId = companyData['CompanyID'];
-        
+
         // Set form data
         _legalNameController.text = companyData['LegalName'] ?? '';
         _tradeNameController.text = companyData['TradeName'] ?? '';
@@ -82,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _emailController.text = companyData['Email'] ?? '';
         _websiteController.text = companyData['Website'] ?? '';
         _selectedCountry = companyData['Country'] ?? 'Morocco';
-        
+
         // Handle creation date
         if (companyData['CreatedAt'] != null) {
           try {
@@ -91,12 +91,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _createdAt = null;
           }
         }
-        
+
         // Handle logo - get full company info with logo
         try {
-          final fullCompanyData = await CompanyInfoService.getCompanyInfo(_companyId!);
+          final fullCompanyData = await CompanyInfoService.getCompanyInfo(
+            _companyId!,
+          );
           if (fullCompanyData['logo_base64'] != null) {
-            final logoBytes = CompanyInfoService.decodeBase64Logo(fullCompanyData['logo_base64']);
+            final logoBytes = CompanyInfoService.decodeBase64Logo(
+              fullCompanyData['logo_base64'],
+            );
             if (logoBytes != null) {
               setState(() {
                 _logoBytes = logoBytes;
@@ -106,6 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
         } catch (e) {
           // Logo loading failed, continue without logo
+          // ignore: avoid_print
           print('Failed to load logo: $e');
         }
       } else {
@@ -165,39 +170,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await CompanyInfoService.updateCompany(
           companyId: _companyId!,
           legalName: _legalNameController.text.trim(),
-          tradeName: _tradeNameController.text.trim().isNotEmpty ? _tradeNameController.text.trim() : null,
+          tradeName: _tradeNameController.text.trim().isNotEmpty
+              ? _tradeNameController.text.trim()
+              : null,
           ice: _iceController.text.trim(),
-          rc: _rcController.text.trim().isNotEmpty ? _rcController.text.trim() : null,
-          ifNumber: _ifNumberController.text.trim().isNotEmpty ? _ifNumberController.text.trim() : null,
-          cnss: _cnssController.text.trim().isNotEmpty ? _cnssController.text.trim() : null,
-          address: _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
-          city: _cityController.text.trim().isNotEmpty ? _cityController.text.trim() : null,
+          rc: _rcController.text.trim().isNotEmpty
+              ? _rcController.text.trim()
+              : null,
+          ifNumber: _ifNumberController.text.trim().isNotEmpty
+              ? _ifNumberController.text.trim()
+              : null,
+          cnss: _cnssController.text.trim().isNotEmpty
+              ? _cnssController.text.trim()
+              : null,
+          address: _addressController.text.trim().isNotEmpty
+              ? _addressController.text.trim()
+              : null,
+          city: _cityController.text.trim().isNotEmpty
+              ? _cityController.text.trim()
+              : null,
           country: _selectedCountry,
-          phone: _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
-          email: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
-          website: _websiteController.text.trim().isNotEmpty ? _websiteController.text.trim() : null,
+          phone: _phoneController.text.trim().isNotEmpty
+              ? _phoneController.text.trim()
+              : null,
+          email: _emailController.text.trim().isNotEmpty
+              ? _emailController.text.trim()
+              : null,
+          website: _websiteController.text.trim().isNotEmpty
+              ? _websiteController.text.trim()
+              : null,
           logoBytes: _logoBytes,
-          removeLogo: _logoBytes == null && _hadLogo, // Remove logo if it was cleared and had logo before
+          removeLogo:
+              _logoBytes == null &&
+              _hadLogo, // Remove logo if it was cleared and had logo before
         );
       } else {
         // Create new company
         final result = await CompanyInfoService.createCompany(
           legalName: _legalNameController.text.trim(),
-          tradeName: _tradeNameController.text.trim().isNotEmpty ? _tradeNameController.text.trim() : null,
+          tradeName: _tradeNameController.text.trim().isNotEmpty
+              ? _tradeNameController.text.trim()
+              : null,
           ice: _iceController.text.trim(),
-          rc: _rcController.text.trim().isNotEmpty ? _rcController.text.trim() : null,
-          ifNumber: _ifNumberController.text.trim().isNotEmpty ? _ifNumberController.text.trim() : null,
-          cnss: _cnssController.text.trim().isNotEmpty ? _cnssController.text.trim() : null,
-          address: _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
-          city: _cityController.text.trim().isNotEmpty ? _cityController.text.trim() : null,
+          rc: _rcController.text.trim().isNotEmpty
+              ? _rcController.text.trim()
+              : null,
+          ifNumber: _ifNumberController.text.trim().isNotEmpty
+              ? _ifNumberController.text.trim()
+              : null,
+          cnss: _cnssController.text.trim().isNotEmpty
+              ? _cnssController.text.trim()
+              : null,
+          address: _addressController.text.trim().isNotEmpty
+              ? _addressController.text.trim()
+              : null,
+          city: _cityController.text.trim().isNotEmpty
+              ? _cityController.text.trim()
+              : null,
           country: _selectedCountry,
-          phone: _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
-          email: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
-          website: _websiteController.text.trim().isNotEmpty ? _websiteController.text.trim() : null,
+          phone: _phoneController.text.trim().isNotEmpty
+              ? _phoneController.text.trim()
+              : null,
+          email: _emailController.text.trim().isNotEmpty
+              ? _emailController.text.trim()
+              : null,
+          website: _websiteController.text.trim().isNotEmpty
+              ? _websiteController.text.trim()
+              : null,
           logoBytes: _logoBytes,
         );
         _companyId = result['CompanyID'];
-        
+
         // Update creation date
         if (result['CreatedAt'] != null) {
           try {
@@ -207,7 +250,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
         }
       }
-      
+
       if (mounted) {
         setState(() {
           _isEditing = false;
@@ -215,7 +258,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppTranslations.get('profile_updated', Provider.of<LanguageProvider>(context, listen: false).currentLanguage)),
+            content: Text(
+              AppTranslations.get(
+                'profile_updated',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: false,
+                ).currentLanguage,
+              ),
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -250,7 +301,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (image != null) {
         final bytes = await image.readAsBytes();
-        
+
         if (mounted) {
           setState(() {
             _logoBytes = bytes;
@@ -270,7 +321,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showImagePickerDialog() {
-    final currentLang = Provider.of<LanguageProvider>(context, listen: false).currentLanguage;
+    final currentLang = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    ).currentLanguage;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -310,7 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
         final currentLang = languageProvider.currentLanguage;
-        
+
         return Scaffold(
           appBar: AppBar(
             title: Text(AppTranslations.get('company_profile', currentLang)),
@@ -331,16 +385,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           body: _isLoading
               ? const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF1E40AF),
-                  ),
+                  child: CircularProgressIndicator(color: Color(0xFF1E40AF)),
                 )
               : Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Color(0xFF1E40AF), Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                      colors: [
+                        Color(0xFF1E40AF),
+                        Color(0xFF3B82F6),
+                        Color(0xFF60A5FA),
+                      ],
                     ),
                   ),
                   child: Column(
@@ -386,7 +442,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 40),
 
                                   // Action Buttons
-                                  if (_isEditing) _buildActionButtons(currentLang),
+                                  if (_isEditing)
+                                    _buildActionButtons(currentLang),
                                 ],
                               ),
                             ),
@@ -417,10 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           Text(
             '${AppTranslations.get('created_at', currentLang)}: ${_formatDate(_createdAt)}',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
       ),
@@ -446,7 +500,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Logo Display
           Container(
             width: 120,
@@ -484,9 +538,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: Color(0xFF1E40AF),
                   ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           if (_isEditing) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -498,7 +552,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF3B82F6),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -512,11 +569,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       });
                     },
                     icon: const Icon(Icons.delete, size: 18),
-                    label: Text(AppTranslations.get('remove_logo', currentLang)),
+                    label: Text(
+                      AppTranslations.get('remove_logo', currentLang),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFEF4444),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -567,7 +629,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Legal Name
           _buildTextField(
             controller: _legalNameController,
@@ -576,9 +638,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             isRequired: true,
             enabled: _isEditing,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Trade Name
           _buildTextField(
             controller: _tradeNameController,
@@ -586,9 +648,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.store,
             enabled: _isEditing,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Address
           _buildTextField(
             controller: _addressController,
@@ -597,9 +659,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             enabled: _isEditing,
             maxLines: 2,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // City and Country Row
           Row(
             children: [
@@ -618,7 +680,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: AppTranslations.get('country', currentLang),
                   icon: Icons.public,
                   enabled: _isEditing,
-                  items: ['Morocco', 'Algeria', 'Tunisia', 'Egypt', 'Saudi Arabia'],
+                  items: [
+                    'Morocco',
+                    'Algeria',
+                    'Tunisia',
+                    'Egypt',
+                    'Saudi Arabia',
+                  ],
                   onChanged: (value) {
                     setState(() {
                       _selectedCountry = value!;
@@ -670,7 +738,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Phone
           _buildTextField(
             controller: _phoneController,
@@ -679,9 +747,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             enabled: _isEditing,
             keyboardType: TextInputType.phone,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Email
           _buildTextField(
             controller: _emailController,
@@ -690,9 +758,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             enabled: _isEditing,
             keyboardType: TextInputType.emailAddress,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Website
           _buildTextField(
             controller: _websiteController,
@@ -743,7 +811,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // ICE Number
           _buildTextField(
             controller: _iceController,
@@ -753,7 +821,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             isRequired: true,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return AppTranslations.get('required', Provider.of<LanguageProvider>(context, listen: false).currentLanguage);
+                return AppTranslations.get(
+                  'required',
+                  Provider.of<LanguageProvider>(
+                    context,
+                    listen: false,
+                  ).currentLanguage,
+                );
               }
               if (value.length != 15 || !RegExp(r'^\d{15}$').hasMatch(value)) {
                 return 'رقم ICE يجب أن يكون 15 رقم';
@@ -761,9 +835,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return null;
             },
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // RC Number
           _buildTextField(
             controller: _rcController,
@@ -771,9 +845,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.description,
             enabled: _isEditing,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // IF Number
           _buildTextField(
             controller: _ifNumberController,
@@ -781,9 +855,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.receipt,
             enabled: _isEditing,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // CNSS Number
           _buildTextField(
             controller: _cnssController,
@@ -828,16 +902,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         filled: true,
         fillColor: enabled ? Colors.white : Colors.grey.shade100,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
-      validator: validator ?? (isRequired
-          ? (value) {
-              if (value == null || value.isEmpty) {
-                return AppTranslations.get('required', Provider.of<LanguageProvider>(context, listen: false).currentLanguage);
-              }
-              return null;
-            }
-          : null),
+      validator:
+          validator ??
+          (isRequired
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return AppTranslations.get(
+                      'required',
+                      Provider.of<LanguageProvider>(
+                        context,
+                        listen: false,
+                      ).currentLanguage,
+                    );
+                  }
+                  return null;
+                }
+              : null),
     );
   }
 
@@ -850,7 +935,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: const Color(0xFF64748B)),
@@ -868,13 +953,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         filled: true,
         fillColor: enabled ? Colors.white : Colors.grey.shade100,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
       items: items.map((String item) {
-        return DropdownMenuItem<String>(
-          value: item,
-          child: Text(item),
-        );
+        return DropdownMenuItem<String>(value: item, child: Text(item));
       }).toList(),
       onChanged: enabled ? onChanged : null,
     );
@@ -885,13 +970,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: _isLoading ? null : () {
-              setState(() {
-                _isEditing = false;
-              });
-              // Reload data to reset any changes
-              _loadCompanyInfo();
-            },
+            onPressed: _isLoading
+                ? null
+                : () {
+                    setState(() {
+                      _isEditing = false;
+                    });
+                    // Reload data to reset any changes
+                    _loadCompanyInfo();
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.grey.shade300,
               foregroundColor: Colors.grey.shade700,

@@ -313,7 +313,7 @@ class InvoiceCard extends StatelessWidget {
     );
   }
 
-  void _showStatusPopup(BuildContext context, String currentLang) {
+  Future<void> _showStatusPopup(BuildContext context, String currentLang) async {
     final RenderBox button = context.findRenderObject() as RenderBox;
     final RenderBox overlay =
         Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
@@ -328,22 +328,24 @@ class InvoiceCard extends StatelessWidget {
       Offset.zero & overlay.size,
     );
 
-    showMenu<String>(
+    final selectedStatus = await showMenu<String>(
       context: context,
       position: position,
       items: [
         _buildStatusMenuItem('Envoyer au stockage', Colors.blue, currentLang),
         _buildStatusMenuItem('Brouillon', Colors.grey, currentLang),
       ],
-    ).then((selectedStatus) {
-      if (selectedStatus != null && onStatusUpdate != null) {
-        if (selectedStatus == 'Envoyer au stockage') {
-          _showConfirmationDialog(context, currentLang);
-        } else {
-          onStatusUpdate!(selectedStatus);
-        }
+    );
+
+    if (!context.mounted) return;
+
+    if (selectedStatus != null && onStatusUpdate != null) {
+      if (selectedStatus == 'Envoyer au stockage') {
+        _showConfirmationDialog(context, currentLang);
+      } else {
+        onStatusUpdate!(selectedStatus);
       }
-    });
+    }
   }
 
   void _showConfirmationDialog(BuildContext context, String currentLang) {
