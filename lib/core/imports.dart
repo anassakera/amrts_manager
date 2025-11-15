@@ -28,7 +28,9 @@ export '../screens/auth_screen.dart';
 export '../screens/users_management_screen.dart';
 export '../screens/profile_screen.dart';
 export '../screens/sales_screen/sales_screen_edit.dart';
-export '../screens/production_screen/production_form_screen.dart';
+export '../screens/production_screen/extrusion_screen.dart';
+export '../screens/production_screen/fonderie_screen.dart';
+export '../screens/production_screen/peinture_screen.dart';
 
 // services
 export '../services/calculation_service.dart';

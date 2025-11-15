@@ -10,6 +10,8 @@ class ProductionScreen extends StatefulWidget {
 class _ProductionScreenState extends State<ProductionScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -18,11 +20,18 @@ class _ProductionScreenState extends State<ProductionScreen>
     _tabController.addListener(() {
       setState(() {});
     });
+
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -37,9 +46,9 @@ class _ProductionScreenState extends State<ProductionScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildInventoryList(),
-                _buildCategoriesTab(),
-                _buildReportsTab(),
+                FonderieScreen(searchQuery: _searchQuery),
+                ExtrusionScreen(),
+                PeintureScreen(),
               ],
             ),
           ),
@@ -131,12 +140,24 @@ class _ProductionScreenState extends State<ProductionScreen>
                       ],
                     ),
                     child: TextField(
+                      controller: _searchController,
                       decoration: InputDecoration(
                         hintText: _getHintTextForTab(),
                         prefixIcon: const Icon(
                           Icons.search,
                           color: Color(0xFF64748B),
                         ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.clear,
+                                  color: Color(0xFF64748B),
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                },
+                              )
+                            : null,
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           vertical: 12,
@@ -173,33 +194,6 @@ class _ProductionScreenState extends State<ProductionScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildInventoryList() {
-    return Center(
-      child: Text(
-        'تبويب المخزون',
-        style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-      ),
-    );
-  }
-
-  Widget _buildCategoriesTab() {
-    return Center(
-      child: Text(
-        'تبويب الفئات',
-        style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-      ),
-    );
-  }
-
-  Widget _buildReportsTab() {
-    return Center(
-      child: Text(
-        'تبويب التقارير',
-        style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
       ),
     );
   }
