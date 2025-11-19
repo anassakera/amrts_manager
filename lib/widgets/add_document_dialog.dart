@@ -90,7 +90,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
               surface: Colors.white,
               onSurface: Colors.black,
             ),
-            dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+            dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
           ),
           child: child!,
         );
@@ -111,7 +111,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                 surface: Colors.white,
                 onSurface: Colors.black,
               ),
-              dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+              dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
             ),
             child: child!,
           );
@@ -232,7 +232,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                         onChanged: (value) =>
                             setState(() => selectedCustomer = value),
                         hintText: "اختر عميل...",
-                        prefixIcon: Icon(Icons.person_outline_rounded),
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
                         primaryColor: Colors.blue,
                         enabled: !_isLoading,
                         onPrefixIconTap: () {
@@ -271,7 +271,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                                     color: Colors.grey.shade600,
                                   ),
                                 ),
-                                SizedBox(width: 15),
+                                const SizedBox(width: 15),
                                 Expanded(
                                   child: DocumentTypeSelector(
                                     selectedType: _documentType,
@@ -293,7 +293,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                                     ],
                                   ),
                                 ),
-                                SizedBox(width: 15),
+                                const SizedBox(width: 15),
                               ],
                             ),
 
@@ -451,7 +451,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                                   if (selectedCustomer == null) {
                                     // عرض رسالة خطأ إذا لم يتم اختيار عميل
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
+                                      const SnackBar(
                                         content: Text('الرجاء اختيار عميل'),
                                       ),
                                     );

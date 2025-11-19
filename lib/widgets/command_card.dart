@@ -51,7 +51,7 @@ class CommandeCard extends StatelessWidget {
               width: 8,
               height: isWide ? 110 : 140,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -81,7 +81,7 @@ class CommandeCard extends StatelessWidget {
           flex: 3,
           child: Column(
             children: [
-              SizedBox(height: 6),
+              const SizedBox(height: 6),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -93,7 +93,7 @@ class CommandeCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
                         ),
                         borderRadius: BorderRadius.circular(6),
@@ -234,7 +234,7 @@ class CommandeCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
                   ),
                   borderRadius: BorderRadius.circular(6),

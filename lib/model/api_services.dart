@@ -47,7 +47,10 @@ class ApiServices {
     print(baseUrl);
   }
 
-  static Future<Map<String, dynamic>> signIn(String email, String password) async {
+  static Future<Map<String, dynamic>> signIn(
+    String email,
+    String password,
+  ) async {
     if (baseUrl == null) {
       await initBaseUrl();
     }
@@ -58,18 +61,11 @@ class ApiServices {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: json.encode({
-        'email': email,
-        'password': password,
-      }),
+      body: json.encode({'email': email, 'password': password}),
     );
 
     return json.decode(response.body);
   }
-
-
-
-
 
   // خدمات المستخدمين
   static Future<List<Map<String, dynamic>>> getAllUsers() async {
@@ -78,7 +74,7 @@ class ApiServices {
         Uri.parse('$baseUrl/api/auth/crud_user_api.php'),
         headers: {'Accept': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -106,7 +102,7 @@ class ApiServices {
         Uri.parse('$baseUrl/api/auth/crud_user_api.php?id=$id'),
         headers: {'Accept': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -130,7 +126,9 @@ class ApiServices {
     }
   }
 
-  static Future<Map<String, dynamic>> createUser(Map<String, dynamic> user) async {
+  static Future<Map<String, dynamic>> createUser(
+    Map<String, dynamic> user,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/crud_user_api.php'),
@@ -140,7 +138,7 @@ class ApiServices {
         },
         body: json.encode(user),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -165,7 +163,10 @@ class ApiServices {
     }
   }
 
-  static Future<Map<String, dynamic>> updateUser(String id, Map<String, dynamic> user) async {
+  static Future<Map<String, dynamic>> updateUser(
+    String id,
+    Map<String, dynamic> user,
+  ) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/api/auth/crud_user_api.php?id=$id'),
@@ -175,7 +176,7 @@ class ApiServices {
         },
         body: json.encode(user),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -208,7 +209,7 @@ class ApiServices {
         Uri.parse('$baseUrl/api/auth/crud_user_api.php?id=$id'),
         headers: {'Accept': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] != true) {
@@ -237,7 +238,7 @@ class ApiServices {
         Uri.parse('$baseUrl/api/invoices/get_all.php'),
         headers: {'Accept': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -265,7 +266,7 @@ class ApiServices {
         Uri.parse('$baseUrl/api/invoices/get_by_id.php?id=$id'),
         headers: {'Accept': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -289,7 +290,9 @@ class ApiServices {
     }
   }
 
-  static Future<Map<String, dynamic>> createInvoice(Map<String, dynamic> invoice) async {
+  static Future<Map<String, dynamic>> createInvoice(
+    Map<String, dynamic> invoice,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/invoices/create.php'),
@@ -299,7 +302,7 @@ class ApiServices {
         },
         body: json.encode(invoice),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -324,7 +327,10 @@ class ApiServices {
     }
   }
 
-  static Future<Map<String, dynamic>> updateInvoice(String id, Map<String, dynamic> invoice) async {
+  static Future<Map<String, dynamic>> updateInvoice(
+    String id,
+    Map<String, dynamic> invoice,
+  ) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/api/invoices/update.php'),
@@ -334,7 +340,7 @@ class ApiServices {
         },
         body: json.encode(invoice),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -367,7 +373,7 @@ class ApiServices {
         Uri.parse('$baseUrl/api/invoices/delete.php?id=$id'),
         headers: {'Accept': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] != true) {
@@ -389,7 +395,10 @@ class ApiServices {
     }
   }
 
-  static Future<Map<String, dynamic>> updateInvoiceStatus(String id, String status) async {
+  static Future<Map<String, dynamic>> updateInvoiceStatus(
+    String id,
+    String status,
+  ) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/api/invoices/update_status.php'),
@@ -399,7 +408,7 @@ class ApiServices {
         },
         body: json.encode({'id': id, 'status': status}),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -426,7 +435,10 @@ class ApiServices {
     }
   }
 
-  static Future<Map<String, dynamic>> updateInvoiceType(String id, bool isLocal) async {
+  static Future<Map<String, dynamic>> updateInvoiceType(
+    String id,
+    bool isLocal,
+  ) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/api/invoices/update_type.php'),
@@ -436,7 +448,7 @@ class ApiServices {
         },
         body: json.encode({'id': id, 'isLocal': isLocal}),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -510,7 +522,9 @@ class ApiServices {
     }
   }
 
-  static Future<Map<String, dynamic>> sendInvoiceToInventory(String invoiceId) async {
+  static Future<Map<String, dynamic>> sendInvoiceToInventory(
+    String invoiceId,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/inventory/inventory_create_from_invoice.php'),
@@ -534,7 +548,9 @@ class ApiServices {
       } else if (response.statusCode == 404) {
         throw Exception('الفاتورة غير موجودة');
       } else {
-        throw Exception('فشل في إرسال الفاتورة للمخزون (${response.statusCode})');
+        throw Exception(
+          'فشل في إرسال الفاتورة للمخزون (${response.statusCode})',
+        );
       }
     } catch (e) {
       if (e is FormatException) {

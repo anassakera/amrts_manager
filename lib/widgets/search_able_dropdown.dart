@@ -66,7 +66,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
     _filteredItems = List.from(widget.items); // نسخ صريح
 
     _animationController = AnimationController(
-      duration: Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 250),
       vsync: this,
     );
 
@@ -133,7 +133,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
   void _onFocusChanged() {
     if (_focusNode.hasFocus && !_isOpen && widget.enabled && mounted) {
       // تأخير بسيط للتأكد من عدم الفتح أثناء validation
-      Future.delayed(Duration(milliseconds: 100), () {
+      Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted && _focusNode.hasFocus && !_isOpen) {
           _openDropdown();
         }
@@ -330,7 +330,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                 borderRadius: BorderRadius.circular(12),
                 shadowColor: Colors.black.withValues(alpha: 0.15),
                 child: Container(
-                  constraints: BoxConstraints(maxHeight: 300),
+                  constraints: const BoxConstraints(maxHeight: 300),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey[200]!),
@@ -360,7 +360,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
   Widget _buildLoadingItem() {
     return Container(
       height: 56,
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           SizedBox(
@@ -371,7 +371,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
               valueColor: AlwaysStoppedAnimation(_primaryColor),
             ),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Text(
             widget.loadingText,
             style: TextStyle(
@@ -430,10 +430,10 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
     return Scrollbar(
       controller: _scrollController, // أضف هذا السطر
       thumbVisibility: _filteredItems.length > 6,
-      radius: Radius.circular(6),
+      radius: const Radius.circular(6),
       child: ListView.builder(
         controller: _scrollController, // أضف هذا السطر أيضاً
-        padding: EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         shrinkWrap: true,
         itemCount: _filteredItems.length,
         itemBuilder: (context, index) {
@@ -446,8 +446,8 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
             onEnter: (_) => setState(() => _hoveredIndex = index),
             onExit: (_) => setState(() => _hoveredIndex = -1),
             child: AnimatedContainer(
-              duration: Duration(milliseconds: 150),
-              margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: isSelected
@@ -467,12 +467,15 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                 onTap: () => _selectItem(item),
                 child: Container(
                   height: 48,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
                       if (isSelected)
                         Container(
-                          margin: EdgeInsets.only(left: 8),
+                          margin: const EdgeInsets.only(left: 8),
                           child: Icon(
                             Icons.check_circle_rounded,
                             color: _primaryColor,
@@ -560,7 +563,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
       child: CompositedTransformTarget(
         link: _layerLink,
         child: AnimatedContainer(
-          duration: Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             boxShadow: _isHovered && widget.enabled
@@ -568,7 +571,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                     BoxShadow(
                       color: _primaryColor.withValues(alpha: 0.1),
                       blurRadius: 8,
-                      offset: Offset(0, 2),
+                      offset: const Offset(0, 2),
                     ),
                   ]
                 : [],
@@ -591,7 +594,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                 ? () {
                     if (!_isOpen && mounted) {
                       // تحقق من أن الـ focus مستقر
-                      Future.delayed(Duration(milliseconds: 50), () {
+                      Future.delayed(const Duration(milliseconds: 50), () {
                         if (mounted && _focusNode.hasFocus && !_isOpen) {
                           _openDropdown();
                         }
@@ -602,7 +605,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
             onChanged: widget.enabled
                 ? (value) {
                     if (!_isOpen && mounted && _focusNode.hasFocus) {
-                      Future.delayed(Duration(milliseconds: 50), () {
+                      Future.delayed(const Duration(milliseconds: 50), () {
                         if (mounted && !_isOpen && _focusNode.hasFocus) {
                           _openDropdown();
                         }
@@ -629,7 +632,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                   ? GestureDetector(
                       onTap: widget.enabled ? widget.onPrefixIconTap : null,
                       child: Container(
-                        margin: EdgeInsets.only(left: 8),
+                        margin: const EdgeInsets.only(left: 8),
                         child: widget.prefixIcon,
                       ),
                     )
@@ -640,7 +643,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                   if (_controller.text.isNotEmpty && widget.enabled)
                     AnimatedOpacity(
                       opacity: 1.0,
-                      duration: Duration(milliseconds: 150),
+                      duration: const Duration(milliseconds: 150),
                       child: IconButton(
                         icon: Icon(
                           Icons.clear_rounded,
@@ -649,7 +652,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                         ),
                         onPressed: _clearSelection,
                         padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(
+                        constraints: const BoxConstraints(
                           minWidth: 32,
                           minHeight: 32,
                         ),
@@ -669,7 +672,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                       ),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                 ],
               ),
               filled: true,
@@ -692,7 +695,7 @@ class _SearchableDropdownTState<T> extends State<SearchableDropdownT<T>>
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
               ),
-              contentPadding: EdgeInsets.symmetric(
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 16,
               ),

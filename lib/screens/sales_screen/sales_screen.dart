@@ -182,7 +182,7 @@ class _SalesScreenState extends State<SalesScreen>
                             Colors.blue,
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         // Expanded(
                         //   child: _buildStatItem(
                         //     'Variantes de peinture',
@@ -215,7 +215,7 @@ class _SalesScreenState extends State<SalesScreen>
                             Colors.red,
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: _buildStatItem(
                             'Dechets initiaux',
@@ -645,7 +645,7 @@ class _SalesScreenState extends State<SalesScreen>
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(height: 125),
+          const SizedBox(height: 125),
           _buildTopBar(),
           if (_showStatsCard) _buildStatsCard(stats),
           Expanded(child: _buildCommandesList(filteredCommandes)),

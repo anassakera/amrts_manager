@@ -5,7 +5,14 @@
       "Bash(dir:*)",
       "Bash(tree:*)",
       "Bash(find:*)",
-      "Bash(readlink:*)"
+      "Bash(readlink:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(findstr:*)",
+      "Bash(mkdir:*)",
+      "Bash(git add:*)",
+      "Bash(cat:*)",
+      "Bash(php -l:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

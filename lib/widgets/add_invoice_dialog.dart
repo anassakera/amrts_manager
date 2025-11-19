@@ -1,5 +1,5 @@
 import '../core/imports.dart';
-import '../screens/edit_invoice_screen_buy.dart';
+import '../screens/need_fix/edit_invoice_screen_buy.dart';
 
 class AddInvoiceDialog extends StatefulWidget {
   final bool isLocal;
@@ -59,7 +59,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
               surface: Colors.white,
               onSurface: Colors.black,
             ),
-            dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+            dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
           ),
           child: child!,
         );
@@ -82,7 +82,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                 surface: Colors.white,
                 onSurface: Colors.black,
               ),
-              dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+              dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
             ),
             child: child!,
           );
@@ -364,7 +364,8 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                               ? SmartDocumentScreenBuy(
                                                   isLocal: widget.isLocal,
                                                   clientName:
-                                                      _clientNameController.text,
+                                                      _clientNameController
+                                                          .text,
                                                   invoiceNumber:
                                                       _invoiceNumberController
                                                           .text,
@@ -373,7 +374,8 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                               : SmartDocumentScreen(
                                                   isLocal: widget.isLocal,
                                                   clientName:
-                                                      _clientNameController.text,
+                                                      _clientNameController
+                                                          .text,
                                                   invoiceNumber:
                                                       _invoiceNumberController
                                                           .text,

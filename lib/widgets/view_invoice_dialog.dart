@@ -57,7 +57,7 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
   Widget build(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context);
     final currentLang = languageProvider.currentLanguage;
-    
+
     final items = widget.invoice['items'] as List<dynamic>? ?? [];
     final summary = widget.invoice['summary'] as Map<String, dynamic>? ?? {};
     final status = widget.invoice['status'] ?? '';
@@ -76,12 +76,15 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
               // Header
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 18,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _getStatusColor(status).withValues(alpha:0.85),
-                      Colors.blue.shade400.withValues(alpha:0.85),
+                      _getStatusColor(status).withValues(alpha: 0.85),
+                      Colors.blue.shade400.withValues(alpha: 0.85),
                     ],
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
@@ -89,10 +92,14 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.receipt_long, color: Colors.white, size: 28),
+                    const Icon(
+                      Icons.receipt_long,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                     const SizedBox(width: 10),
                     Text(
-                                             '${AppTranslations.get('invoice_number', currentLang)}: ${widget.invoice['invoiceNumber']?.toString() ?? AppTranslations.get('not_specified', currentLang)}',
+                      '${AppTranslations.get('invoice_number', currentLang)}: ${widget.invoice['invoiceNumber']?.toString() ?? AppTranslations.get('not_specified', currentLang)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -102,18 +109,25 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha:0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.circle, size: 12, color: _getStatusColor(status)),
+                          Icon(
+                            Icons.circle,
+                            size: 12,
+                            color: _getStatusColor(status),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             status,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
@@ -132,18 +146,29 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // معلومات العميل والتاريخ والنوع
                       Row(
                         children: [
-                          Icon(Icons.person, color: Colors.blue.shade400, size: 20),
+                          Icon(
+                            Icons.person,
+                            color: Colors.blue.shade400,
+                            size: 20,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              widget.invoice['clientName'] ?? AppTranslations.get('not_specified', currentLang),
+                              widget.invoice['clientName'] ??
+                                  AppTranslations.get(
+                                    'not_specified',
+                                    currentLang,
+                                  ),
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -154,41 +179,72 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                             ),
                           ),
                           const SizedBox(width: 10),
-                          Icon(Icons.calendar_today, color: Colors.grey.shade500, size: 16),
+                          Icon(
+                            Icons.calendar_today,
+                            color: Colors.grey.shade500,
+                            size: 16,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            widget.invoice['date'] ?? AppTranslations.get('not_specified', currentLang),
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                            widget.invoice['date'] ??
+                                AppTranslations.get(
+                                  'not_specified',
+                                  currentLang,
+                                ),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.category, color: Colors.blue.shade400, size: 18),
+                          Icon(
+                            Icons.category,
+                            color: Colors.blue.shade400,
+                            size: 18,
+                          ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: isLocal
-                                  ? Colors.green.withValues(alpha:0.1)
-                                  : Colors.blue.withValues(alpha:0.1),
+                                  ? Colors.green.withValues(alpha: 0.1)
+                                  : Colors.blue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              isLocal ? AppTranslations.get('local', currentLang) : AppTranslations.get('external', currentLang),
+                              isLocal
+                                  ? AppTranslations.get('local', currentLang)
+                                  : AppTranslations.get(
+                                      'external',
+                                      currentLang,
+                                    ),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
-                                color: isLocal ? Colors.green.shade700 : Colors.blue.shade700,
+                                color: isLocal
+                                    ? Colors.green.shade700
+                                    : Colors.blue.shade700,
                               ),
                             ),
                           ),
                           const Spacer(),
-                          Icon(Icons.attach_money, color: Colors.amber.shade700, size: 18),
+                          Icon(
+                            Icons.attach_money,
+                            color: Colors.amber.shade700,
+                            size: 18,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            NumberFormattingService.formatCurrencySafe(widget.invoice['totalAmount']),
+                            NumberFormattingService.formatCurrencySafe(
+                              widget.invoice['totalAmount'],
+                            ),
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -218,11 +274,20 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                           children: [
                             IconButton(
                               onPressed: _scrollLeft,
-                              icon: Icon(Icons.arrow_left, color: Colors.blue.shade600),
-                              tooltip: AppTranslations.get('scroll_left', currentLang),
+                              icon: Icon(
+                                Icons.arrow_left,
+                                color: Colors.blue.shade600,
+                              ),
+                              tooltip: AppTranslations.get(
+                                'scroll_left',
+                                currentLang,
+                              ),
                             ),
                             Text(
-                              AppTranslations.get('use_buttons_to_navigate', currentLang),
+                              AppTranslations.get(
+                                'use_buttons_to_navigate',
+                                currentLang,
+                              ),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
@@ -230,8 +295,14 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                             ),
                             IconButton(
                               onPressed: _scrollRight,
-                              icon: Icon(Icons.arrow_right, color: Colors.blue.shade600),
-                              tooltip: AppTranslations.get('scroll_right', currentLang),
+                              icon: Icon(
+                                Icons.arrow_right,
+                                color: Colors.blue.shade600,
+                              ),
+                              tooltip: AppTranslations.get(
+                                'scroll_right',
+                                currentLang,
+                              ),
                             ),
                           ],
                         ),
@@ -245,29 +316,162 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                             controller: _scrollController,
                             scrollDirection: Axis.horizontal,
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(Colors.blue.shade50),
+                              headingRowColor: WidgetStateProperty.all(
+                                Colors.blue.shade50,
+                              ),
                               columns: [
-                                DataColumn(label: Text(AppTranslations.get('reference', currentLang), style: const TextStyle(fontSize: 12))),
-                                DataColumn(label: Text(AppTranslations.get('category', currentLang), style: const TextStyle(fontSize: 12))),
-                                DataColumn(label: Text(AppTranslations.get('quantity', currentLang), style: const TextStyle(fontSize: 12))),
-                                DataColumn(label: Text(AppTranslations.get('weight', currentLang), style: const TextStyle(fontSize: 12))),
-                                DataColumn(label: Text(AppTranslations.get('unit_price_header', currentLang), style: const TextStyle(fontSize: 12))),
-                                DataColumn(label: Text(AppTranslations.get('purchase_price_header', currentLang), style: const TextStyle(fontSize: 12))),
-                                DataColumn(label: Text(AppTranslations.get('other_expenses_header', currentLang), style: const TextStyle(fontSize: 12))),
-                                DataColumn(label: Text(AppTranslations.get('total_header', currentLang), style: const TextStyle(fontSize: 12))),
+                                DataColumn(
+                                  label: Text(
+                                    AppTranslations.get(
+                                      'reference',
+                                      currentLang,
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    AppTranslations.get(
+                                      'category',
+                                      currentLang,
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    AppTranslations.get(
+                                      'quantity',
+                                      currentLang,
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    AppTranslations.get('weight', currentLang),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    AppTranslations.get(
+                                      'unit_price_header',
+                                      currentLang,
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    AppTranslations.get(
+                                      'purchase_price_header',
+                                      currentLang,
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    AppTranslations.get(
+                                      'other_expenses_header',
+                                      currentLang,
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    AppTranslations.get(
+                                      'total_header',
+                                      currentLang,
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
                               ],
                               rows: items
                                   .map<DataRow>(
                                     (item) => DataRow(
                                       cells: [
-                                        DataCell(Text(item['refFournisseur']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(item['articles']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(NumberFormattingService.formatQuantitySafe(item['qte']), style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(NumberFormattingService.formatWeightSafe(item['poids']), style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(NumberFormattingService.formatCurrencySafe(item['puPieces']), style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(NumberFormattingService.formatCurrencySafe(item['prixAchat']), style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(NumberFormattingService.formatCurrencySafe(item['autresCharges']), style: const TextStyle(fontSize: 11))),
-                                        DataCell(Text(NumberFormattingService.formatCurrencySafe(item['cuHt']), style: const TextStyle(fontSize: 11))),
+                                        DataCell(
+                                          Text(
+                                            item['refFournisseur']
+                                                    ?.toString() ??
+                                                '',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            item['articles']?.toString() ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            NumberFormattingService.formatQuantitySafe(
+                                              item['qte'],
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            NumberFormattingService.formatWeightSafe(
+                                              item['poids'],
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            NumberFormattingService.formatCurrencySafe(
+                                              item['puPieces'],
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            NumberFormattingService.formatCurrencySafe(
+                                              item['prixAchat'],
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            NumberFormattingService.formatCurrencySafe(
+                                              item['autresCharges'],
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            NumberFormattingService.formatCurrencySafe(
+                                              item['cuHt'],
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   )
@@ -303,14 +507,53 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                             runSpacing: 8,
                             spacing: 16,
                             children: [
-                              _summaryItem(AppTranslations.get('customs_invoice_number', currentLang), summary['factureNumber']),
-                              _summaryItem(AppTranslations.get('transit', currentLang), summary['transit']),
-                              _summaryItem(AppTranslations.get('customs', currentLang), summary['droitDouane']),
-                              _summaryItem(AppTranslations.get('exchange_cheque', currentLang), summary['chequeChange']),
-                              _summaryItem(AppTranslations.get('freight', currentLang), summary['freiht']),
-                              _summaryItem(AppTranslations.get('other_expenses', currentLang), summary['autres']),
-                              _summaryItem(AppTranslations.get('total_weight_summary', currentLang), summary['poidsTotal']),
-                              _summaryItem(AppTranslations.get('total_invoice', currentLang), summary['total']),
+                              _summaryItem(
+                                AppTranslations.get(
+                                  'customs_invoice_number',
+                                  currentLang,
+                                ),
+                                summary['factureNumber'],
+                              ),
+                              _summaryItem(
+                                AppTranslations.get('transit', currentLang),
+                                summary['transit'],
+                              ),
+                              _summaryItem(
+                                AppTranslations.get('customs', currentLang),
+                                summary['droitDouane'],
+                              ),
+                              _summaryItem(
+                                AppTranslations.get(
+                                  'exchange_cheque',
+                                  currentLang,
+                                ),
+                                summary['chequeChange'],
+                              ),
+                              _summaryItem(
+                                AppTranslations.get('freight', currentLang),
+                                summary['freiht'],
+                              ),
+                              _summaryItem(
+                                AppTranslations.get(
+                                  'other_expenses',
+                                  currentLang,
+                                ),
+                                summary['autres'],
+                              ),
+                              _summaryItem(
+                                AppTranslations.get(
+                                  'total_weight_summary',
+                                  currentLang,
+                                ),
+                                summary['poidsTotal'],
+                              ),
+                              _summaryItem(
+                                AppTranslations.get(
+                                  'total_invoice',
+                                  currentLang,
+                                ),
+                                summary['total'],
+                              ),
                             ],
                           ),
                         ),
@@ -328,14 +571,20 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
                   icon: const Icon(Icons.close, color: Colors.white, size: 18),
                   label: Text(
                     AppTranslations.get('close', currentLang),
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
@@ -348,22 +597,32 @@ class _ViewInvoiceDialogState extends State<ViewInvoiceDialog> {
 
   Widget _summaryItem(String label, dynamic value) {
     String formattedValue = '-';
-    
+
     if (value != null) {
       // تحديد نوع التنسيق بناءً على نوع البيانات
-      if (label.contains('Poids') || label.contains('Weight') || label.contains('الوزن')) {
+      if (label.contains('Poids') ||
+          label.contains('Weight') ||
+          label.contains('الوزن')) {
         formattedValue = NumberFormattingService.formatWeightSafe(value);
-      } else if (label.contains('Total') || label.contains('Montant') || label.contains('الإجمالي') || 
-                 label.contains('Transport') || label.contains('Droit') || label.contains('Fret') || 
-                 label.contains('Autre') || label.contains('Cheque') || label.contains('النقل') || 
-                 label.contains('الجمرك') || label.contains('الشحن') || label.contains('أخرى') || 
-                 label.contains('الصرف')) {
+      } else if (label.contains('Total') ||
+          label.contains('Montant') ||
+          label.contains('الإجمالي') ||
+          label.contains('Transport') ||
+          label.contains('Droit') ||
+          label.contains('Fret') ||
+          label.contains('Autre') ||
+          label.contains('Cheque') ||
+          label.contains('النقل') ||
+          label.contains('الجمرك') ||
+          label.contains('الشحن') ||
+          label.contains('أخرى') ||
+          label.contains('الصرف')) {
         formattedValue = NumberFormattingService.formatCurrencySafe(value);
       } else {
         formattedValue = value.toString();
       }
     }
-    
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

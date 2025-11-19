@@ -40,13 +40,14 @@ class _ProductionScreenState extends State<ProductionScreen>
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(height: 125),
+          const SizedBox(height: 125),
           _buildTopBar(),
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [
-                FonderieScreen(searchQuery: _searchQuery),
+              children: const [
+                // FonderieScreen(searchQuery: _searchQuery),
+                FonderieScreen(),
                 ExtrusionScreen(),
                 PeintureScreen(),
               ],
