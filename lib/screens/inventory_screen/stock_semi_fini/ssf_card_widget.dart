@@ -14,19 +14,32 @@ class SsfCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = (ssf['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    // Support both 'items' and 'inventory_ssf_operations' keys for operations
+    final items =
+        (ssf['items'] as List?)?.cast<Map<String, dynamic>>() ??
+        (ssf['inventory_ssf_operations'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
 
-    final totalQuantity = ssf['total_quantity'] ?? 0;
+    // Support both ref_code and product_ref for reference code
+    final refCode = (ssf['ref_code'] ?? ssf['product_ref'] ?? 'N/A').toString();
+
+    final totalQuantity = ssf['total_quantity'] ?? ssf['quantity'] ?? 0;
     final totalWeight =
         (ssf['total_weight'] as num?)?.toStringAsFixed(2) ??
         ssf['total_weight']?.toString() ??
         '0.00';
     final totalAmount =
         (ssf['total_amount'] as num?)?.toStringAsFixed(2) ??
+        (ssf['total_cost'] as num?)?.toStringAsFixed(2) ??
         ssf['total_amount']?.toString() ??
+        ssf['total_cost']?.toString() ??
         '0.00';
     final operationsCount = ssf['operations_count'] ?? items.length;
-    final status = ssf['status']?.toString() ?? 'Disponible';
+    final cmup =
+        (ssf['CMUP'] as num?)?.toStringAsFixed(2) ??
+        ssf['CMUP']?.toString() ??
+        '0.00';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -57,13 +70,13 @@ class SsfCard extends StatelessWidget {
                   icon: Icons.qr_code_2,
                   color: const Color(0xFF4338CA),
                   label: 'Réf. Code',
-                  value: ssf['ref_code'] ?? 'N/A',
+                  value: refCode,
                 ),
                 _buildStatCard(
-                  icon: Icons.check_circle,
-                  color: _getStatusColor(status),
-                  label: 'Statut',
-                  value: status,
+                  icon: Icons.monetization_on,
+                  color: const Color(0xFF7C3AED),
+                  label: 'CMUP (DH)',
+                  value: cmup,
                 ),
                 _buildStatCard(
                   icon: Icons.production_quantity_limits,
@@ -168,18 +181,5 @@ class SsfCard extends StatelessWidget {
         child: Icon(icon, size: 20, color: color),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'disponible':
-        return const Color(0xFF16A34A);
-      case 'faible':
-        return const Color(0xFFF59E0B);
-      case 'épuisé':
-        return const Color(0xFFDC2626);
-      default:
-        return const Color(0xFF64748B);
-    }
   }
 }

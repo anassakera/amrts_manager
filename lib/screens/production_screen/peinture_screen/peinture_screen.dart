@@ -1,4 +1,5 @@
 import '../../../core/imports.dart';
+import 'api_services.dart';
 import 'peinture_card_widget.dart';
 import 'peinture_edit_screen.dart';
 
@@ -12,65 +13,64 @@ class PeintureScreen extends StatefulWidget {
 }
 
 class _PeintureScreenState extends State<PeintureScreen> {
-  final List<Map<String, dynamic>> _peinture = [
-    {
-      'ref_peinture': 'PE-25-01-00001',
-      'total_quantity': 120,
-      'total_cout': 22260.0,
-      'operations_count': 1,
-      'items': [
-        {
-          'id': 1,
-          'ref': 'AL-6063-PEIN',
-          'designations':
-              'Profilé aluminium extrudé - Traitement peinture époxy',
-          'qte': 120,
-          'poid_barre': 35.5,
-          'poid': 4260.0,
-          'dichet': 213.0,
-          'poid_net': 4047.0,
-          'couleur': 'RAL 9016 - Blanc signalisation',
-          'cout_production_unitaire': 185.50,
-          'prix_vente': 245.00,
-          'type': 'Peinture liquide époxy',
-          'date': '2025-01-15',
-          'time': '09:00',
-          'status': 'completed',
-        },
-      ],
-    },
-  ];
+  final PeintureApiService _apiService = PeintureApiService();
+  List<Map<String, dynamic>> peintures = [];
+  bool isLoading = true;
+  String? errorMessage;
 
-  List<Map<String, dynamic>> get filteredPeinture {
+  @override
+  void initState() {
+    super.initState();
+    _loadPeintures();
+  }
+
+  Future<void> _loadPeintures() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final data = await _apiService.getAllPeintures();
+
+      if (!mounted) return;
+
+      setState(() {
+        peintures = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> get filteredPeintures {
     if (widget.searchQuery.isEmpty) {
-      return _peinture;
+      return peintures;
     }
 
     final query = widget.searchQuery.toLowerCase();
-    return _peinture.where((peinture) {
+    return peintures.where((peinture) {
       return (peinture['ref_peinture']?.toString().toLowerCase().contains(
                 query,
               ) ??
               false) ||
-          (peinture['total_quantity']?.toString().toLowerCase().contains(
-                query,
-              ) ??
-              false) ||
-          (peinture['total_cout']?.toString().toLowerCase().contains(query) ??
-              false) ||
-          (peinture['operations_count']?.toString().toLowerCase().contains(
-                query,
-              ) ??
+          (peinture['total_quantity']?.toString().contains(query) ?? false) ||
+          (peinture['operator']?.toString().toLowerCase().contains(query) ??
               false);
     }).toList();
   }
 
   String? _getLastRefPeinture() {
-    if (_peinture.isEmpty) return null;
+    if (peintures.isEmpty) return null;
     final reg = RegExp(r'^PE-(\d{2})-(\d{2})-(\d{5})$');
     String? bestRef;
     int bestYY = -1, bestMM = -1, bestSeq = -1;
-    for (final p in _peinture) {
+    for (final p in peintures) {
       final ref = p['ref_peinture']?.toString() ?? '';
       final m = reg.firstMatch(ref);
       if (m != null) {
@@ -90,96 +90,134 @@ class _PeintureScreenState extends State<PeintureScreen> {
     return bestRef;
   }
 
+  String _computeNextRefPeinture() {
+    final now = DateTime.now();
+    final yy = (now.year % 100).toString().padLeft(2, '0');
+    final mm = now.month.toString().padLeft(2, '0');
+
+    int nextSeq = 1;
+    final lastRef = _getLastRefPeinture();
+    if (lastRef != null) {
+      final reg = RegExp(r'^PE-(\d{2})-(\d{2})-(\d{5})$');
+      final m = reg.firstMatch(lastRef);
+      if (m != null) {
+        final lastYY = m.group(1)!;
+        final lastMM = m.group(2)!;
+        if (lastYY == yy && lastMM == mm) {
+          nextSeq = (int.tryParse(m.group(3)!) ?? 0) + 1;
+        }
+      }
+    }
+
+    return 'PE-$yy-$mm-${nextSeq.toString().padLeft(5, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final displayedPeinture = filteredPeinture;
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (errorMessage != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  errorMessage!,
+                  style: TextStyle(fontSize: 16, color: Colors.red.shade600),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadPeintures,
+                child: const Text('Réessayer'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final displayedPeintures = filteredPeintures;
 
     return Scaffold(
-      body: displayedPeinture.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: RefreshIndicator(
+        onRefresh: _loadPeintures,
+        child: displayedPeintures.isEmpty
+            ? ListView(
                 children: [
-                  Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucun résultat trouvé',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 1),
-              itemCount: displayedPeinture.length,
-              itemBuilder: (context, index) {
-                final peinture = displayedPeinture[index];
-                return PeintureCard(
-                  peinture: peinture,
-                  onEdit: () => _handleEditPeinture(context, peinture),
-                  onDelete: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Confirmer la suppression'),
-                        content: Text(
-                          'Voulez-vous vraiment supprimer ${peinture['ref_peinture']} ?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.format_paint_outlined,
+                            size: 64,
+                            color: Colors.grey.shade400,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _peinture.removeWhere(
-                                  (p) =>
-                                      p['ref_peinture'] ==
-                                      peinture['ref_peinture'],
-                                );
-                              });
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Production supprimée avec succès',
-                                  ),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Supprimer',
-                              style: TextStyle(color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            widget.searchQuery.isEmpty
+                                ? 'Aucune fiche de peinture'
+                                : 'Aucun résultat trouvé',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                  ),
+                ],
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                itemCount: displayedPeintures.length,
+                itemBuilder: (context, index) {
+                  final peinture = displayedPeintures[index];
+                  return PeintureCard(
+                    peinture: peinture,
+                    onEdit: () => _handleEditPeinture(context, peinture),
+                    onDelete: () => _handleDeletePeinture(context, peinture),
+                  );
+                },
+              ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final lastRef = _getLastRefPeinture();
+          String nextRef;
+          try {
+            nextRef = await _apiService.getNextNumero();
+          } catch (_) {
+            nextRef = _computeNextRefPeinture();
+          }
+
+          if (!mounted) return;
+
+          if (!context.mounted) return;
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) =>
-                  PeintureEditScreen(lastRefPeinture: lastRef),
+                  PeintureEditScreen(lastRefPeinture: nextRef),
             ),
           );
 
           if (!mounted) return;
 
-          if (result != null && result is Map<String, dynamic>) {
-            _upsertPeinture(result);
+          if (result == true || (result != null && result is Map)) {
+            _loadPeintures();
           }
         },
         backgroundColor: const Color(0xFF3B82F6),
@@ -188,90 +226,110 @@ class _PeintureScreenState extends State<PeintureScreen> {
     );
   }
 
+  Future<void> _handleDeletePeinture(
+    BuildContext context,
+    Map<String, dynamic> peinture,
+  ) async {
+    // Check for completed items
+    final items = peinture['items'] as List? ?? [];
+    final hasCompletedItems = items.any(
+      (item) =>
+          (item as Map<String, dynamic>)['status']?.toString() == 'completed',
+    );
+
+    if (hasCompletedItems) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Suppression impossible'),
+          content: Text(
+            'La fiche ${peinture['ref_peinture']} contient des articles marqués comme "Terminé".\n\n'
+            'Pour supprimer cette fiche, vous devez d\'abord réinitialiser le statut de tous les articles.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: Text(
+          'Voulez-vous vraiment supprimer ${peinture['ref_peinture']} ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _apiService.deletePeinture(peinture['ref_peinture']);
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fiche supprimée avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadPeintures();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   void _handleEditPeinture(
     BuildContext context,
     Map<String, dynamic> peinture,
   ) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PeintureEditScreen(
-          lastRefPeinture: _getLastRefPeinture(),
-          production: peinture,
-        ),
-      ),
-    );
-
-    if (!mounted) return;
-    if (result != null && result is Map<String, dynamic>) {
-      _upsertPeinture(result);
-    }
-  }
-
-  void _upsertPeinture(Map<String, dynamic> result) {
-    final List<Map<String, dynamic>> items =
-        (result['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-
-    int nextItemId = _highestItemId();
-    final normalizedItems = items.map((item) {
-      final newItem = Map<String, dynamic>.from(item);
-      if (newItem['id'] == null) {
-        nextItemId += 1;
-        newItem['id'] = nextItemId;
-      }
-      newItem['status'] = newItem['status'] ?? 'completed';
-      return newItem;
-    }).toList();
-
-    final totalQuantity =
-        result['total_quantity'] ??
-        normalizedItems.fold<int>(
-          0,
-          (prev, item) => prev + (item['qte'] as int? ?? 0),
-        );
-    final totalCout =
-        result['total_cout'] ??
-        normalizedItems.fold<double>(
-          0,
-          (prev, item) =>
-              prev +
-              ((item['cout_production_unitaire'] as num? ?? 0).toDouble() *
-                  (item['qte'] as num? ?? 0).toDouble()),
-        );
-    final operationsCount =
-        result['operations_count'] ?? normalizedItems.length;
-
-    final updatedPeinture = <String, dynamic>{
-      'ref_peinture': result['ref_peinture'],
-      'total_quantity': totalQuantity,
-      'total_cout': totalCout,
-      'operations_count': operationsCount,
-      'items': normalizedItems,
-    };
-
-    setState(() {
-      final index = _peinture.indexWhere(
-        (p) => p['ref_peinture'] == updatedPeinture['ref_peinture'],
+    try {
+      // Fetch fresh data from API
+      final freshData = await _apiService.getPeintureByRef(
+        peinture['ref_peinture'],
       );
-      if (index >= 0) {
-        _peinture[index] = updatedPeinture;
-      } else {
-        _peinture.add(updatedPeinture);
-      }
-    });
-  }
 
-  int _highestItemId() {
-    return _peinture
-        .expand(
-          (peinture) =>
-              (peinture['items'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-        )
-        .fold<int>(
-          0,
-          (previousValue, item) => ((item['id'] as int?) ?? 0) > previousValue
-              ? (item['id'] as int?) ?? 0
-              : previousValue,
-        );
+      if (!mounted) return;
+
+      if (!context.mounted) return;
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PeintureEditScreen(
+            lastRefPeinture: _getLastRefPeinture(),
+            production: freshData,
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      if (result == true || (result != null && result is Map)) {
+        _loadPeintures();
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 }

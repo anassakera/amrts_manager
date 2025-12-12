@@ -1,5 +1,5 @@
 import '../core/imports.dart';
-import '../screens/need_fix/edit_invoice_screen_buy.dart';
+import '../screens/purchases/purchase_local/edit_invoice_screen_buy.dart';
 
 class AddInvoiceDialog extends StatefulWidget {
   final bool isLocal;
@@ -14,14 +14,19 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  final _formKey = GlobalKey<FormState>();
   late TextEditingController _clientNameController;
   late TextEditingController _invoiceNumberController;
+  final _formKey = GlobalKey<FormState>();
+  final ApiService _apiService = ApiService();
+  final bool _isLoading = false;
+  List<Map<String, dynamic>> clients = [];
+  String? selectedCustomer;
   DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    _fetchClients();
     _clientNameController = TextEditingController();
     _invoiceNumberController = TextEditingController();
     _animationController = AnimationController(
@@ -100,6 +105,20 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
           );
         });
       }
+    }
+  }
+
+  Future<void> _fetchClients() async {
+    try {
+      final fetchClients = await _apiService.loadAllClients();
+
+      if (!mounted) return;
+
+      setState(() {
+        clients = fetchClients;
+      });
+    } catch (e) {
+      if (!mounted) return;
     }
   }
 
@@ -210,18 +229,28 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                   child: Column(
                     children: [
                       // حقل اسم العميل
-                      _buildTextField(
-                        controller: _clientNameController,
-                        label: AppTranslations.get('client_name', currentLang),
-                        icon: Icons.person_outline,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return AppTranslations.get(
-                              'please_enter_client_name',
-                              currentLang,
-                            );
-                          }
-                          return null;
+                      // حقل اسم العميل
+                      SearchableDropdownT<String>(
+                        items: clients
+                            .where(
+                              (client) => client['IsActive'] == true,
+                            ) // فلترة العملاء النشطين فقط
+                            .map((client) => client['ClientName'] as String)
+                            .toList(),
+                        displayText: (item) => item,
+                        selectedValue: selectedCustomer,
+                        onChanged: (value) =>
+                            setState(() => selectedCustomer = value),
+                        hintText: "Choix fournisseur......",
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
+                        primaryColor: Colors.blue,
+                        enabled: !_isLoading,
+                        onPrefixIconTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ClientCurdScreen(),
+                            ),
+                          );
                         },
                       ),
 
@@ -363,9 +392,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                           builder: (context) => widget.isLocal
                                               ? SmartDocumentScreenBuy(
                                                   isLocal: widget.isLocal,
-                                                  clientName:
-                                                      _clientNameController
-                                                          .text,
+                                                  clientName: selectedCustomer,
                                                   invoiceNumber:
                                                       _invoiceNumberController
                                                           .text,
@@ -373,9 +400,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                                 )
                                               : SmartDocumentScreen(
                                                   isLocal: widget.isLocal,
-                                                  clientName:
-                                                      _clientNameController
-                                                          .text,
+                                                  clientName: selectedCustomer,
                                                   invoiceNumber:
                                                       _invoiceNumberController
                                                           .text,

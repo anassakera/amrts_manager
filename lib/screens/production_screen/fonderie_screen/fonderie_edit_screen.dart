@@ -1,4 +1,5 @@
 import '../../../core/imports.dart';
+import 'api_services.dart';
 
 class FonderieEditScreen extends StatefulWidget {
   final Map<String, dynamic>? production;
@@ -15,12 +16,15 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final List<Map<String, dynamic>> _items = [];
   final List<int> _selectedIndices = [];
+  final FonderieApiService _fonderieApiService = FonderieApiService();
+  List<Map<String, dynamic>> _articles = [];
+  Map<String, dynamic>? _selectedArticle;
   bool _isSaving = false;
   int? _editingIndex;
-  bool get _hasSelection => _selectedIndices.isNotEmpty;
-  String _currentItemStatus = 'completed';
+  String _currentItemStatus = 'in_progress';
 
   final Map<String, TextEditingController> _itemControllers = {};
+  final Map<String, TextEditingController> _costsControllers = {};
   late final TextEditingController _refArticleController;
   late final TextEditingController _articleNameController;
 
@@ -30,12 +34,15 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   String _time = '';
   String _refArticle = '';
   String _articleName = '';
+  double _cuFondrie = 0.0; // Cost from API
 
   @override
   void initState() {
     super.initState();
-    _initializeData();
     _initializeControllers();
+    _initializeData();
+    _fetchArticles();
+    _loadCosts();
   }
 
   void _initializeData() {
@@ -49,10 +56,9 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     _items.clear();
 
     if (widget.production != null) {
+      // Editing existing production - use its ref_fondrie
       final production = Map<String, dynamic>.from(widget.production!);
-      _refFonderie =
-          production['ref_fondrie']?.toString() ??
-          _computeNextRef(widget.lastRefFonderie, now);
+      _refFonderie = production['ref_fondrie']?.toString() ?? '';
       _refArticle = production['ref_article']?.toString() ?? '';
       _articleName = production['articleName']?.toString() ?? '';
 
@@ -71,7 +77,9 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         _time = formattedTime;
       }
     } else {
-      _refFonderie = _computeNextRef(widget.lastRefFonderie, now);
+      // New production - use the pre-calculated ref from fonderie_screen
+      // lastRefFonderie is already the NEXT ref to use (from API or fallback)
+      _refFonderie = widget.lastRefFonderie ?? _generateDefaultRef(now);
       _refArticle = '';
       _articleName = '';
       _date = formattedDate;
@@ -79,19 +87,9 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     }
   }
 
-  String _computeNextRef(String? lastRef, DateTime now) {
-    final reg = RegExp(r'^FO-(\d{2})-(\d{2})-(\d{5})$');
-    if (lastRef != null) {
-      final m = reg.firstMatch(lastRef);
-      if (m != null) {
-        final lastYY = m.group(1)!;
-        final lastMM = m.group(2)!;
-        final lastSeq = int.tryParse(m.group(3)!) ?? 0;
-        final next = (lastSeq + 1).toString().padLeft(5, '0');
-        // Conserver le même préfixe (année/mois) que la dernière référence
-        return 'FO-$lastYY-$lastMM-$next';
-      }
-    }
+  /// Generate default ref when no lastRefFonderie is provided
+  /// Format: FO-YY-MM-00001
+  String _generateDefaultRef(DateTime now) {
     final yy = now.year.toString().substring(2);
     final mm = now.month.toString().padLeft(2, '0');
     return 'FO-$yy-$mm-00001';
@@ -103,16 +101,37 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     _itemControllers['quantity'] = TextEditingController();
     _itemControllers['dechet_fondrie'] = TextEditingController();
     _itemControllers['billete'] = TextEditingController();
-    _itemControllers['propane'] = TextEditingController();
+    _itemControllers['ref_dechet'] = TextEditingController();
     _itemControllers['cout'] = TextEditingController();
-    _itemControllers['date'] = TextEditingController();
     _refArticleController = TextEditingController(text: _refArticle);
     _articleNameController = TextEditingController(text: _articleName);
+
+    // Add listener to quantity field to auto-calculate dechet_fondrie and billete
+    _itemControllers['quantity']?.addListener(_updateCalculatedFields);
+  }
+
+  void _updateCalculatedFields() {
+    final quantityText = _itemControllers['quantity']?.text.trim() ?? '';
+    final quantity = double.tryParse(quantityText) ?? 0.0;
+
+    // Calculate dechet_fondrie = 14% of quantity
+    final dechetFondrie = quantity * 0.14;
+
+    // Calculate billete = quantity - 14% (86% of quantity)
+    final billete = quantity - (quantity * 0.14);
+
+    // Update the controllers
+    _itemControllers['dechet_fondrie']?.text = dechetFondrie.toStringAsFixed(2);
+    _itemControllers['billete']?.text = billete.toStringAsFixed(2);
   }
 
   void _clearControllers() {
     _itemControllers.forEach((key, controller) {
       controller.clear();
+    });
+    // Reset selected article
+    setState(() {
+      _selectedArticle = null;
     });
   }
 
@@ -125,9 +144,59 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     _itemControllers['dechet_fondrie']?.text =
         item['dechet_fondrie']?.toString() ?? '';
     _itemControllers['billete']?.text = item['billete']?.toString() ?? '';
-    _itemControllers['propane']?.text = item['propane']?.toString() ?? '';
+    _itemControllers['ref_dechet']?.text = item['ref_dechet']?.toString() ?? '';
     _itemControllers['cout']?.text = item['cout']?.toString() ?? '';
-    _itemControllers['date']?.text = item['date']?.toString() ?? '';
+  }
+
+  Future<void> _fetchArticles() async {
+    try {
+      final fetchedArticles = await _fonderieApiService.getAllArticlesStock();
+      if (!mounted) return;
+      setState(() {
+        _articles = fetchedArticles;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // Error fetching articles - silent fail
+    }
+  }
+
+  Future<void> _loadCosts() async {
+    if (!mounted) return;
+
+    try {
+      final apiService = FonderieApiService();
+      final response = await apiService.getCosts();
+
+      if (!mounted) return;
+
+      if (response['status'] == 'success' && response['data'] != null) {
+        final data = response['data'];
+        if (mounted) {
+          setState(() {
+            final fondrie = data['CU_FONDRIE']?.toString() ?? '0';
+            _cuFondrie = double.tryParse(fondrie) ?? 0.0;
+          });
+        }
+      }
+    } catch (e) {
+      // Silent fail
+    }
+  }
+
+  void _updateRefDechet(String refArticle) {
+    String refDechetValue = '';
+
+    // إذا ref_article تبدأ بـ DE → تفريغ ref_dechet (لإجبار المستخدم على اختيار BI)
+    if (refArticle.startsWith('DE')) {
+      refDechetValue = '';
+    } else if (refArticle == 'BI002') {
+      // BI002 → DE001
+      refDechetValue = 'DE001';
+    }
+    // أي ref_article أخرى (غير DE وغير BI002) → فارغ
+
+    _itemControllers['ref_dechet']?.text = refDechetValue;
   }
 
   double _calculateTotalDechet() {
@@ -146,18 +215,12 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     return total;
   }
 
-  double _calculateTotalPropane() {
-    double total = 0;
-    for (var item in _items) {
-      total += (item['propane'] as num?)?.toDouble() ?? 0;
-    }
-    return total;
-  }
-
   double _calculateTotalCout() {
     double total = 0;
     for (var item in _items) {
-      total += (item['cout'] as num?)?.toDouble() ?? 0;
+      final quantity = (item['quantity'] as num?)?.toDouble() ?? 0;
+      final cout = (item['cout'] as num?)?.toDouble() ?? 0;
+      total += quantity * cout;
     }
     return total;
   }
@@ -182,6 +245,9 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     _itemControllers.forEach((key, controller) {
       controller.dispose();
     });
+    _costsControllers.forEach((key, controller) {
+      controller.dispose();
+    });
     _refArticleController.dispose();
     _articleNameController.dispose();
     super.dispose();
@@ -196,7 +262,6 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
           children: [
             _buildSmartHeader(),
             Expanded(child: _buildSmartTable()),
-            const SizedBox(height: 5),
           ],
         ),
       ),
@@ -325,6 +390,20 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
                     const SizedBox(width: 12),
                     _buildActionButton(
                       onPressed: () {
+                        final hasCompletedItems = _items.any(
+                          (item) => item['status'] == 'completed',
+                        );
+                        if (hasCompletedItems) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "Il n'est pas possible de supprimer les éléments complets.",
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
                         Navigator.pop(context);
                       },
                       icon: Icons.cancel_rounded,
@@ -382,15 +461,7 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
                           color: const Color(0xFF10B981),
                         ),
                       ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: _buildInfoCard(
-                          icon: Icons.local_fire_department,
-                          label: 'Propane',
-                          value: _formatNumber(_calculateTotalPropane()),
-                          color: const Color(0xFFF59E0B),
-                        ),
-                      ),
+
                       const SizedBox(width: 5),
                       Expanded(
                         child: _buildInfoCard(
@@ -442,20 +513,6 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
                                   icon: Icons.add_circle_outline_rounded,
                                   color: const Color(0xFF10B981),
                                 ),
-                                if (_hasSelection)
-                                  _buildTooltipButton(
-                                    tooltip: 'Supprimer sélection',
-                                    onTap: _deleteSelected,
-                                    icon: Icons.delete_sweep_rounded,
-                                    color: const Color(0xFFEF4444),
-                                  ),
-                                if (_hasSelection)
-                                  _buildTooltipButton(
-                                    tooltip: 'Effacer sélection',
-                                    onTap: _clearSelection,
-                                    icon: Icons.clear_all_rounded,
-                                    color: const Color(0xFF6B7280),
-                                  ),
                               ],
                             ),
                           ),
@@ -473,8 +530,21 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   }
 
   Future<void> _saveProduction() async {
-    final refArticle = _refArticleController.text.trim();
-    final articleName = _articleNameController.text.trim();
+    // Check if we have items
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ajoutez au moins une opération avant de sauvegarder.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Get ref_article and articleName from the first item
+    final firstItem = _items.first;
+    final refArticle = firstItem['ref_article']?.toString().trim() ?? '';
+    final articleName = firstItem['articleName']?.toString().trim() ?? '';
 
     if (refArticle.isEmpty || articleName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -486,25 +556,44 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
       return;
     }
 
-    if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ajoutez au moins une opération avant de sauvegarder.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
     setState(() {
       _isSaving = true;
     });
 
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 1200));
 
       if (!mounted) return;
 
+      // If it was already created via toggle, we just update it now
+      if (_isLocallyCreated) {
+        // Prepare items: keep IDs for existing items, remove IDs for new items
+        final itemsToSend = _items.map((item) {
+          final itemCopy = Map<String, dynamic>.from(item);
+          // Only keep ID if it's a real database ID (positive integer)
+          // Local temporary IDs should be removed
+          final id = itemCopy['id'];
+          if (id == null || (id is int && id <= 0)) {
+            itemCopy.remove('id');
+          }
+          return itemCopy;
+        }).toList();
+
+        final fondrieData = {'ref_fondrie': _refFonderie, 'items': itemsToSend};
+        await _fonderieApiService.updateFondrie(fondrieData);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Production mise à jour avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true); // Return true to signal reload
+        return;
+      }
+
+      // Standard flow (not locally created yet)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -565,13 +654,26 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   }
 
   void _addNewItem() {
+    if (_items.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Un seul élément peut être ajouté'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     setState(() {
       _editingIndex = _items.length;
       _clearControllers();
       _itemControllers['date']?.text = DateTime.now().toString().split(' ')[0];
       _itemControllers['ref_article']?.text = _refArticleController.text;
       _itemControllers['articleName']?.text = _articleNameController.text;
-      _currentItemStatus = 'completed';
+      _currentItemStatus = 'in_progress';
+      // Set cout from API value
+      _itemControllers['cout']?.text = _cuFondrie == 0
+          ? ''
+          : _cuFondrie.toString();
     });
   }
 
@@ -582,57 +684,6 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         _selectedIndices.add(i);
       }
     });
-  }
-
-  void _clearSelection() {
-    setState(() {
-      _selectedIndices.clear();
-    });
-  }
-
-  void _deleteSelected() {
-    if (_selectedIndices.isEmpty) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: Text(
-          'Êtes-vous sûr de vouloir supprimer ${_selectedIndices.length} élément(s) ?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _selectedIndices.sort((a, b) => b.compareTo(a));
-                for (var index in _selectedIndices) {
-                  if (index >= 0 && index < _items.length) {
-                    _items.removeAt(index);
-                  }
-                }
-                _selectedIndices.clear();
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Éléments supprimés avec succès'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              'Supprimer',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _toggleSelection(int index) {
@@ -650,12 +701,31 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
       _editingIndex = index;
       final item = _items[index];
       _loadItemToControllers(item);
-      _currentItemStatus = item['status']?.toString() ?? 'completed';
+      _currentItemStatus = item['status']?.toString() ?? 'in_progress';
+      // Set cout from API value
+      _itemControllers['cout']?.text = _cuFondrie == 0
+          ? ''
+          : _cuFondrie.toString();
     });
   }
 
   void _saveItem() {
     if (_formKey.currentState?.validate() ?? false) {
+      // التحقق من أن ref_dechet غير فارغ
+      final refDechet = _itemControllers['ref_dechet']?.text.trim() ?? '';
+      if (refDechet.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'يجب اختيار مقال يبدأ بـ BI للحصول على رقم مرجع الديشي',
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
       final isEditing = _editingIndex != null && _editingIndex! < _items.length;
       final existingId = isEditing
           ? _items[_editingIndex!]['id'] as int?
@@ -678,16 +748,8 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
               _itemControllers['billete']?.text.replaceAll(',', '.') ?? '0',
             ) ??
             0.0,
-        'propane':
-            double.tryParse(
-              _itemControllers['propane']?.text.replaceAll(',', '.') ?? '0',
-            ) ??
-            0.0,
-        'cout':
-            double.tryParse(
-              _itemControllers['cout']?.text.replaceAll(',', '.') ?? '0',
-            ) ??
-            0.0,
+        'ref_dechet': _itemControllers['ref_dechet']?.text.trim() ?? '',
+        'cout': _cuFondrie,
         'date': _itemControllers['date']?.text.isNotEmpty == true
             ? _itemControllers['date']!.text
             : DateTime.now().toString().split(' ')[0],
@@ -703,7 +765,6 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         }
         _editingIndex = null;
         _clearControllers();
-        _currentItemStatus = 'completed';
         _date = newItem['date']?.toString() ?? _date;
         _time = newItem['time']?.toString() ?? _time;
       });
@@ -717,49 +778,186 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     }
   }
 
+  bool _isLocallyCreated = false;
+
+  Future<bool> _createProductionInitial(Map<String, dynamic> item) async {
+    // Validate basic requirements before creating
+    final refArticle = item['ref_article']?.toString().trim() ?? '';
+    final articleName = item['articleName']?.toString().trim() ?? '';
+
+    if (refArticle.isEmpty || articleName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Veuillez renseigner la référence et la désignation avant de changer le statut.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return false;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // Prepare data for creation
+      // Use current status (likely in_progress)
+      final itemForCreation = Map<String, dynamic>.from(item);
+
+      // Ensure ID is set (though backend might ignore or use it)
+      if (itemForCreation['id'] == null) {
+        itemForCreation['id'] = _getLocalNextItemId();
+      }
+
+      final fondrieData = {
+        'ref_fondrie': _refFonderie,
+        'items': [itemForCreation],
+      };
+
+      // Call create API
+      final result = await _fonderieApiService.createFondrie(fondrieData);
+
+      if (!mounted) return false;
+
+      // Update local state with result
+      setState(() {
+        _isLocallyCreated = true;
+        // Update items with returned data to get real IDs
+        if (result['items'] != null) {
+          final returnedItems = (result['items'] as List)
+              .cast<Map<String, dynamic>>();
+          if (returnedItems.isNotEmpty) {
+            // Assuming single item creation, we update our single item
+            if (_items.length == 1) {
+              _items[0] = returnedItems.first;
+            } else {
+              final returnedItem = returnedItems.first;
+              final index = _items.indexOf(item);
+              if (index != -1) {
+                _items[index] = returnedItem;
+              }
+            }
+          }
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Production créée. Mise à jour du statut...'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de la création: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateItemStatus(Map<String, dynamic> item, int index) async {
+    final currentStatus = item['status'] ?? 'in_progress';
+    final newStatus = currentStatus == 'completed'
+        ? 'in_progress'
+        : 'completed';
+
+    // If new production, create it first
+    if (widget.production == null && !_isLocallyCreated) {
+      final created = await _createProductionInitial(item);
+      if (!created) return;
+
+      // Re-fetch item to get the new ID and data from the list
+      // The 'item' variable still holds the old map reference
+      if (index < _items.length) {
+        item = _items[index];
+      }
+    }
+
+    final itemId = item['id']; // Now this should have the ID from DB
+
+    // Existing production (or locally created). Try to update via API.
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mise à jour du statut...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      try {
+        await _fonderieApiService.updateFoundryItemStatus(
+          refFondrie: _refFonderie,
+          itemId: itemId is int ? itemId : int.tryParse(itemId.toString()) ?? 0,
+          oldStatus: currentStatus,
+          newStatus: newStatus,
+          itemData: item,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          item['status'] = newStatus;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              newStatus == 'completed'
+                  ? 'Statut mis à jour: Terminé (Stock mis à jour)'
+                  : 'Statut mis à jour: En cours (Stock rétabli)',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+
+        // If error is "Inventory is empty", do not update status locally
+        if (e.toString().contains('المخزن فارغ')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('المخزن فارغ: لا يمكن إتمام العملية'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        setState(() {
+          item['status'] = newStatus;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Statut changé localement (Non synchronisé: ${e.toString().split(':').last.trim()})',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
+
   void _cancelEdit() {
     setState(() {
       _editingIndex = null;
       _clearControllers();
-      _currentItemStatus = 'completed';
+      _currentItemStatus = 'in_progress';
     });
-  }
-
-  void _deleteItem(int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous supprimer cet article ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                if (index >= 0 && index < _items.length) {
-                  _items.removeAt(index);
-                }
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Article supprimé avec succès'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              'Supprimer',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildSmartTable() {
@@ -860,15 +1058,11 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
           _verticalDivider(height: 28),
           _buildHeaderCell('Billet', flex: 1),
           _verticalDivider(height: 28),
-          _buildHeaderCell('Propane', flex: 1),
+          _buildHeaderCell('Réf Déchet', flex: 1),
           _verticalDivider(height: 28),
           _buildHeaderCell('Coût (DH)', flex: 1),
           _verticalDivider(height: 28),
-          _buildHeaderCell('Date', flex: 1),
-          _verticalDivider(height: 28),
-          _buildHeaderCell('Statut', flex: 1),
-          _verticalDivider(height: 28),
-          _buildHeaderCell('Actions', flex: 1),
+          _buildHeaderCell('Actions', flex: 2),
         ],
       ),
     );
@@ -941,47 +1135,58 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
                 flex: 1,
               ),
               _verticalDivider(height: 28),
-              _buildDataCell(
-                _formatNumber((item['propane'] as num?)?.toDouble() ?? 0),
-                flex: 1,
-              ),
+              _buildDataCell(item['ref_dechet']?.toString() ?? '', flex: 1),
               _verticalDivider(height: 28),
               _buildDataCell(
                 _formatNumber((item['cout'] as num?)?.toDouble() ?? 0),
                 flex: 1,
               ),
               _verticalDivider(height: 28),
-              _buildDataCell(item['date']?.toString() ?? '', flex: 1),
-              _verticalDivider(height: 28),
               Expanded(
-                flex: 1,
-                child: Align(
-                  alignment: Alignment.center,
-                  child: _buildStatusChip(
-                    (item['status'] ?? 'completed').toString(),
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Status chip with toggle
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _updateItemStatus(item, index),
+                          borderRadius: BorderRadius.circular(16),
+                          child: _buildStatusChip(
+                            (item['status'] ?? 'in_progress').toString(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Action buttons
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: _buildEnhancedActionButton(
+                          icon: Icons.edit_rounded,
+                          onPressed: (item['status'] == 'completed')
+                              ? null
+                              : () => _editItem(index),
+                          color: const Color(0xFF3B82F6),
+                          tooltip: 'Modifier',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 20),
-              SizedBox(
-                width: 60,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _buildActionIconButton(
-                      icon: Icons.edit,
-                      onPressed: () => _editItem(index),
-                      color: const Color(0xFF3B82F6),
-                    ),
-                    _buildActionIconButton(
-                      icon: Icons.delete_outline,
-                      onPressed: () => _deleteItem(index),
-                      color: Colors.red.shade400,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 20),
             ],
           ),
         ),
@@ -992,7 +1197,7 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   Widget _buildEditRow(int index) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
       decoration: BoxDecoration(
         color: const Color(0xFF60A5FA).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(12),
@@ -1002,10 +1207,59 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         key: _formKey,
         child: Row(
           children: [
-            const SizedBox(width: 20),
-            _buildEditField('ref_article', 'Référence', flex: 1),
+            const SizedBox(width: 8),
+            _buildEditField(
+              'ref_article',
+              'Référence',
+              flex: 1,
+              isReadOnly: true,
+            ),
             _verticalDivider(height: 28),
-            _buildEditField('articleName', 'Désignation', flex: 2),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: SearchableDropdownT<Map<String, dynamic>>(
+                  items: _articles,
+                  displayText: (article) => article['material_name'] ?? '',
+                  selectedValue: _selectedArticle,
+                  onChanged: (article) {
+                    setState(() {
+                      _selectedArticle = article;
+                      if (article != null) {
+                        _itemControllers['articleName']?.text =
+                            article['material_name'] ?? '';
+                        // Auto-populate ref_article
+                        final refArticle = article['ref_code'] ?? '';
+                        _itemControllers['ref_article']?.text = refArticle;
+
+                        // Auto-populate ref_dechet based on ref_article logic
+                        _updateRefDechet(refArticle);
+                      } else {
+                        _itemControllers['articleName']?.clear();
+                        _itemControllers['ref_article']?.clear();
+                        _itemControllers['ref_dechet']?.clear();
+                      }
+                    });
+                  },
+                  hintText: 'Sélectionner un article',
+                  onPrefixIconTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ArticlesStockCrudScreen(),
+                      ),
+                    );
+                  },
+                  searchHint: 'Recherche...',
+                  noResultsText: 'Aucun résultat',
+                  loadingText: 'Chargement...',
+                  isLoading: _articles.isEmpty,
+                  prefixIcon: const Icon(Icons.inventory_2_outlined),
+                  primaryColor: Colors.blue,
+                  enabled: true,
+                ),
+              ),
+            ),
             _verticalDivider(height: 28),
             _buildEditField('quantity', 'Quantité', flex: 1, isNumber: true),
             _verticalDivider(height: 28),
@@ -1015,6 +1269,7 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
               flex: 1,
               isNumber: true,
               isDecimal: true,
+              isReadOnly: true,
             ),
             _verticalDivider(height: 28),
             _buildEditField(
@@ -1023,14 +1278,16 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
               flex: 1,
               isNumber: true,
               isDecimal: true,
+              isReadOnly: true,
             ),
             _verticalDivider(height: 28),
             _buildEditField(
-              'propane',
-              'Propane',
+              'ref_dechet',
+              'Réf Déchet *',
               flex: 1,
-              isNumber: true,
-              isDecimal: true,
+              isNumber: false,
+              isDecimal: false,
+              isReadOnly: true,
             ),
             _verticalDivider(height: 28),
             _buildEditField(
@@ -1039,19 +1296,35 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
               flex: 1,
               isNumber: true,
               isDecimal: true,
+              isReadOnly: true,
             ),
             _verticalDivider(height: 28),
-            _buildEditField('date', 'Date', flex: 1, isReadOnly: true),
-            _verticalDivider(height: 28),
             _buildStatusDropdown(),
-            const SizedBox(width: 30),
+            const SizedBox(width: 3),
             SizedBox(
-              width: 60,
+              width: 56,
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildActionIconButton(
                     icon: Icons.save,
-                    onPressed: _saveItem,
+                    onPressed: () {
+                      // Check if article is selected first
+                      if (_selectedArticle == null ||
+                          _itemControllers['articleName']?.text.isEmpty ==
+                              true) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Veuillez sélectionner un article'),
+                            backgroundColor: Colors.red,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        return;
+                      }
+
+                      _saveItem();
+                    },
                     color: const Color(0xFF1E3A8A),
                   ),
                   _buildActionIconButton(
@@ -1062,7 +1335,7 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 30),
+            const SizedBox(width: 8),
           ],
         ),
       ),
@@ -1214,16 +1487,20 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     return Expanded(
       flex: flex,
       child: Container(
+        height: 48,
         alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         child: Text(
           title,
           style: const TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             fontSize: 13,
             color: Colors.white,
-            letterSpacing: 0.2,
+            letterSpacing: 0.3,
           ),
           textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -1233,16 +1510,19 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     return Expanded(
       flex: flex,
       child: Container(
+        height: 48,
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         child: Text(
           text,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             color: Color(0xFF1E3A8A),
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
           ),
           textAlign: TextAlign.center,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -1259,6 +1539,39 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
       onPressed: onPressed,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+    );
+  }
+
+  Widget _buildEnhancedActionButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required Color color,
+    required String tooltip,
+  }) {
+    final isEnabled = onPressed != null;
+    final effectiveColor = isEnabled ? color : Colors.grey;
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: effectiveColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: effectiveColor.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, size: 16, color: effectiveColor),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1337,13 +1650,17 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   }
 
   Widget _buildStatusDropdown() {
-    const statuses = ['completed', 'in_progress', 'pending', 'cancelled'];
+    const statuses = [
+      {'value': 'in_progress', 'label': 'En cours'},
+      {'value': 'completed', 'label': 'Terminé'},
+    ];
 
     return Expanded(
       flex: 1,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 5),
         child: Container(
+          height: 48,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
@@ -1360,14 +1677,23 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
-                vertical: 12,
+                vertical: 8,
               ),
               filled: true,
               fillColor: Colors.white,
               hintText: 'Statut',
+              hintStyle: const TextStyle(
+                fontSize: 13,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: Colors.blueAccent),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1380,12 +1706,13 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
             items: statuses
                 .map(
                   (status) => DropdownMenuItem<String>(
-                    value: status,
+                    value: status['value'],
                     child: Text(
-                      status,
-                      style: const TextStyle(
+                      status['label']!,
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1E3A8A),
+                        fontSize: 13,
+                        color: _statusColor(status['value']!),
                       ),
                     ),
                   ),
@@ -1405,37 +1732,67 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   }
 
   Widget _buildStatusChip(String status) {
-    final color = _statusColor(status);
+    final statusInfo = _getStatusInfo(status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: statusInfo['color'].withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: color,
+        border: Border.all(
+          color: statusInfo['color'].withValues(alpha: 0.4),
+          width: 1.5,
         ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(statusInfo['icon'], size: 14, color: statusInfo['color']),
+          const SizedBox(width: 6),
+          Text(
+            statusInfo['label'],
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: statusInfo['color'],
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
       ),
     );
   }
 
+  Map<String, dynamic> _getStatusInfo(String status) {
+    switch (status.toLowerCase()) {
+      case 'in_progress':
+        return {
+          'label': 'En cours',
+          'color': const Color(0xFFF59E0B),
+          'icon': Icons.autorenew_rounded,
+        };
+      case 'completed':
+        return {
+          'label': 'Terminé',
+          'color': const Color(0xFF16A34A),
+          'icon': Icons.check_circle_rounded,
+        };
+      default:
+        return {
+          'label': 'En cours',
+          'color': const Color(0xFFF59E0B),
+          'icon': Icons.autorenew_rounded,
+        };
+    }
+  }
+
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'completed':
-        return const Color(0xFF16A34A);
       case 'in_progress':
         return const Color(0xFFF59E0B);
-      case 'pending':
-        return const Color(0xFF2563EB);
-      case 'cancelled':
-        return const Color(0xFFDC2626);
+      case 'completed':
+        return const Color(0xFF16A34A);
       default:
-        return const Color(0xFF64748B);
+        return const Color(0xFFF59E0B);
     }
   }
 

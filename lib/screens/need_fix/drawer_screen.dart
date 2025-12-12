@@ -1,4 +1,5 @@
 import '../../core/imports.dart';
+import '../costs_manger_screen/costs_manger_screen.dart';
 
 class DrawerScreen extends StatelessWidget {
   final Function(int)? onNavigationItemSelected;
@@ -209,6 +210,13 @@ class DrawerScreen extends StatelessWidget {
             'color': const Color(0xFF8B5CF6),
             'key': 'financial_transactions',
           },
+          {
+            'icon': Icons.calculate_rounded,
+            'title': 'Gestion des Coûts',
+            'subtitle': 'Suivi et contrôle des dépenses',
+            'color': const Color(0xFF3B82F6),
+            'key': 'costs_manager',
+          },
         ];
 
         return Column(
@@ -231,6 +239,20 @@ class DrawerScreen extends StatelessWidget {
             onTap: () {
               // Handle navigation based on key
               String key = item['key'];
+
+              // Special case: Costs Manager opens as new screen
+              if (key == 'costs_manager') {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CostsMangerScreen(),
+                  ),
+                );
+                return;
+              }
+
+              // Regular tab navigation
               int selectedIndex = 0;
 
               switch (key) {

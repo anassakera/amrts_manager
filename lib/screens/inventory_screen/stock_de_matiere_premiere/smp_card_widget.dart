@@ -14,15 +14,17 @@ class SmpCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = (smp['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-
     final totalQuantity = smp['total_quantity'] ?? 0;
     final totalAmount =
         (smp['total_amount'] as num?)?.toStringAsFixed(2) ??
         smp['total_amount']?.toString() ??
         '0.00';
-    final operationsCount = smp['operations_count'] ?? items.length;
-    final status = smp['status']?.toString() ?? 'Disponible';
+    final operationsCount = smp['operations_count'] ?? 0;
+    final materialType = smp['material_type']?.toString() ?? '';
+    final cmup =
+        (smp['CMUP'] as num?)?.toStringAsFixed(2) ??
+        smp['CMUP']?.toString() ??
+        '0.00';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -42,7 +44,7 @@ class SmpCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(5),
+        padding: const EdgeInsets.all(0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -56,21 +58,33 @@ class SmpCard extends StatelessWidget {
                   value: smp['ref_code'] ?? 'N/A',
                 ),
                 _buildStatCard(
-                  icon: Icons.check_circle,
-                  color: _getStatusColor(status),
-                  label: 'Statut',
-                  value: status,
+                  icon: Icons.inventory_2,
+                  color: const Color(0xFF6366F1),
+                  label: 'Matière',
+                  value: materialType,
+                ),
+                // _buildStatCard(
+                //   icon: Icons.check_circle,
+                //   color: _getStatusColor(status),
+                //   label: 'Statut',
+                //   value: status,
+                // ),
+                _buildStatCard(
+                  icon: Icons.production_quantity_limits,
+                  color: const Color(0xFF2563EB),
+                  label: 'CMUP',
+                  value: cmup,
                 ),
                 _buildStatCard(
                   icon: Icons.production_quantity_limits,
                   color: const Color(0xFF2563EB),
-                  label: 'Quantité totale',
+                  label: 'Quantité (KG)',
                   value: '$totalQuantity',
                 ),
                 _buildStatCard(
                   icon: Icons.attach_money,
                   color: const Color(0xFF16A34A),
-                  label: 'Montant total (DH)',
+                  label: 'Montant (DH)',
                   value: totalAmount,
                 ),
                 _buildStatCard(
@@ -98,7 +112,7 @@ class SmpCard extends StatelessWidget {
     return Expanded(
       child: Container(
         width: 170,
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
@@ -130,7 +144,7 @@ class SmpCard extends StatelessWidget {
                   Text(
                     value,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: color,
                     ),
@@ -158,18 +172,5 @@ class SmpCard extends StatelessWidget {
         child: Icon(icon, size: 20, color: color),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'disponible':
-        return const Color(0xFF16A34A);
-      case 'faible':
-        return const Color(0xFFF59E0B);
-      case 'épuisé':
-        return const Color(0xFFDC2626);
-      default:
-        return const Color(0xFF64748B);
-    }
   }
 }

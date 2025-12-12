@@ -72,14 +72,15 @@ class CalculationService {
     for (var item in items) {
       // تحويل البيانات من String إلى double بشكل آمن
       final mtValue = _safeParseDouble(item['mt']);
-      final poidsValue = _safeParseDouble(item['poids']);
-      
+      final poidsValue = _safeParseDouble(item['qte']);
+
       totalMt += mtValue;
       totalPoids += poidsValue;
     }
 
     // حساب المجموع الكلي للمصاريف الإضافية
-    final grandTotal = _safeParseDouble(summary['transit']) +
+    final grandTotal =
+        _safeParseDouble(summary['transit']) +
         _safeParseDouble(summary['droitDouane']) +
         _safeParseDouble(summary['chequeChange']) +
         _safeParseDouble(summary['freiht']) +
@@ -100,8 +101,8 @@ class CalculationService {
     if (totalMt == 0) return {'ratio': 0.0};
 
     final ratio = double.parse(
-        (_safeParseDouble(item['mt']) / totalMt)
-            .toStringAsFixed(2));
+      (_safeParseDouble(item['mt']) / totalMt).toStringAsFixed(2),
+    );
     return {'ratio': ratio};
   }
 
@@ -114,24 +115,19 @@ class CalculationService {
     final ratio = calculateDistributionRatios(item, totalMt)['ratio'] ?? 0.0;
 
     final distributedTransit = double.parse(
-      (_safeParseDouble(summary['transit']) * ratio)
-          .toStringAsFixed(2),
+      (_safeParseDouble(summary['transit']) * ratio).toStringAsFixed(2),
     );
     final distributedDroitDouane = double.parse(
-      (_safeParseDouble(summary['droitDouane']) * ratio)
-          .toStringAsFixed(2),
+      (_safeParseDouble(summary['droitDouane']) * ratio).toStringAsFixed(2),
     );
     final distributedChequeChange = double.parse(
-      (_safeParseDouble(summary['chequeChange']) * ratio)
-          .toStringAsFixed(2),
+      (_safeParseDouble(summary['chequeChange']) * ratio).toStringAsFixed(2),
     );
     final distributedFreiht = double.parse(
-      (_safeParseDouble(summary['freiht']) * ratio)
-          .toStringAsFixed(2),
+      (_safeParseDouble(summary['freiht']) * ratio).toStringAsFixed(2),
     );
     final distributedAutres = double.parse(
-      (_safeParseDouble(summary['autres']) * ratio)
-          .toStringAsFixed(2),
+      (_safeParseDouble(summary['autres']) * ratio).toStringAsFixed(2),
     );
 
     final totalDistributedCost = double.parse(
@@ -145,9 +141,7 @@ class CalculationService {
     final qte = _safeParseInt(item['qte']);
     final mt = _safeParseDouble(item['mt']);
     final finalCostPerUnit = qte > 0
-        ? double.parse(
-            ((mt + totalDistributedCost) / qte).toStringAsFixed(2),
-          )
+        ? double.parse(((mt + totalDistributedCost) / qte).toStringAsFixed(2))
         : 0.0;
 
     return {
@@ -195,7 +189,7 @@ class CalculationService {
       errors['puPieces'] = 'سعر القطعة يجب أن يكون أكبر من صفر';
     }
 
-        return errors;
+    return errors;
   }
 
   // تنسيق الأرقام للعرض
@@ -289,30 +283,30 @@ class CalculationService {
   // دالة مساعدة لتحويل البيانات إلى double بشكل آمن
   double _safeParseDouble(dynamic value) {
     if (value == null) return 0.0;
-    
+
     if (value is num) {
       return value.toDouble();
     }
-    
+
     if (value is String) {
       return double.tryParse(value) ?? 0.0;
     }
-    
+
     return 0.0;
   }
 
   // دالة مساعدة لتحويل البيانات إلى int بشكل آمن
   int _safeParseInt(dynamic value) {
     if (value == null) return 0;
-    
+
     if (value is num) {
       return value.toInt();
     }
-    
+
     if (value is String) {
       return int.tryParse(value) ?? 0;
     }
-    
+
     return 0;
   }
 }

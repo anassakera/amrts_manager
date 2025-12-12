@@ -332,13 +332,16 @@ class ApiServices {
     Map<String, dynamic> invoice,
   ) async {
     try {
+      final payload = Map<String, dynamic>.from(invoice);
+      payload['id'] = id;
+
       final response = await http.put(
         Uri.parse('$baseUrl/api/invoices/update.php'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: json.encode(invoice),
+        body: json.encode(payload),
       );
 
       if (response.statusCode == 200) {
@@ -399,8 +402,9 @@ class ApiServices {
     String id,
     String status,
   ) async {
+    http.Response? response;
     try {
-      final response = await http.put(
+      response = await http.put(
         Uri.parse('$baseUrl/api/invoices/update_status.php'),
         headers: {
           'Content-Type': 'application/json',
@@ -422,7 +426,15 @@ class ApiServices {
       } else if (response.statusCode == 404) {
         throw Exception('الفاتورة غير موجودة');
       } else {
-        throw Exception('فشل في تحديث حالة الفاتورة (${response.statusCode})');
+        String errorMessage =
+            'فشل في تحديث حالة الفاتورة (${response.statusCode})';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData['message'] != null) {
+            errorMessage += ': ${errorData['message']}';
+          }
+        } catch (_) {}
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is FormatException) {

@@ -6,7 +6,7 @@ class InventorySmpApiService {
   static final String baseUrl =
       ApiServices.baseUrl ?? 'http://localhost/amrts_manager';
 
-  /// Get all inventory SMP items grouped by ref_code
+  /// Get all inventory SMP items (with operations)
   static Future<Map<String, dynamic>> getAllInventorySmp() async {
     try {
       final response = await http.get(
@@ -18,9 +18,9 @@ class InventorySmpApiService {
         final data = json.decode(response.body);
         final List rawData = data['data'] ?? [];
 
-        // تحويل البيانات وضمان الأنواع الصحيحة
+        // معالجة البيانات - التنسيق الجديد يحتوي على inventory_smp_operations لكل عنصر
         final List<Map<String, dynamic>> processedData = rawData.map((item) {
-          return _processInventoryItem(item);
+          return _processInventoryItemWithOperations(item);
         }).toList();
 
         return {'success': data['success'] ?? false, 'data': processedData};
@@ -35,45 +35,60 @@ class InventorySmpApiService {
     }
   }
 
-  /// Process and normalize inventory item data
-  static Map<String, dynamic> _processInventoryItem(dynamic item) {
+  /// Process inventory item with its operations
+  static Map<String, dynamic> _processInventoryItemWithOperations(
+    dynamic item,
+  ) {
     final Map<String, dynamic> itemMap = Map<String, dynamic>.from(item);
 
-    // معالجة الحقول الرئيسية
+    // معالجة البيانات الأساسية
     final processed = {
+      'id': _toInt(itemMap['id']),
       'ref_code': itemMap['ref_code']?.toString() ?? '',
+      'material_name': itemMap['material_name']?.toString() ?? '',
+      'material_type': itemMap['material_type']?.toString() ?? '',
       'total_quantity': _toDouble(itemMap['total_quantity']),
+      'CMUP': _toDouble(itemMap['CMUP']),
       'total_amount': _toDouble(itemMap['total_amount']),
       'operations_count': _toInt(itemMap['operations_count']),
+      'last_updated': itemMap['last_updated']?.toString() ?? '',
       'status': itemMap['status']?.toString() ?? 'Disponible',
-      'items': [],
     };
 
-    // معالجة العناصر الفرعية
-    if (itemMap['items'] != null && itemMap['items'] is List) {
-      processed['items'] = (itemMap['items'] as List).map((subItem) {
-        final Map<String, dynamic> subItemMap = Map<String, dynamic>.from(
-          subItem,
-        );
-        return {
-          'id': _toInt(subItemMap['id']),
-          'date': subItemMap['date']?.toString() ?? '',
-          'invoice_number': subItemMap['invoice_number']?.toString() ?? '',
-          'supplier': subItemMap['supplier']?.toString() ?? '',
-          'ref_code': subItemMap['ref_code']?.toString() ?? '',
-          'product_name': subItemMap['product_name']?.toString() ?? '',
-          'quantity': _toDouble(subItemMap['quantity']),
-          'unit_cost': _toDouble(subItemMap['unit_cost']),
-          'unit': subItemMap['unit']?.toString() ?? 'KG',
-          'total_amount': _toDouble(subItemMap['total_amount']),
-          'category': subItemMap['category']?.toString() ?? '',
-          'source': subItemMap['source']?.toString() ?? '',
-          'cycle_id': subItemMap['cycle_id'],
-        };
-      }).toList();
+    // معالجة العمليات
+    if (itemMap['inventory_smp_operations'] != null &&
+        itemMap['inventory_smp_operations'] is List) {
+      processed['inventory_smp_operations'] =
+          (itemMap['inventory_smp_operations'] as List).map((operation) {
+            return _processOperation(operation);
+          }).toList();
+    } else {
+      processed['inventory_smp_operations'] = [];
     }
 
     return processed;
+  }
+
+  /// Process single operation
+  static Map<String, dynamic> _processOperation(dynamic operation) {
+    final Map<String, dynamic> opMap = Map<String, dynamic>.from(operation);
+
+    return {
+      'id': _toInt(opMap['id']),
+      'date': opMap['date']?.toString() ?? '',
+      'n_facture': opMap['n_facture']?.toString() ?? '',
+      'fournisseur': opMap['fournisseur']?.toString() ?? '',
+      'ref_code': opMap['ref_code']?.toString() ?? '',
+      'material_name': opMap['material_name']?.toString() ?? '',
+      'quantite': _toDouble(opMap['quantite']),
+      'prix_u': _toDouble(opMap['prix_u']),
+      'total_amount': _toDouble(opMap['total_amount']),
+      'unite': opMap['unite']?.toString() ?? 'KG',
+      'categorie': opMap['categorie']?.toString() ?? '',
+      'source_ref': opMap['source_ref']?.toString() ?? '',
+      'created_at': opMap['created_at']?.toString() ?? '',
+      'created_by': opMap['created_by']?.toString() ?? '',
+    };
   }
 
   /// Convert value to double safely
@@ -94,7 +109,7 @@ class InventorySmpApiService {
     return 0;
   }
 
-  /// Get inventory SMP items by ref_code
+  /// Get inventory SMP item by ref_code (same format as get_all)
   static Future<Map<String, dynamic>> getInventorySmpByRef(
     String refCode,
   ) async {
@@ -108,7 +123,12 @@ class InventorySmpApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return {'success': data['success'] ?? false, 'data': data['data']};
+        final itemData = data['data'];
+
+        // معالجة البيانات - نفس التنسيق كـ get_all
+        final processed = _processInventoryItemWithOperations(itemData);
+
+        return {'success': data['success'] ?? false, 'data': processed};
       } else if (response.statusCode == 404) {
         return {
           'success': false,
@@ -125,7 +145,7 @@ class InventorySmpApiService {
     }
   }
 
-  /// Create new inventory SMP items
+  /// Create new inventory SMP item
   static Future<Map<String, dynamic>> createInventorySmp(
     Map<String, dynamic> data,
   ) async {
@@ -157,7 +177,7 @@ class InventorySmpApiService {
     }
   }
 
-  /// Update inventory SMP items
+  /// Update inventory SMP item (only material_name and material_type)
   static Future<Map<String, dynamic>> updateInventorySmp(
     Map<String, dynamic> data,
   ) async {
@@ -193,7 +213,7 @@ class InventorySmpApiService {
     }
   }
 
-  /// Delete inventory SMP items by ref_code
+  /// Delete inventory SMP item by ref_code (deletes from both tables)
   static Future<Map<String, dynamic>> deleteInventorySmp(String refCode) async {
     try {
       final request = http.Request(
@@ -211,6 +231,7 @@ class InventorySmpApiService {
         return {
           'success': responseData['success'] ?? false,
           'message': responseData['message'] ?? 'Deleted successfully',
+          'details': responseData['details'],
         };
       } else if (response.statusCode == 404) {
         return {

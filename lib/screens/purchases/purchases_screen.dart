@@ -1,7 +1,5 @@
-import 'package:amrts_manager/screens/need_fix/edit_invoice_screen_buy.dart';
-
+import 'package:amrts_manager/screens/purchases/purchase_local/edit_invoice_screen_buy.dart';
 import '../../core/imports.dart';
-import 'package:printing/printing.dart';
 
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
@@ -90,6 +88,18 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               ],
             ),
           ),
+
+          // ElevatedButton(
+          //   onPressed: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //         builder: (context) => const CostsMainScreen(),
+          //       ),
+          //     );
+          //   },
+          //   child: const Text('Add Invoice'),
+          // ),
         ],
       ),
       floatingActionButton: _buildFloatingActionButton(currentLang),
@@ -841,7 +851,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         // Debug: طباعة البيانات المستلمة من API
         debugPrint('=== Updated Invoice Response ===');
         debugPrint('Status: $newStatus');
-        debugPrint('Has inventory data: ${updatedInvoice['inventory'] != null}');
+        debugPrint(
+          'Has inventory data: ${updatedInvoice['inventory'] != null}',
+        );
         if (updatedInvoice['inventory'] != null) {
           debugPrint('Inventory data: ${updatedInvoice['inventory']}');
         }

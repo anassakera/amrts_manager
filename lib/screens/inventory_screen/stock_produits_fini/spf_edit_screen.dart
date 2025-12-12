@@ -490,14 +490,11 @@ class _SpfEditScreenState extends State<SpfEditScreen> {
         0,
         (prev, item) => prev + (item['total_weight'] as num? ?? 0).toDouble(),
       );
-      final totalValue = normalizedItems.fold<double>(
-        0,
-        (prev, item) {
-          final qty = item['quantity'] as int? ?? 0;
-          final price = (item['selling_price'] as num? ?? 0).toDouble();
-          return prev + (qty * price);
-        },
-      );
+      final totalValue = normalizedItems.fold<double>(0, (prev, item) {
+        final qty = item['quantity'] as int? ?? 0;
+        final price = (item['selling_price'] as num? ?? 0).toDouble();
+        return prev + (qty * price);
+      });
 
       Navigator.pop(context, {
         'ref_code': _refCode,
@@ -952,9 +949,7 @@ class _SpfEditScreenState extends State<SpfEditScreen> {
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _formatNumber(
-                  (item['selling_price'] as num?)?.toDouble() ?? 0,
-                ),
+                _formatNumber((item['selling_price'] as num?)?.toDouble() ?? 0),
                 flex: 1,
               ),
               _verticalDivider(height: 28),
@@ -1412,10 +1407,13 @@ class _SpfEditScreenState extends State<SpfEditScreen> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: statuses.map((status) {
+                // ignore: deprecated_member_use
                 return RadioListTile<String>(
                   title: Text(status),
                   value: status,
+                  // ignore: deprecated_member_use
                   groupValue: _stockStatus,
+                  // ignore: deprecated_member_use
                   onChanged: (value) {
                     if (value != null) {
                       setState(() {

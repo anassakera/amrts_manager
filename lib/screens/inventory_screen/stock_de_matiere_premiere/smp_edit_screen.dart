@@ -46,8 +46,14 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
           stock['ref_code']?.toString() ?? _computeNextRef(widget.lastRefCode);
       _stockStatus = stock['status']?.toString() ?? 'Disponible';
 
+      // التنسيق الجديد: العمليات في 'inventory_smp_operations'
       final incomingItems =
-          (stock['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+          (stock['inventory_smp_operations'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          (stock['operations'] as List?)?.cast<Map<String, dynamic>>() ??
+          (stock['items'] as List?)?.cast<Map<String, dynamic>>() ??
+          [];
+
       _items.addAll(
         incomingItems.map((item) => Map<String, dynamic>.from(item)),
       );
@@ -105,22 +111,22 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
 
   void _initializeControllers() {
     _itemControllers['date'] = TextEditingController();
-    _itemControllers['invoice_number'] = TextEditingController();
-    _itemControllers['supplier'] = TextEditingController();
+    _itemControllers['n_facture'] = TextEditingController();
+    _itemControllers['fournisseur'] = TextEditingController();
     _itemControllers['ref_code'] = TextEditingController();
-    _itemControllers['product_name'] = TextEditingController();
-    _itemControllers['quantity'] = TextEditingController();
-    _itemControllers['unit_cost'] = TextEditingController();
-    _itemControllers['unit'] = TextEditingController();
+    _itemControllers['material_name'] = TextEditingController();
+    _itemControllers['quantite'] = TextEditingController();
+    _itemControllers['prix_u'] = TextEditingController();
+    _itemControllers['unite'] = TextEditingController();
     _itemControllers['total_amount'] = TextEditingController();
-    _itemControllers['category'] = TextEditingController();
-    _itemControllers['source'] = TextEditingController();
+    _itemControllers['categorie'] = TextEditingController();
+    _itemControllers['source_ref'] = TextEditingController();
 
     // إضافة listeners لتحديث الحساب التلقائي
-    _itemControllers['quantity']?.addListener(() {
+    _itemControllers['quantite']?.addListener(() {
       setState(() {});
     });
-    _itemControllers['unit_cost']?.addListener(() {
+    _itemControllers['prix_u']?.addListener(() {
       setState(() {});
     });
   }
@@ -142,7 +148,7 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
   double _calculateTotalQuantity() {
     double total = 0;
     for (var item in _items) {
-      final quantity = item['quantity'];
+      final quantity = item['quantite'];
       if (quantity is int) {
         total += quantity.toDouble();
       } else if (quantity is double) {
@@ -517,7 +523,7 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
       }
 
       final totalQuantity = normalizedItems.fold<double>(0.0, (prev, item) {
-        final quantity = item['quantity'];
+        final quantity = item['quantite'];
         if (quantity is int) {
           return prev + quantity.toDouble();
         } else if (quantity is double) {
@@ -636,11 +642,11 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
           : null;
 
       final quantity =
-          double.tryParse(_itemControllers['quantity']?.text.trim() ?? '0') ??
+          double.tryParse(_itemControllers['quantite']?.text.trim() ?? '0') ??
           0.0;
       final unitCost =
           double.tryParse(
-            _itemControllers['unit_cost']?.text.replaceAll(',', '.') ?? '0',
+            _itemControllers['prix_u']?.text.replaceAll(',', '.') ?? '0',
           ) ??
           0.0;
       final totalAmount = quantity * unitCost;
@@ -653,17 +659,17 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
       final newItem = <String, dynamic>{
         'id': existingId ?? _getLocalNextItemId(),
         'date': formattedDate,
-        'invoice_number': _itemControllers['invoice_number']?.text.trim() ?? '',
-        'supplier': _itemControllers['supplier']?.text.trim() ?? '',
+        'n_facture': _itemControllers['n_facture']?.text.trim() ?? '',
+        'fournisseur': _itemControllers['fournisseur']?.text.trim() ?? '',
         'ref_code': _itemControllers['ref_code']?.text.trim() ?? '',
-        'product_name': _itemControllers['product_name']?.text.trim() ?? '',
-        'quantity': quantity,
-        'unit_cost': unitCost,
-        'unit': _itemControllers['unit']?.text.trim() ?? 'KG',
+        'material_name': _itemControllers['material_name']?.text.trim() ?? '',
+        'quantite': quantity,
+        'prix_u': unitCost,
+        'unite': _itemControllers['unite']?.text.trim() ?? 'KG',
         'total_amount': totalAmount,
-        'category':
-            _itemControllers['category']?.text.trim() ?? 'Matières premières',
-        'source': _itemControllers['source']?.text.trim() ?? '',
+        'categorie':
+            _itemControllers['categorie']?.text.trim() ?? 'Matières premières',
+        'source_ref': _itemControllers['source_ref']?.text.trim() ?? '',
         'status': _currentItemStatus,
       };
 
@@ -887,34 +893,34 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
               const SizedBox(width: 10),
               _buildDataCell(_formatDate(item['date']), flex: 1),
               _verticalDivider(height: 28),
-              _buildDataCell(item['invoice_number']?.toString() ?? '', flex: 1),
+              _buildDataCell(item['n_facture']?.toString() ?? '', flex: 1),
               _verticalDivider(height: 28),
-              _buildDataCell(item['supplier']?.toString() ?? '', flex: 1),
+              _buildDataCell(item['fournisseur']?.toString() ?? '', flex: 1),
               _verticalDivider(height: 28),
               _buildDataCell(item['ref_code']?.toString() ?? '', flex: 1),
               _verticalDivider(height: 28),
-              _buildDataCell(item['product_name']?.toString() ?? '', flex: 2),
+              _buildDataCell(item['material_name']?.toString() ?? '', flex: 2),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _formatNumber((item['quantity'] as num?)?.toDouble() ?? 0),
+                _formatNumber((item['quantite'] as num?)?.toDouble() ?? 0),
                 flex: 1,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(
-                _formatNumber((item['unit_cost'] as num?)?.toDouble() ?? 0),
+                _formatNumber((item['prix_u'] as num?)?.toDouble() ?? 0),
                 flex: 1,
               ),
               _verticalDivider(height: 28),
-              _buildDataCell(item['unit']?.toString() ?? '', flex: 1),
+              _buildDataCell(item['unite']?.toString() ?? '', flex: 1),
               _verticalDivider(height: 28),
               _buildDataCell(
                 _formatNumber((item['total_amount'] as num?)?.toDouble() ?? 0),
                 flex: 1,
               ),
               _verticalDivider(height: 28),
-              _buildDataCell(item['category']?.toString() ?? '', flex: 1),
+              _buildDataCell(item['categorie']?.toString() ?? '', flex: 1),
               _verticalDivider(height: 28),
-              _buildDataCell(item['source']?.toString() ?? '', flex: 1),
+              _buildDataCell(item['source_ref']?.toString() ?? '', flex: 1),
               // const SizedBox(width: 20),
               // SizedBox(
               //   width: 60,
@@ -958,16 +964,16 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
             const SizedBox(width: 20),
             _buildDateTimePickerField('date', 'Date', flex: 1),
             _verticalDivider(height: 28),
-            _buildEditField('invoice_number', 'N° Facture', flex: 1),
+            _buildEditField('n_facture', 'N° Facture', flex: 1),
             _verticalDivider(height: 28),
-            _buildEditField('supplier', 'Fournisseur', flex: 1),
+            _buildEditField('fournisseur', 'Fournisseur', flex: 1),
             _verticalDivider(height: 28),
             _buildEditField('ref_code', 'Réf Code', flex: 1),
             _verticalDivider(height: 28),
-            _buildEditField('product_name', 'Produit', flex: 2),
+            _buildEditField('material_name', 'Produit', flex: 2),
             _verticalDivider(height: 28),
             _buildEditField(
-              'quantity',
+              'quantite',
               'Quantité',
               flex: 1,
               isNumber: true,
@@ -975,20 +981,20 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
             ),
             _verticalDivider(height: 28),
             _buildEditField(
-              'unit_cost',
+              'prix_u',
               'Prix U.',
               flex: 1,
               isNumber: true,
               isDecimal: true,
             ),
             _verticalDivider(height: 28),
-            _buildEditField('unit', 'Unité', flex: 1),
+            _buildEditField('unite', 'Unité', flex: 1),
             _verticalDivider(height: 28),
             _buildCalculatedAmountField(flex: 1),
             _verticalDivider(height: 28),
-            _buildEditField('category', 'Catégorie', flex: 1),
+            _buildEditField('categorie', 'Catégorie', flex: 1),
             _verticalDivider(height: 28),
-            _buildEditField('source', 'Source', flex: 1),
+            _buildEditField('source_ref', 'Source', flex: 1),
             const SizedBox(width: 30),
             SizedBox(
               width: 60,
@@ -1348,11 +1354,11 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
   Widget _buildCalculatedAmountField({int flex = 1}) {
     // حساب المبلغ تلقائياً
     final quantity =
-        double.tryParse(_itemControllers['quantity']?.text.trim() ?? '0') ??
+        double.tryParse(_itemControllers['quantite']?.text.trim() ?? '0') ??
         0.0;
     final unitCost =
         double.tryParse(
-          _itemControllers['unit_cost']?.text.replaceAll(',', '.') ?? '0',
+          _itemControllers['prix_u']?.text.replaceAll(',', '.') ?? '0',
         ) ??
         0.0;
     final calculatedAmount = quantity * unitCost;
@@ -1419,10 +1425,13 @@ class _SmpEditScreenState extends State<SmpEditScreen> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: statuses.map((status) {
+                // ignore: deprecated_member_use
                 return RadioListTile<String>(
                   title: Text(status),
                   value: status,
+                  // ignore: deprecated_member_use
                   groupValue: _stockStatus,
+                  // ignore: deprecated_member_use
                   onChanged: (value) {
                     if (value != null) {
                       setState(() {

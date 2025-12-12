@@ -1,7 +1,3 @@
-import 'package:amrts_manager/screens/client_curd_screen/api_services.dart';
-import 'package:amrts_manager/screens/client_curd_screen/client_curd_screen.dart';
-import 'package:amrts_manager/widgets/search_able_dropdown.dart';
-
 import '../core/imports.dart';
 
 class AddDocumentDialog extends StatefulWidget {
@@ -231,7 +227,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                         selectedValue: selectedCustomer,
                         onChanged: (value) =>
                             setState(() => selectedCustomer = value),
-                        hintText: "اختر عميل...",
+                        hintText: "Choix fournisseur......",
                         prefixIcon: const Icon(Icons.person_outline_rounded),
                         primaryColor: Colors.blue,
                         enabled: !_isLoading,

@@ -20,6 +20,58 @@ class _SsfEditScreenState extends State<SsfEditScreen> {
   String _currentItemStatus = 'Disponible';
   String _stockStatus = 'Disponible';
 
+  // final List<Map<String, dynamic>> inventorySsf = [
+  //   {
+  //     'id': 1,
+  //     'product_ref': 'TC4040',
+  //     'product_name': 'TUBE CARRE 40X40',
+  //     'product_type': 'BRUT',
+  //     'quantity': 75,
+  //     'CMUP': 100.19,
+  //     'total_cost': 7514.25,
+  //     'inventory_ssf_operations': [
+  //       {
+  //         'id': 1,
+  //         'date': '2025-11-22',
+  //         'doc_ref': 'EX2025-0001',
+  //         'product_ref': 'TC4040',
+  //         'product_name': 'TUBE CARRE 40X40',
+  //         'quantity': 75,
+  //         'weight_per_unit': 2.33,
+  //         'total_weight': 174.75,
+  //         'cost_kg': 43,
+  //         'unit_cost': 100.19,
+  //         'product_type': 'BRUT',
+  //         'source': 'EX2025-0001',
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     'id': 2,
+  //     'product_ref': '8343',
+  //     'product_name': 'DORMANT AVEC COUVRE JOINT',
+  //     'product_type': 'BRUT',
+  //     'quantity': 44,
+  //     'CMUP': 114.81,
+  //     'total_cost': 5051.64,
+  //     'inventory_ssf_operations': [
+  //       {
+  //         'id': 2,
+  //         'date': '2025-11-22',
+  //         'doc_ref': 'EX2025-0001',
+  //         'product_ref': '8343',
+  //         'product_name': 'DORMANT AVEC COUVRE JOINT',
+  //         'quantity': 44,
+  //         'weight_per_unit': 2.67,
+  //         'total_weight': 117.48,
+  //         'cost_kg': 43,
+  //         'unit_cost': 114.81,
+  //         'product_type': 'BRUT',
+  //         'source': 'EX2025-0001',
+  //       },
+  //     ],
+  //   },
+  // ];
   final Map<String, TextEditingController> _itemControllers = {};
 
   String _refCode = '';
@@ -1429,10 +1481,13 @@ class _SsfEditScreenState extends State<SsfEditScreen> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: statuses.map((status) {
+                // ignore: deprecated_member_use
                 return RadioListTile<String>(
                   title: Text(status),
                   value: status,
+                  // ignore: deprecated_member_use
                   groupValue: _stockStatus,
+                  // ignore: deprecated_member_use
                   onChanged: (value) {
                     if (value != null) {
                       setState(() {

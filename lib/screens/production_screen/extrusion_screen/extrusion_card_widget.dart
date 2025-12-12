@@ -5,19 +5,20 @@ class ExtrusionCard extends StatelessWidget {
 
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onPrint;
 
   const ExtrusionCard({
     super.key,
     required this.fiche,
-
     required this.onEdit,
     required this.onDelete,
+    required this.onPrint,
   });
 
   @override
   Widget build(BuildContext context) {
     final production =
-        (fiche['production_data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        (fiche['production'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final arrets =
         (fiche['arrets'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
@@ -41,7 +42,11 @@ class ExtrusionCard extends StatelessWidget {
               ) /
               production.length;
 
-    final totalArrets = fiche['total_arrets']?.toString() ?? '0 min';
+    // total_arrets is stored as int (minutes), display with 'min' suffix
+    final totalArretsValue = fiche['total_arrets'];
+    final totalArrets = totalArretsValue != null
+        ? '$totalArretsValue min'
+        : '0 min';
 
     return Container(
       width: double.infinity,
@@ -151,6 +156,7 @@ class ExtrusionCard extends StatelessWidget {
                   value: '${arrets.length}',
                   color: const Color(0xFF8B5CF6),
                 ),
+                _buildGridAction(Icons.print, Colors.blue.shade600, onPrint),
                 _buildGridAction(Icons.delete, Colors.red.shade600, onDelete),
                 _buildGridAction(Icons.edit, Colors.orange.shade600, onEdit),
               ],

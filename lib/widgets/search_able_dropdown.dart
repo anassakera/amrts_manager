@@ -733,7 +733,7 @@ SearchableDropdownT<String>(
   displayText: (item) => item,
   selectedValue: selectedClient,
   onChanged: (value) => setState(() => selectedClient = value),
-  hintText: "اختر عميل...",
+  hintText: "Choix fournisseur......",
   prefixIcon: Icon(Icons.person_outline_rounded),
   primaryColor: Colors.blue,
   enabled: true,

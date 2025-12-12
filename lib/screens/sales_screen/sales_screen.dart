@@ -1,7 +1,6 @@
 ﻿import 'dart:async';
 import 'package:amrts_manager/services/print_sales_documents.dart';
 import 'package:amrts_manager/widgets/add_document_dialog.dart';
-import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import '../../core/imports.dart';
 import 'api_services.dart';

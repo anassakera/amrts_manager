@@ -181,8 +181,10 @@ class _FonderieCardState extends State<FonderieCard>
         ..setEntry(3, 2, 0.001)
         ..rotateX(tiltX)
         ..rotateY(tiltY)
-        ..translate(0.0, 40 * _meltAnimation.value, 0.0)
-        ..scale(scale, 1.0 - (0.4 * _meltAnimation.value)),
+        // ignore: deprecated_member_use
+        ..translate(0.0, 40 * _meltAnimation.value)
+        // ignore: deprecated_member_use
+        ..scale(scale, 1.0 - (0.4 * _meltAnimation.value), 1.0),
       alignment: Alignment.center,
       child: Transform(
         transform: Matrix4.identity()

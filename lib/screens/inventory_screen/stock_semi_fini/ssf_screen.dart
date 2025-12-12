@@ -17,6 +17,58 @@ class _SsfScreenState extends State<SsfScreen> {
   bool isLoading = true;
   String? errorMessage;
 
+  final List<Map<String, dynamic>> inventorySsf = [
+    {
+      'id': 1,
+      'product_ref': 'TC4040',
+      'product_name': 'TUBE CARRE 40X40',
+      'product_type': 'BRUT',
+      'quantity': 75,
+      'unit_cost': 100.19,
+      'total_cost': 7514.25,
+      'inventory_ssf_operations': [
+        {
+          'id': 1,
+          'date': '2025-11-22',
+          'doc_ref': 'EX2025-0001',
+          'product_ref': 'TC4040',
+          'product_name': 'TUBE CARRE 40X40',
+          'quantity': 75,
+          'weight_per_unit': 2.33,
+          'total_weight': 174.75,
+          'cost_kg': 43,
+          'unit_cost': 100.19,
+          'product_type': 'BRUT',
+          'source': 'EX2025-0001',
+        },
+      ],
+    },
+    {
+      'id': 2,
+      'product_ref': '8343',
+      'product_name': 'DORMANT AVEC COUVRE JOINT',
+      'product_type': 'BRUT',
+      'quantity': 44,
+      'unit_cost': 114.81,
+      'total_cost': 5051.64,
+      'inventory_ssf_operations': [
+        {
+          'id': 2,
+          'date': '2025-11-22',
+          'doc_ref': 'EX2025-0001',
+          'product_ref': '8343',
+          'product_name': 'DORMANT AVEC COUVRE JOINT',
+          'quantity': 44,
+          'weight_per_unit': 2.67,
+          'total_weight': 117.48,
+          'cost_kg': 43,
+          'unit_cost': 114.81,
+          'product_type': 'BRUT',
+          'source': 'EX2025-0001',
+        },
+      ],
+    },
+  ];
   List<Map<String, dynamic>> get filteredSsfData {
     if (widget.searchQuery.isEmpty) {
       return ssfData;
@@ -213,6 +265,7 @@ class _SsfScreenState extends State<SsfScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Stock supprimé avec succès'),
@@ -221,6 +274,7 @@ class _SsfScreenState extends State<SsfScreen> {
         );
         await _loadSsfData();
       } else {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Erreur lors de la suppression'),
@@ -230,7 +284,7 @@ class _SsfScreenState extends State<SsfScreen> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur: $e'),

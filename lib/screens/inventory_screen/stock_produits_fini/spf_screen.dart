@@ -1,4 +1,5 @@
 import '../../../core/imports.dart';
+import 'api_services.dart';
 import 'spf_card_widget.dart';
 import 'spf_edit_screen.dart';
 
@@ -12,58 +13,50 @@ class SpfScreen extends StatefulWidget {
 }
 
 class _SpfScreenState extends State<SpfScreen> {
-  final List<Map<String, dynamic>> spfData = [
-    {
-      'total_quantity': 50,
-      'total_weight': 1250.00,
-      'total_value': 10000.00,
-      'operations_count': 1,
-      'status': 'Disponible',
-      'ref_code': 'SPF001',
-      'items': [
-        {
-          'id': 1,
-          'date': '2025-11-16',
-          'doc_ref': 'DOC003',
-          'product_ref': 'PREF003',
-          'product_name': 'PEINTURE A',
-          'quantity': 50,
-          'weight_per_unit': 25.00,
-          'total_weight': 1250.00,
-          'color': 'Red',
-          'unit_cost': 150.75,
-          'selling_price': 200.00,
-          'product_type': 'PF',
-          'source': 'ATELIER PEINTURE',
-        },
-      ],
-    },
-    {
-      'total_quantity': 70,
-      'total_weight': 1575.00,
-      'total_value': 13300.00,
-      'operations_count': 1,
-      'status': 'Disponible',
-      'ref_code': 'SPF002',
-      'items': [
-        {
-          'id': 2,
-          'date': '2025-11-17',
-          'doc_ref': 'DOC004',
-          'product_ref': 'PREF004',
-          'product_name': 'PEINTURE B',
-          'quantity': 70,
-          'weight_per_unit': 22.50,
-          'total_weight': 1575.00,
-          'color': 'Blue',
-          'unit_cost': 140.00,
-          'selling_price': 190.00,
-          'product_type': 'PF',
-          'source': 'ATELIER PEINTURE',
-        },
-      ],
-    },
-  ];
+  List<Map<String, dynamic>> spfData = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSpfData();
+  }
+
+  Future<void> _loadSpfData() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final result = await InventorySpfApiService.getAllInventorySpf();
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        setState(() {
+          spfData =
+              (result['data'] as List?)
+                  ?.map((item) => Map<String, dynamic>.from(item))
+                  .toList() ??
+              [];
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = result['message'] ?? 'Failed to load data';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        errorMessage = 'Error: $e';
+        isLoading = false;
+      });
+    }
+  }
 
   List<Map<String, dynamic>> get filteredSpfData {
     if (widget.searchQuery.isEmpty) {
@@ -74,21 +67,16 @@ class _SpfScreenState extends State<SpfScreen> {
     return spfData.where((spf) {
       return (spf['ref_code']?.toString().toLowerCase().contains(query) ??
               false) ||
+          (spf['product_name']?.toString().toLowerCase().contains(query) ??
+              false) ||
           (spf['status']?.toString().toLowerCase().contains(query) ?? false) ||
-          (spf['total_quantity']?.toString().toLowerCase().contains(query) ??
-              false) ||
-          (spf['total_weight']?.toString().toLowerCase().contains(query) ??
-              false) ||
-          (spf['total_value']?.toString().toLowerCase().contains(query) ??
-              false) ||
-          (spf['operations_count']?.toString().toLowerCase().contains(query) ??
-              false);
+          (spf['color']?.toString().toLowerCase().contains(query) ?? false);
     }).toList();
   }
 
   String? _getLastRefCode() {
     if (spfData.isEmpty) return null;
-    final reg = RegExp(r'^SPF(\d{3})$');
+    final reg = RegExp(r'^SPF([\d]+)$');
     String? bestRef;
     int bestSeq = -1;
     for (final s in spfData) {
@@ -107,168 +95,172 @@ class _SpfScreenState extends State<SpfScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (errorMessage != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+              const SizedBox(height: 16),
+              Text(
+                errorMessage!,
+                style: TextStyle(fontSize: 16, color: Colors.red.shade600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadSpfData,
+                child: const Text('Réessayer'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final displayedSpfData = filteredSpfData;
 
     return Scaffold(
-      body: displayedSpfData.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: RefreshIndicator(
+        onRefresh: _loadSpfData,
+        child: displayedSpfData.isEmpty
+            ? ListView(
                 children: [
-                  Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucun résultat trouvé',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 1),
-              itemCount: displayedSpfData.length,
-              itemBuilder: (context, index) {
-                final spf = displayedSpfData[index];
-                return SpfCard(
-                  spf: spf,
-                  onEdit: () => _handleEditSpf(context, spf),
-                  onDelete: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Confirmer la suppression'),
-                        content: Text(
-                          'Voulez-vous vraiment supprimer ${spf['ref_code']} ?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 64,
+                            color: Colors.grey.shade400,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                spfData.removeWhere(
-                                  (s) => s['ref_code'] == spf['ref_code'],
-                                );
-                              });
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Stock supprimé avec succès'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Supprimer',
-                              style: TextStyle(color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            widget.searchQuery.isEmpty
+                                ? 'Aucun produit fini en stock'
+                                : 'Aucun résultat trouvé',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                  ),
+                ],
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                itemCount: displayedSpfData.length,
+                itemBuilder: (context, index) {
+                  final spf = displayedSpfData[index];
+                  return SpfCard(
+                    spf: spf,
+                    onEdit: () => _handleEditSpf(context, spf),
+                    onDelete: () => _handleDeleteSpf(context, spf),
+                  );
+                },
+              ),
+      ),
     );
   }
 
-  void _handleEditSpf(BuildContext context, Map<String, dynamic> spf) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            SpfEditScreen(lastRefCode: _getLastRefCode(), stock: spf),
+  Future<void> _handleDeleteSpf(
+    BuildContext context,
+    Map<String, dynamic> spf,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: Text('Voulez-vous vraiment supprimer ${spf['ref_code']} ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
 
-    if (!mounted) return;
-    if (result != null && result is Map<String, dynamic>) {
-      _upsertSpf(result);
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final result = await InventorySpfApiService.deleteInventorySpf(
+        spf['ref_code'],
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Stock supprimé avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _loadSpfData();
+      } else {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Erreur lors de la suppression'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
-  void _upsertSpf(Map<String, dynamic> result) {
-    final List<Map<String, dynamic>> items =
-        (result['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-
-    int nextItemId = _highestItemId();
-    final normalizedItems = items.map((item) {
-      final newItem = Map<String, dynamic>.from(item);
-      if (newItem['id'] == null) {
-        nextItemId += 1;
-        newItem['id'] = nextItemId;
-      }
-      newItem['status'] = newItem['status'] ?? 'Disponible';
-      return newItem;
-    }).toList();
-
-    final totalQuantity =
-        result['total_quantity'] ??
-        normalizedItems.fold<int>(
-          0,
-          (prev, item) => prev + (item['quantity'] as int? ?? 0),
-        );
-
-    final totalWeight =
-        result['total_weight'] ??
-        normalizedItems.fold<double>(
-          0,
-          (prev, item) => prev + (item['total_weight'] as num? ?? 0).toDouble(),
-        );
-
-    final totalValue =
-        result['total_value'] ??
-        normalizedItems.fold<double>(
-          0,
-          (prev, item) {
-            final qty = item['quantity'] as int? ?? 0;
-            final price = (item['selling_price'] as num? ?? 0).toDouble();
-            return prev + (qty * price);
-          },
-        );
-
-    final operationsCount =
-        result['operations_count'] ?? normalizedItems.length;
-
-    final updatedSpf = <String, dynamic>{
-      'ref_code': result['ref_code'],
-      'status': result['status'] ?? 'Disponible',
-      'total_quantity': totalQuantity,
-      'total_weight': totalWeight,
-      'total_value': totalValue,
-      'operations_count': operationsCount,
-      'items': normalizedItems,
-    };
-
-    setState(() {
-      final index = spfData.indexWhere(
-        (s) => s['ref_code'] == updatedSpf['ref_code'],
+  void _handleEditSpf(BuildContext context, Map<String, dynamic> spf) async {
+    // Fetch fresh data from API
+    try {
+      final freshData = await InventorySpfApiService.getInventorySpfByRef(
+        spf['ref_code'],
       );
-      if (index >= 0) {
-        spfData[index] = updatedSpf;
-      } else {
-        spfData.add(updatedSpf);
-      }
-    });
-  }
 
-  int _highestItemId() {
-    return spfData
-        .expand(
-          (spf) => (spf['items'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-        )
-        .fold<int>(
-          0,
-          (previousValue, item) => ((item['id'] as int?) ?? 0) > previousValue
-              ? (item['id'] as int?) ?? 0
-              : previousValue,
-        );
+      if (!mounted) return;
+
+      final spfData = freshData['success'] == true ? freshData['data'] : spf;
+
+      if (!context.mounted) return;
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              SpfEditScreen(lastRefCode: _getLastRefCode(), stock: spfData),
+        ),
+      );
+
+      if (!mounted) return;
+      if (result != null && result is Map<String, dynamic>) {
+        await _loadSpfData(); // Reload from API
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 }

@@ -1,6 +1,7 @@
 import '../../../core/imports.dart';
 import 'extrusion_card_widget.dart';
 import 'extrusion_edit_screen.dart';
+import 'api_services.dart';
 
 class ExtrusionScreen extends StatefulWidget {
   const ExtrusionScreen({super.key});
@@ -10,75 +11,73 @@ class ExtrusionScreen extends StatefulWidget {
 }
 
 class _ExtrusionScreenState extends State<ExtrusionScreen> {
-  final List<Map<String, dynamic>> _extrusion = [
-    {
-      'numero': 'EX-25-01-00001',
-      'date': '15/03/2023',
-      'horaire': '8:00-16:00',
-      'equipe': 'A',
-      'conducteur': 'Ahmed Benali',
-      'dressage': 'Mohammed Alami',
-      'presse': '2',
-      'production_data': [
-        {
-          'nbr_eclt': '1',
-          'ref': 'AL-6063',
-          'ind': 'A',
-          'heur_debut': '8:15',
-          'heur_fin': '10:45',
-          'nbr_blocs': '25',
-          'Lg_blocs': '600',
-          'prut_kg': '4500',
-          'num_lot_billette': 'BL-2023-145',
-          'vitesse': '12',
-          'pres_extru': '350',
-          'nbr_barres': '120',
-          'long': '6000',
-          'p_barre_reel': '35.5',
-          'net_kg': '4260',
-          'Long_eclt': '5950',
-          'etirage_kg': '4300',
-          'taux_de_chutes': '5.33',
-          'nbr_barres_chutes': '6',
-          'observation': 'Production normale, qualité conforme',
-        },
-      ],
-      'arrets': [
-        {
-          'debut': '10:45',
-          'fin': '11:00',
-          'duree': '15 min',
-          'cause': 'Changement de billette',
-          'action': 'Préparation matière',
-        },
-        {
-          'debut': '12:30',
-          'fin': '13:00',
-          'duree': '30 min',
-          'cause': 'Pause déjeuner',
-          'action': 'Pause équipe',
-        },
-      ],
-      'culot': {
-        'par_NC': '3',
-        'culot': '180',
-        'pag': '45',
-        'FO': '12',
-        'retour_F': '8',
-        'total': '248',
-      },
-      'total_arrets': '45 min',
-    },
-  ];
+  List<Map<String, dynamic>> _extrusions = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  List<Map<String, dynamic>> get _displayedInventory => _extrusion;
+  @override
+  void initState() {
+    super.initState();
+    _loadExtrusions();
+  }
+
+  Future<void> _loadExtrusions() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final extrusions = await ExtrusionApiService().getAllExtrusions();
+
+      if (!mounted) return;
+
+      setState(() {
+        _extrusions = extrusions;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final displayedInventory = _displayedInventory;
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 66, color: Colors.red.shade400),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadExtrusions,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      body: displayedInventory.isEmpty
+      body: _extrusions.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -100,67 +99,44 @@ class _ExtrusionScreenState extends State<ExtrusionScreen> {
                 ],
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              itemCount: displayedInventory.length,
-              itemBuilder: (context, index) {
-                final fiche = displayedInventory[index];
-                return ExtrusionCard(
-                  fiche: fiche,
-                  onEdit: () => _handleEditFiche(context, fiche),
-                  onDelete: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Confirmer la suppression'),
-                        content: Text(
-                          'Supprimer la fiche N° ${fiche['numero']} ?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _extrusion.removeWhere(
-                                  (e) => e['numero'] == fiche['numero'],
-                                );
-                              });
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Fiche supprimée'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Supprimer',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
+          : RefreshIndicator(
+              onRefresh: _loadExtrusions,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                itemCount: _extrusions.length,
+                itemBuilder: (context, index) {
+                  final fiche = _extrusions[index];
+                  return ExtrusionCard(
+                    fiche: fiche,
+                    onEdit: () => _handleEditFiche(context, fiche),
+                    onDelete: () => _handleDeleteFiche(context, fiche),
+                    onPrint: () => _handlePrintFiche(context, fiche),
+                  );
+                },
+              ),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final nextNumero = _computeNextNumero();
+          // Try to get next numero from API, fallback to local calculation
+          String nextNumero;
+          try {
+            nextNumero = await ExtrusionApiService().getNextNumero();
+          } catch (e) {
+            // Fallback to local calculation if API fails
+            nextNumero = _computeNextNumero();
+          }
+
+          if (!context.mounted) return;
+
           final result = await Navigator.push<Map<String, dynamic>?>(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  ExtrusionEditScreen(fiche: {'numero': nextNumero ?? ''}),
+              builder: (context) => ExtrusionEditScreen(lastNumero: nextNumero),
             ),
           );
           if (!mounted) return;
-          if (result != null) {
-            _upsertFiche(result);
+          if (result != null && result['success'] == true) {
+            _loadExtrusions(); // Reload from API
           }
         },
         backgroundColor: const Color(0xFF2563EB),
@@ -173,53 +149,272 @@ class _ExtrusionScreenState extends State<ExtrusionScreen> {
     BuildContext context,
     Map<String, dynamic> fiche,
   ) async {
-    final result = await Navigator.push<Map<String, dynamic>?>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ExtrusionEditScreen(fiche: fiche),
-      ),
-    );
-    if (!mounted) return;
-    if (result != null) {
-      _upsertFiche(result);
+    try {
+      // Fetch fresh data from API
+      final ficheData = await ExtrusionApiService().getExtrusionByRef(
+        fiche['numero'],
+      );
+
+      if (!context.mounted) return;
+
+      final result = await Navigator.push<Map<String, dynamic>?>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ExtrusionEditScreen(fiche: ficheData),
+        ),
+      );
+
+      if (!context.mounted) return;
+
+      if (result != null && result['success'] == true) {
+        _loadExtrusions(); // Reload from API
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fiche mise à jour avec succès'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
     }
   }
 
-  void _upsertFiche(Map<String, dynamic> updated) {
-    setState(() {
-      // حساب total_arrets تلقائياً
-      final arrets =
-          (updated['arrets'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      int totalMinutes = 0;
-      for (final arret in arrets) {
-        final dureeStr = arret['duree']?.toString() ?? '';
-        final match = RegExp(r'(\d+)').firstMatch(dureeStr);
-        if (match != null) {
-          totalMinutes += int.tryParse(match.group(1) ?? '0') ?? 0;
-        }
-      }
-      updated['total_arrets'] = '$totalMinutes min';
-
-      final numero = updated['numero']?.toString();
-      final index = _extrusion.indexWhere(
-        (element) => element['numero']?.toString() == numero,
+  Future<void> _handlePrintFiche(
+    BuildContext context,
+    Map<String, dynamic> ficheHeader,
+  ) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
-      if (index >= 0) {
-        _extrusion[index] = updated;
-      } else {
-        _extrusion.add(updated);
-      }
-    });
+
+      // Fetch full extrusion details
+      final fullFiche = await ExtrusionApiService().getExtrusionByRef(
+        ficheHeader['numero'],
+      );
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      // Show confirmation dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Imprimer la fiche'),
+          content: Text(
+            'Voulez-vous imprimer la fiche d\'extrusion N° ${ficheHeader['numero']} ?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                try {
+                  final pdfData =
+                      await PrintExtrusionService.generateExtrusionPdf(
+                        fullFiche,
+                      );
+                  await Printing.layoutPdf(
+                    onLayout: (format) async => pdfData,
+                    name: 'Extrusion_${ficheHeader['numero']}',
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur d\'impression: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.print, color: Colors.white, size: 18),
+              label: const Text(
+                'Imprimer',
+                style: TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    }
   }
 
-  String? _computeNextNumero() {
-    if (_extrusion.isEmpty) return '2650';
-    final numeros = _extrusion
-        .map((e) => int.tryParse(e['numero']?.toString() ?? ''))
-        .whereType<int>()
-        .toList();
-    if (numeros.isEmpty) return '2650';
-    numeros.sort();
-    return (numeros.last + 1).toString();
+  Future<void> _handleDeleteFiche(
+    BuildContext context,
+    Map<String, dynamic> ficheHeader,
+  ) async {
+    try {
+      // Show loading indicator while checking status
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // Fetch full extrusion details to check item statuses
+      final fullFiche = await ExtrusionApiService().getExtrusionByRef(
+        ficheHeader['numero'],
+      );
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      final productionData = fullFiche['production'] as List<dynamic>? ?? [];
+
+      // Check if any item is completed
+      final hasCompletedItems = productionData.any((item) {
+        final status = item['status']?.toString() ?? 'in_progress';
+        return status == 'completed';
+      });
+
+      if (hasCompletedItems) {
+        // Show warning dialog preventing deletion
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Suppression impossible'),
+            content: Text(
+              'La fiche N° ${ficheHeader['numero']} contient des articles marqués comme "Terminé".\n\n'
+              'Pour supprimer cette fiche, vous devez d\'abord réinitialiser le statut de tous les articles à "En cours" afin d\'annuler les mouvements de stock.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Proceed with deletion confirmation if safe
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirmer la suppression'),
+          content: Text(
+            'Voulez-vous vraiment supprimer la fiche N° ${ficheHeader['numero']} ?\n\nCette action est irréversible.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+
+                try {
+                  // Show loading indicator
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) =>
+                        const Center(child: CircularProgressIndicator()),
+                  );
+
+                  await ExtrusionApiService().deleteExtrusion(
+                    ficheHeader['numero'],
+                  );
+
+                  if (!context.mounted) return;
+                  Navigator.pop(context); // Close loading dialog
+
+                  _loadExtrusions(); // Reload from API
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Fiche supprimée'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  Navigator.pop(context); // Close loading dialog
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Supprimer',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  /// Compute next numero locally (fallback)
+  /// Format: EX-YY-MM-NNNNN
+  /// - EX: Operation prefix
+  /// - YY: Current year (last 2 digits)
+  /// - MM: Current month
+  /// - NNNNN: Sequential number (5 digits, resets each month)
+  String _computeNextNumero() {
+    final now = DateTime.now();
+    final year = now.year.toString().substring(2); // "25" for 2025
+    final month = now.month.toString().padLeft(2, '0'); // "01" for January
+
+    // Build prefix for current year-month: EX-YY-MM-
+    final currentPrefix = 'EX-$year-$month-';
+
+    if (_extrusions.isEmpty) {
+      return '${currentPrefix}00001';
+    }
+
+    final regex = RegExp(r'^EX-\d{2}-\d{2}-(\d{5})$');
+    int bestSeq = 0;
+
+    for (final extrusion in _extrusions) {
+      final numero = extrusion['numero']?.toString() ?? '';
+      // Only count numeros that match the current year-month prefix
+      if (numero.startsWith(currentPrefix)) {
+        final match = regex.firstMatch(numero);
+        if (match != null) {
+          final seq = int.tryParse(match.group(1)!) ?? 0;
+          if (seq > bestSeq) {
+            bestSeq = seq;
+          }
+        }
+      }
+    }
+
+    final nextSeq = (bestSeq + 1).toString().padLeft(5, '0');
+    return '$currentPrefix$nextSeq';
   }
 }

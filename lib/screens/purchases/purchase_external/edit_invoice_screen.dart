@@ -1,14 +1,15 @@
 // ignore_for_file: avoid_print
-import '../../core/imports.dart';
+import '../../../core/imports.dart';
+import '../purchase_local/api_services.dart';
 
-class SmartDocumentScreenBuy extends StatefulWidget {
+class SmartDocumentScreen extends StatefulWidget {
   final Map<String, dynamic>? invoice;
   final bool isLocal;
   final String? clientName;
   final String? invoiceNumber;
   final DateTime? date;
 
-  const SmartDocumentScreenBuy({
+  const SmartDocumentScreen({
     super.key,
     this.invoice,
     this.isLocal = true,
@@ -18,18 +19,21 @@ class SmartDocumentScreenBuy extends StatefulWidget {
   });
 
   @override
-  SmartDocumentScreenBuyState createState() => SmartDocumentScreenBuyState();
+  SmartDocumentScreenState createState() => SmartDocumentScreenState();
 }
 
-class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
+class SmartDocumentScreenState extends State<SmartDocumentScreen>
     with SingleTickerProviderStateMixin {
   final Map<String, TextEditingController> _controllers = {};
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final CalculationService _calculationService = CalculationService();
+  final PurchaseApiService _purchaseApiService = PurchaseApiService();
   late TabController _tabController;
 
   // State moved from DocumentProvider
   List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _articles = [];
+  Map<String, dynamic>? _selectedArticle;
   Map<String, dynamic> _summary = {
     'factureNumber':
         'CI-SSA${DateTime.now().year}${DateTime.now().month.toString().padLeft(2, '0')}${DateTime.now().day.toString().padLeft(2, '0')}${DateTime.now().millisecond}',
@@ -38,6 +42,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
     'chequeChange': 0.0,
     'freiht': 0.0,
     'autres': 0.0,
+    'total': 0.0,
     'txChange': 0.0,
     'poidsTotal': 0.0,
   };
@@ -50,6 +55,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _initializeControllers();
+    _fetchArticles();
     if (widget.invoice != null) {
       _setFromInvoiceModel(widget.invoice!);
     } else {
@@ -58,6 +64,19 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
           _summary['factureNumber'] = widget.invoiceNumber!;
         }
       });
+    }
+  }
+
+  Future<void> _fetchArticles() async {
+    try {
+      final fetchedArticles = await _purchaseApiService.getAllArticlesStock();
+      if (!mounted) return;
+      setState(() {
+        _articles = fetchedArticles;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      print('Error fetching articles: $e');
     }
   }
 
@@ -86,6 +105,8 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
         'qte': data['qte'],
         'poids': data['poids'],
         'puPieces': data['puPieces'],
+        'exchangeRate': data['exchangeRate'],
+        'material_type': data['material_type'],
       };
 
       // التحقق من أن العنصر لا يحتوي على بيانات فارغة
@@ -129,6 +150,8 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
         }
         _editingIndex = null;
       }
+      // إعادة تعيين المادة المحددة
+      _selectedArticle = null;
     });
   }
 
@@ -195,6 +218,9 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
         case 'أخرى':
           newSummary['autres'] = value;
           break;
+        case 'سعر الصرف':
+          newSummary['txChange'] = value;
+          break;
       }
       _summary = newSummary;
 
@@ -208,6 +234,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
     final totals = _calculationService.calculateTotals(_items, newSummary);
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final grandTotal = totals['total'] ?? 0.0;
 
     _items = _items.map((item) {
       final itemData = {
@@ -216,12 +243,13 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
         'qte': item['qte'],
         'poids': item['poids'],
         'puPieces': item['puPieces'],
+        'exchangeRate': _safeParseDouble(newSummary['txChange']),
       };
       return _calculationService.calculateItemValues(
         itemData,
         totalMt: totalMt,
         poidsTotal: poidsTotal,
-        grandTotal: 0.0,
+        grandTotal: grandTotal,
       );
     }).toList();
   }
@@ -229,6 +257,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
   void _recalculateSummary() {
     final totals = _calculationService.calculateTotals(_items, _summary);
     final newSummary = Map<String, dynamic>.from(_summary);
+    newSummary['total'] = totals['total'];
     newSummary['poidsTotal'] = totals['poidsTotal'];
     _summary = newSummary;
   }
@@ -246,6 +275,8 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
         'chequeChange': 0.0,
         'freiht': 0.0,
         'autres': 0.0,
+        'total': 0.0,
+        'txChange': 0.0,
         'poidsTotal': 0.0,
       };
     });
@@ -278,6 +309,11 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
       'poids',
       'puPieces',
       'mt',
+      'prixAchat',
+      'autresCharges',
+      'cuHt',
+      'exchangeRate',
+      'material_type',
     ];
 
     for (String field in fields) {
@@ -287,22 +323,42 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
     _controllers['qte']?.addListener(_updateCalculatedFieldsWithService);
     _controllers['poids']?.addListener(_updateCalculatedFieldsWithService);
     _controllers['puPieces']?.addListener(_updateCalculatedFieldsWithService);
+    _controllers['exchangeRate']?.addListener(
+      _updateCalculatedFieldsWithService,
+    );
   }
 
-  void _populateControllers(Map<String, dynamic> item) {
-    // defaultExchangeRate parameter is intentionally unused
-    // as it's part of the method signature for future use
+  void _populateControllers(
+    Map<String, dynamic> item, {
+    double? defaultExchangeRate,
+  }) {
     _controllers['refFournisseur']?.text = item['refFournisseur'].toString();
     _controllers['articles']?.text = item['articles'].toString();
     _controllers['qte']?.text = item['qte'].toString();
     _controllers['poids']?.text = item['poids'].toString();
     _controllers['puPieces']?.text = item['puPieces'].toString();
     _controllers['mt']?.text = item['mt'].toString();
+    _controllers['prixAchat']?.text = item['prixAchat'].toString();
+    _controllers['autresCharges']?.text = item['autresCharges'].toString();
+    _controllers['cuHt']?.text = item['cuHt'].toString();
+    _controllers['material_type']?.text =
+        item['material_type']?.toString() ?? '';
+    final exchangeRate = _safeParseDouble(item['exchangeRate']);
+    if ((exchangeRate == 1.0 || exchangeRate == 0.0) &&
+        defaultExchangeRate != null) {
+      _controllers['exchangeRate']?.text = defaultExchangeRate.toString();
+    } else {
+      _controllers['exchangeRate']?.text = exchangeRate.toString();
+    }
   }
 
   void _clearControllers() {
     _controllers.forEach((key, controller) {
       controller.clear();
+    });
+    // إعادة تعيين المادة المحددة
+    setState(() {
+      _selectedArticle = null;
     });
   }
 
@@ -313,15 +369,19 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
       'qte': int.tryParse(_controllers['qte']?.text ?? '0') ?? 0,
       'poids': double.tryParse(_controllers['poids']?.text ?? '0') ?? 0.0,
       'puPieces': double.tryParse(_controllers['puPieces']?.text ?? '0') ?? 0.0,
+      'exchangeRate':
+          double.tryParse(_controllers['exchangeRate']?.text.trim() ?? '') ??
+          1.0,
+      'material_type': _controllers['material_type']?.text ?? '',
     };
   }
 
   bool _isSaving = false;
-  bool _hasSaved = false;
+
   void _saveInvoice() {
-    if (_isSaving || _hasSaved) return;
+    print('Attempting to save invoicesss...');
+    if (_isSaving) return;
     _isSaving = true;
-    _hasSaved = true;
 
     if (_editingIndex != null) {
       _isSaving = false;
@@ -425,6 +485,9 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
     _controllers['puPieces']?.removeListener(
       _updateCalculatedFieldsWithService,
     );
+    _controllers['exchangeRate']?.removeListener(
+      _updateCalculatedFieldsWithService,
+    );
     _controllers.forEach((key, controller) {
       controller.dispose();
     });
@@ -445,7 +508,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
             children: [
               _buildSmartHeader(totals),
               Expanded(child: _buildSmartTable()),
-              const SizedBox(height: 5),
+              _buildSummaryFooter(totals),
             ],
           ),
         ),
@@ -795,13 +858,18 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
     final totals = _calculationService.calculateTotals(tempItems, _summary);
     final totalMt = totals['totalMt'] ?? 0.0;
     final poidsTotal = totals['poidsTotal'] ?? 0.0;
+    final grandTotal = totals['total'] ?? 0.0;
     final calculated = _calculationService.calculateItemValues(
       data,
       totalMt: totalMt,
       poidsTotal: poidsTotal,
-      grandTotal: 0.0,
+      grandTotal: grandTotal,
     );
     _controllers['mt']?.text = calculated['mt'].toString();
+    _controllers['prixAchat']?.text = calculated['prixAchat'].toString();
+    _controllers['autresCharges']?.text = calculated['autresCharges']
+        .toString();
+    _controllers['cuHt']?.text = calculated['cuHt'].toString();
   }
 
   Widget _buildSmartHeader(Map<String, double> totals) {
@@ -967,7 +1035,9 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                     ),
                     const SizedBox(width: 12),
                     _buildActionButton(
-                      onPressed: _saveInvoice,
+                      onPressed: () {
+                        _saveInvoice();
+                      },
                       icon: Icons.save_rounded,
                       label: AppTranslations.get(
                         'save',
@@ -1024,6 +1094,21 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                           value:
                               '${totals['poidsTotal']?.toStringAsFixed(0) ?? '0'} Kg',
                           color: const Color(0xFF10B981),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: _buildInfoCard(
+                          icon: Icons.attach_money,
+                          label: AppTranslations.get(
+                            'total_expenses',
+                            Provider.of<LanguageProvider>(
+                              context,
+                              listen: true,
+                            ).currentLanguage,
+                          ),
+                          value: totals['total']?.toStringAsFixed(2) ?? '0.00',
+                          color: const Color(0xFFF59E0B),
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -1270,6 +1355,39 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
           _verticalDivider(height: 28),
           _buildHeaderCell(
             AppTranslations.get(
+              'purchase_price',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
+          _verticalDivider(height: 28),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'other_expenses',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
+          _verticalDivider(height: 28),
+          _buildHeaderCell(
+            AppTranslations.get(
+              'item_cost',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            flex: 2,
+          ),
+          _verticalDivider(height: 28),
+          _buildHeaderCell(
+            AppTranslations.get(
               'actions',
               Provider.of<LanguageProvider>(
                 context,
@@ -1331,7 +1449,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                       : null,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 5),
               _buildDataCell(item['refFournisseur'].toString(), flex: 2),
               _verticalDivider(height: 28),
               _buildDataCell(item['articles'].toString(), flex: 2),
@@ -1361,7 +1479,27 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                 ),
                 flex: 2,
               ),
-              const SizedBox(width: 45),
+              _verticalDivider(height: 28),
+              _buildDataCell(
+                _calculationService.formatCurrency(
+                  _safeParseDouble(item['prixAchat']),
+                ),
+                flex: 2,
+              ),
+              _verticalDivider(height: 28),
+              _buildDataCell(
+                _calculationService.formatCurrency(
+                  _safeParseDouble(item['autresCharges']),
+                ),
+                flex: 2,
+              ),
+              _verticalDivider(height: 28),
+              _buildDataCell(
+                _calculationService.formatCurrency(
+                  _safeParseDouble(item['cuHt']),
+                ),
+                flex: 2,
+              ),
               SizedBox(
                 width: 60,
                 child: Row(
@@ -1384,7 +1522,6 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                   ],
                 ),
               ),
-              const SizedBox(width: 20),
             ],
           ),
         ),
@@ -1393,8 +1530,13 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
   }
 
   Widget _buildEditRow(int index) {
-    // isNew variable is intentionally unused
-    // final isNew = index == _items.length;
+    final exchangeRateFromSummary = _safeParseDouble(_summary['txChange']);
+    final isNew = index == _items.length;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isNew || (_controllers['exchangeRate']?.text.isEmpty ?? true)) {
+        _controllers['exchangeRate']?.text = exchangeRateFromSummary.toString();
+      }
+    });
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -1418,18 +1560,63 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                 ).currentLanguage,
               ),
               flex: 2,
+              readOnly: true,
             ),
             _verticalDivider(height: 28),
-            _buildEditField(
-              'articles',
-              AppTranslations.get(
-                'article',
-                Provider.of<LanguageProvider>(
-                  context,
-                  listen: true,
-                ).currentLanguage,
-              ),
+            Expanded(
               flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: SearchableDropdownT<Map<String, dynamic>>(
+                  items: _articles,
+                  displayText: (article) => article['material_name'] ?? '',
+                  selectedValue: _selectedArticle,
+                  onChanged: (article) {
+                    setState(() {
+                      _selectedArticle = article;
+                      if (article != null) {
+                        _controllers['articles']?.text =
+                            article['material_name'] ?? '';
+                        // Auto-populate ref_code
+                        _controllers['refFournisseur']?.text =
+                            article['ref_code'] ?? '';
+                        // Auto-populate unit_price
+                        _controllers['puPieces']?.text =
+                            article['unit_price']?.toString() ?? '';
+                        // Auto-populate material_type
+                        _controllers['material_type']?.text =
+                            article['material_type']?.toString() ?? '';
+                      } else {
+                        _controllers['articles']?.clear();
+                        _controllers['refFournisseur']?.clear();
+                        _controllers['puPieces']?.clear();
+                        _controllers['material_type']?.clear();
+                      }
+                    });
+                  },
+                  hintText: AppTranslations.get(
+                    'article',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: false,
+                    ).currentLanguage,
+                  ),
+                  onPrefixIconTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ArticlesStockCrudScreen(),
+                      ),
+                    );
+                  },
+                  searchHint: 'بحث...',
+                  noResultsText: 'لا توجد نتائج',
+                  loadingText: 'جاري التحميل...',
+                  isLoading: _articles.isEmpty,
+                  prefixIcon: const Icon(Icons.inventory_2_outlined),
+                  primaryColor: Colors.blue,
+                  enabled: true,
+                ),
+              ),
             ),
             _verticalDivider(height: 28),
             _buildEditField(
@@ -1488,7 +1675,51 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
               isDecimal: true,
               readOnly: true,
             ),
-            const SizedBox(width: 30),
+            _verticalDivider(height: 28),
+            _buildEditField(
+              'prixAchat',
+              AppTranslations.get(
+                'purchase_price',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+              isNumber: true,
+              isDecimal: true,
+              readOnly: true,
+            ),
+            _verticalDivider(height: 28),
+            _buildEditField(
+              'autresCharges',
+              AppTranslations.get(
+                'other_expenses',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+              isNumber: true,
+              isDecimal: true,
+              readOnly: true,
+            ),
+            _verticalDivider(height: 28),
+            _buildEditField(
+              'cuHt',
+              AppTranslations.get(
+                'item_cost',
+                Provider.of<LanguageProvider>(
+                  context,
+                  listen: true,
+                ).currentLanguage,
+              ),
+              flex: 2,
+              isNumber: true,
+              isDecimal: true,
+              readOnly: true,
+            ),
             SizedBox(
               width: 60,
               child: Row(
@@ -1496,6 +1727,19 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                   _buildActionIconButton(
                     icon: Icons.save,
                     onPressed: () {
+                      // التحقق من اختيار المادة أولاً
+                      if (_selectedArticle == null ||
+                          _controllers['articles']?.text.isEmpty == true) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('الرجاء اختيار مادة'),
+                            backgroundColor: Colors.red,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        return;
+                      }
+
                       if (_formKey.currentState?.validate() ?? false) {
                         _saveItem(index, _getFormData());
                         _clearControllers();
@@ -1514,9 +1758,194 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                 ],
               ),
             ),
-            const SizedBox(width: 30),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryFooter(Map<String, double> totals) {
+    return Container(
+      margin: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(
+          width: 1,
+          color: Colors.black.withValues(alpha: 0.2),
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF60A5FA).withValues(alpha: 0.10),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(children: [Expanded(child: _buildSummaryGrid())]),
+    );
+  }
+
+  Widget _buildSummaryGrid() {
+    final editingField = ValueNotifier<String?>(null);
+    return StatefulBuilder(
+      builder: (context, setState) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppTranslations.get(
+              'expense_details',
+              Provider.of<LanguageProvider>(
+                context,
+                listen: true,
+              ).currentLanguage,
+            ),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'transit',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
+                  ),
+                  value: _safeParseDouble(_summary['transit']),
+                  icon: Icons.local_shipping,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'النقل',
+                  onEdit: () => setState(() => editingField.value = 'النقل'),
+                  onValueChanged: (v) {
+                    _updateSummaryField('النقل', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'customs',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
+                  ),
+                  value: _safeParseDouble(_summary['droitDouane']),
+                  icon: Icons.account_balance,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'حق الجمرك',
+                  onEdit: () =>
+                      setState(() => editingField.value = 'حق الجمرك'),
+                  onValueChanged: (v) {
+                    _updateSummaryField('حق الجمرك', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'exchange_cheque',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
+                  ),
+                  value: _safeParseDouble(_summary['chequeChange']),
+                  icon: Icons.money,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'شيك الصرف',
+                  onEdit: () =>
+                      setState(() => editingField.value = 'شيك الصرف'),
+                  onValueChanged: (v) {
+                    _updateSummaryField('شيك الصرف', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'freight',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
+                  ),
+                  value: _safeParseDouble(_summary['freiht']),
+                  icon: Icons.flight_takeoff,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'الشحن',
+                  onEdit: () => setState(() => editingField.value = 'الشحن'),
+                  onValueChanged: (v) {
+                    _updateSummaryField('الشحن', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'other',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
+                  ),
+                  value: _safeParseDouble(_summary['autres']),
+                  icon: Icons.more_horiz,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'أخرى',
+                  onEdit: () => setState(() => editingField.value = 'أخرى'),
+                  onValueChanged: (v) {
+                    _updateSummaryField('أخرى', v);
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+              Expanded(
+                child: EditableSummaryItem(
+                  label: AppTranslations.get(
+                    'exchange_rate',
+                    Provider.of<LanguageProvider>(
+                      context,
+                      listen: true,
+                    ).currentLanguage,
+                  ),
+                  value: _safeParseDouble(_summary['txChange']),
+                  isCurrency: false,
+                  icon: Icons.currency_exchange,
+                  calculationService: _calculationService,
+                  isEditing: editingField.value == 'سعر الصرف',
+                  onEdit: () =>
+                      setState(() => editingField.value = 'سعر الصرف'),
+                  onValueChanged: (v) {
+                    _updateSummaryField('سعر الصرف', v);
+                    if (_controllers['exchangeRate'] != null) {
+                      _controllers['exchangeRate']?.text = v.toString();
+                    }
+                    setState(() => editingField.value = null);
+                  },
+                  onCancel: () => setState(() => editingField.value = null),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1781,6 +2210,14 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                 ),
               ),
               const SizedBox(width: 8),
+              Expanded(
+                child: _buildPhoneInfoChip(
+                  Icons.attach_money,
+                  'المجموع',
+                  _calculationService.formatCurrency(totals['total'] ?? 0),
+                  Colors.red,
+                ),
+              ),
             ],
           ),
         ],
@@ -1851,7 +2288,14 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
   }
 
   Widget _buildPhoneEditForm() {
+    final exchangeRateFromSummary = _safeParseDouble(_summary['txChange']);
     final isNew = _editingIndex == _items.length;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isNew || (_controllers['exchangeRate']?.text.isEmpty ?? true)) {
+        _controllers['exchangeRate']?.text = exchangeRateFromSummary.toString();
+      }
+    });
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -1911,6 +2355,15 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                     isDecimal: true,
                   ),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildPhoneEditField(
+                    'exchangeRate',
+                    'سعر الصرف',
+                    isNumber: true,
+                    isDecimal: true,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -1919,6 +2372,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
+                      print('Item saved');
                       if (_formKey.currentState?.validate() ?? false) {
                         _saveItem(_editingIndex!, _getFormData());
                         _clearControllers();
@@ -2085,6 +2539,22 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                       ),
                     ),
                   ),
+                  Expanded(
+                    child: _buildPhoneItemDetail(
+                      'سعر الشراء',
+                      _calculationService.formatCurrency(
+                        _safeParseDouble(item['prixAchat']),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildPhoneItemDetail(
+                      'المصاريف',
+                      _calculationService.formatCurrency(
+                        _safeParseDouble(item['autresCharges']),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -2149,6 +2619,12 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
             _safeParseDouble(_summary['autres']),
             Icons.more_horiz,
           ),
+          _buildPhoneExpenseCard(
+            'سعر الصرف',
+            _safeParseDouble(_summary['txChange']),
+            Icons.currency_exchange,
+            isCurrency: false,
+          ),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
@@ -2172,6 +2648,14 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy>
                         'مجموع البضائع',
                         _calculationService.formatCurrency(
                           totals['totalMt'] ?? 0,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildPhoneTotalItem(
+                        'مجموع المصاريف',
+                        _calculationService.formatCurrency(
+                          totals['total'] ?? 0,
                         ),
                       ),
                     ),
