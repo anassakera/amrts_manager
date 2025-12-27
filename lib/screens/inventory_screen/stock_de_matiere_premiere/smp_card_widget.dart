@@ -72,14 +72,14 @@ class SmpCard extends StatelessWidget {
                 _buildStatCard(
                   icon: Icons.production_quantity_limits,
                   color: const Color(0xFF2563EB),
-                  label: 'CMUP',
-                  value: cmup,
+                  label: 'Quantité (KG)',
+                  value: '$totalQuantity',
                 ),
                 _buildStatCard(
                   icon: Icons.production_quantity_limits,
                   color: const Color(0xFF2563EB),
-                  label: 'Quantité (KG)',
-                  value: '$totalQuantity',
+                  label: 'CMUP',
+                  value: cmup,
                 ),
                 _buildStatCard(
                   icon: Icons.attach_money,

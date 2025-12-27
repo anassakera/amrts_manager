@@ -73,28 +73,28 @@ class SsfCard extends StatelessWidget {
                   value: refCode,
                 ),
                 _buildStatCard(
-                  icon: Icons.monetization_on,
-                  color: const Color(0xFF7C3AED),
-                  label: 'CMUP (DH)',
-                  value: cmup,
-                ),
-                _buildStatCard(
                   icon: Icons.production_quantity_limits,
                   color: const Color(0xFF2563EB),
                   label: 'Quantité totale',
                   value: '$totalQuantity',
                 ),
                 _buildStatCard(
-                  icon: Icons.scale,
-                  color: const Color(0xFFF59E0B),
-                  label: 'Poids total (KG)',
-                  value: totalWeight,
+                  icon: Icons.monetization_on,
+                  color: const Color(0xFF7C3AED),
+                  label: 'CMUP (DH)',
+                  value: cmup,
                 ),
                 _buildStatCard(
                   icon: Icons.attach_money,
                   color: const Color(0xFF16A34A),
                   label: 'Montant total (DH)',
                   value: totalAmount,
+                ),
+                _buildStatCard(
+                  icon: Icons.scale,
+                  color: const Color(0xFFF59E0B),
+                  label: 'Poids total (KG)',
+                  value: totalWeight,
                 ),
                 _buildStatCard(
                   icon: Icons.list_alt,

@@ -1,6 +1,6 @@
 ﻿import 'dart:async';
 import 'package:amrts_manager/services/print_sales_documents.dart';
-import 'package:amrts_manager/widgets/add_document_dialog.dart';
+import 'package:amrts_manager/screens/sales_screen/add_document_dialog.dart';
 import 'package:pdf/pdf.dart';
 import '../../core/imports.dart';
 import 'api_services.dart';
@@ -24,500 +24,24 @@ class _SalesScreenState extends State<SalesScreen>
   final int _currentPage = 1;
   final int _pageSize = 20;
   Timer? _searchDebounce;
-  Map<String, dynamic>? _remoteStats;
   final bool _showSearchBar = true;
 
-  bool _showStatsCard = true;
-
-  DateTime? _startDate;
-  DateTime? _endDate;
-
-  Map<String, dynamic> _calculateStats(List<Map<String, dynamic>> commandes) {
-    double totalPoidsConsomme = 0;
-    Set<String> peintures = {};
-    Set<String> gaz = {};
-    Set<String> bellets = {};
-    double totalDechet = 0;
-    double totalDechetInitial = 0;
-
-    for (var commande in commandes) {
-      // Filtrer les commandes selon la plage de dates selectionnee.
-      if (_startDate != null || _endDate != null) {
-        final commandeDate = DateTime.parse(commande['date']);
-        if (_startDate != null && commandeDate.isBefore(_startDate!)) continue;
-        if (_endDate != null &&
-            commandeDate.isAfter(_endDate!.add(const Duration(days: 1)))) {
-          continue;
-        }
-      }
-
-      final items = commande['items'] as List<dynamic>? ?? [];
-      for (var item in items) {
-        totalPoidsConsomme += totalPoidsConsomme +=
-            (item['Poids consommé'] as num?)?.toDouble() ?? 0.0;
-
-        final peintureValue = item['Peinture'];
-        if (peintureValue != null) {
-          final peinture = (peintureValue is num)
-              ? peintureValue.toDouble()
-              : double.tryParse(peintureValue.toString());
-          if (peinture != null) peintures.add(peinture.toString());
-        }
-
-        final gazItem = item['Gaz'];
-        if (gazItem != null) {
-          final gazValue = (gazItem is num)
-              ? gazItem.toDouble()
-              : double.tryParse(gazItem.toString());
-          if (gazValue != null) gaz.add(gazValue.toString());
-        }
-
-        final belletItem = item['bellet'];
-        if (belletItem != null) {
-          final belletValue = (belletItem is num)
-              ? belletItem.toDouble()
-              : double.tryParse(belletItem.toString());
-          if (belletValue != null) bellets.add(belletValue.toString());
-        }
-
-        totalDechet += (item['dechet'] as num?)?.toDouble() ?? 0.0;
-        totalDechetInitial +=
-            (item['dechet initial'] as num?)?.toDouble() ?? 0.0;
-      }
-    }
-
-    return {
-      'totalPoidsConsomme': totalPoidsConsomme,
-      'peintures': peintures.toList(),
-      'gaz': gaz.toList(),
-      'bellets': bellets.toList(),
-      'totalDechet': totalDechet,
-      'totalDechetInitial': totalDechetInitial,
-    };
-  }
-
-  // Section des statistiques resumees.
-  Widget _buildStatsCard(Map<String, dynamic> stats) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade50, Colors.white],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blue.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade600,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.analytics_outlined,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Indicateurs principaux',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: Icon(
-                    _showStatsCard ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.white,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _showStatsCard = !_showStatsCard;
-                    });
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-          ),
-
-          // Content
-          if (_showStatsCard)
-            Padding(
-              padding: const EdgeInsets.all(5),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isDesktop = constraints.maxWidth > 768;
-
-                  if (isDesktop) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatItem(
-                            'Poids total consomme',
-                            "${stats['totalPoidsConsomme'].toStringAsFixed(2)} kg",
-                            Icons.scale,
-                            Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Expanded(
-                        //   child: _buildStatItem(
-                        //     'Variantes de peinture',
-                        //     '${stats['peintures'].length}',
-                        //     Icons.format_paint,
-                        //     Colors.purple,
-                        //   ),
-                        // ),
-                        // Expanded(
-                        //   child: _buildStatItem(
-                        //     'Variantes de gaz',
-                        //     '${stats['gaz'].length}',
-                        //     Icons.air,
-                        //     Colors.green,
-                        //   ),
-                        // ),
-                        // Expanded(
-                        //   child: _buildStatItem(
-                        //     'Bellets',
-                        //     '${stats['bellets'].length}',
-                        //     Icons.category,
-                        //     Colors.orange,
-                        //   ),
-                        // ),
-                        Expanded(
-                          child: _buildStatItem(
-                            'Dechets totaux',
-                            "${stats['totalDechet'].toStringAsFixed(2)} kg",
-                            Icons.delete_outline,
-                            Colors.red,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildStatItem(
-                            'Dechets initiaux',
-
-                            "${stats['totalDechetInitial'].toStringAsFixed(2)} kg",
-                            Icons.warning_amber,
-                            Colors.amber,
-                          ),
-                        ),
-                      ],
-                    );
-                  } else {
-                    return Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatItem(
-                                'Poids total consomme',
-                                "${stats['totalPoidsConsomme'].toStringAsFixed(2)} kg",
-                                Icons.scale,
-                                Colors.blue,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildStatItem(
-                                'Variantes de peinture',
-                                '${stats['peintures'].length}',
-                                Icons.format_paint,
-                                Colors.purple,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatItem(
-                                'Variantes de gaz',
-                                '${stats['gaz'].length}',
-                                Icons.air,
-                                Colors.green,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildStatItem(
-                                'Bellets',
-                                '${stats['bellets'].length}',
-                                Icons.category,
-                                Colors.orange,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatItem(
-                                'Dechets totaux',
-                                "${stats['totalDechet'].toStringAsFixed(2)} kg",
-                                Icons.delete_outline,
-                                Colors.red,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildStatItem(
-                                'Dechets initiaux',
-                                "${stats['totalDechetInitial'].toStringAsFixed(2)} kg",
-                                Icons.warning_amber,
-                                Colors.amber,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  }
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFilterDialog() {
-    DateTime? tempStartDate = _startDate;
-    DateTime? tempEndDate = _endDate;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Filtrer les commandes'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Date de debut :',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: tempStartDate ?? DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) {
-                      setDialogState(() {
-                        tempStartDate = picked;
-                      });
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today, color: Colors.grey.shade600),
-                        const SizedBox(width: 12),
-                        Text(
-                          tempStartDate != null
-                              ? '${tempStartDate!.year}-${tempStartDate!.month.toString().padLeft(2, '0')}-${tempStartDate!.day.toString().padLeft(2, '0')}'
-                              : 'Selectionner une date',
-                          style: TextStyle(
-                            color: tempStartDate != null
-                                ? Colors.black
-                                : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Date de fin :',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: tempEndDate ?? DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) {
-                      setDialogState(() {
-                        tempEndDate = picked;
-                      });
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today, color: Colors.grey.shade600),
-                        const SizedBox(width: 12),
-                        Text(
-                          tempEndDate != null
-                              ? '${tempEndDate!.year}-${tempEndDate!.month.toString().padLeft(2, '0')}-${tempEndDate!.day.toString().padLeft(2, '0')}'
-                              : 'Selectionner une date',
-                          style: TextStyle(
-                            color: tempEndDate != null
-                                ? Colors.black
-                                : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _startDate = null;
-                  _endDate = null;
-                });
-                Navigator.pop(context);
-              },
-
-              child: const Text('Reinitialiser'),
-            ),
-
-            ElevatedButton(
-              onPressed: () async {
-                setState(() {
-                  _startDate = tempStartDate;
-                  _endDate = tempEndDate;
-                });
-                Navigator.pop(context);
-                await _fetchStats();
-              },
-
-              child: const Text('Appliquer'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showAddInvoiceDialog() async {
-    // edite_1
     final newInvoice = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (BuildContext context) {
         return AddDocumentDialog(
           onPressed: (String client, String docRef, DateTime date) {
+            // Extract doc_type from docRef (first 2 characters if available)
+            final docType = docRef.length >= 2 ? docRef.substring(0, 2) : 'BL';
             final newInvoice = {
               'Document_Ref': docRef,
+              'doc_type': docType,
               'Client': client,
               'date':
-                  '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
-              'items': [],
+                  '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')} | ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
+              'status': 'pending',
+              'items': <Map<String, dynamic>>[],
             };
             Navigator.of(context).pop(newInvoice);
           },
@@ -538,9 +62,12 @@ class _SalesScreenState extends State<SalesScreen>
     return _commandes.where((commande) {
       final docRef = commande['Document_Ref']?.toString().toLowerCase() ?? '';
       final client = commande['Client']?.toString().toLowerCase() ?? '';
+      final docType = commande['doc_type']?.toString().toLowerCase() ?? '';
       final query = _searchQuery.toLowerCase();
 
-      return docRef.contains(query) || client.contains(query);
+      return docRef.contains(query) ||
+          client.contains(query) ||
+          docType.contains(query);
     }).toList();
   }
 
@@ -589,8 +116,6 @@ class _SalesScreenState extends State<SalesScreen>
           ..addAll(orders);
         _isLoading = false;
       });
-
-      await _fetchStats();
     } catch (error, stack) {
       debugPrint('Failed to fetch orders: $error\n$stack');
       if (!mounted) return;
@@ -610,21 +135,6 @@ class _SalesScreenState extends State<SalesScreen>
     await _fetchOrders(useLoader: false);
   }
 
-  Future<void> _fetchStats() async {
-    try {
-      final stats = await SalesApiService.fetchStats(
-        dateFrom: _startDate,
-        dateTo: _endDate,
-      );
-      if (!mounted) return;
-      setState(() {
-        _remoteStats = stats;
-      });
-    } catch (error, stack) {
-      debugPrint('Failed to fetch stats: $error\n$stack');
-    }
-  }
-
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 250), () {
@@ -639,14 +149,12 @@ class _SalesScreenState extends State<SalesScreen>
   @override
   Widget build(BuildContext context) {
     final filteredCommandes = _getFilteredCommandes();
-    final stats = _remoteStats ?? _calculateStats(filteredCommandes);
 
     return Scaffold(
       body: Column(
         children: [
           const SizedBox(height: 125),
           _buildTopBar(),
-          if (_showStatsCard) _buildStatsCard(stats),
           Expanded(child: _buildCommandesList(filteredCommandes)),
         ],
       ),
@@ -726,30 +234,6 @@ class _SalesScreenState extends State<SalesScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade100),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      onPressed: _showFilterDialog,
-                      icon: const Icon(
-                        Icons.filter_list_rounded,
-                        color: Color(0xFF1E40AF),
-                      ),
-
-                      tooltip: 'Afficher les filtres',
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -808,29 +292,6 @@ class _SalesScreenState extends State<SalesScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade100),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      onPressed: _showFilterDialog,
-                      icon: const Icon(
-                        Icons.filter_list_rounded,
-                        color: Color(0xFF1E40AF),
-                      ),
-                      tooltip: 'Afficher les filtres',
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -848,22 +309,7 @@ class _SalesScreenState extends State<SalesScreen>
       return const Center(child: CircularProgressIndicator());
     }
 
-    final filteredCommandes = commandes.where((commande) {
-      if (_startDate == null && _endDate == null) return true;
-
-      final commandeDate = DateTime.parse(commande['date']);
-      if (_startDate != null && commandeDate.isBefore(_startDate!)) {
-        return false;
-      }
-      if (_endDate != null &&
-          commandeDate.isAfter(_endDate!.add(const Duration(days: 1)))) {
-        return false;
-      }
-
-      return true;
-    }).toList();
-
-    if (filteredCommandes.isEmpty) {
+    if (commandes.isEmpty) {
       if (_isLoading) {
         return const Center(child: CircularProgressIndicator());
       }
@@ -872,9 +318,9 @@ class _SalesScreenState extends State<SalesScreen>
 
     final listView = ListView.builder(
       padding: const EdgeInsets.all(0),
-      itemCount: filteredCommandes.length,
+      itemCount: commandes.length,
       itemBuilder: (context, index) {
-        final commande = filteredCommandes[index];
+        final commande = commandes[index];
         return _buildCommandeCard(commande);
       },
     );
@@ -882,7 +328,7 @@ class _SalesScreenState extends State<SalesScreen>
     if (_isSearching) {
       return Column(
         children: [
-          _buildSearchResultsHeader(filteredCommandes.length),
+          _buildSearchResultsHeader(commandes.length),
           Expanded(
             child: RefreshIndicator(onRefresh: _refreshOrders, child: listView),
           ),
@@ -929,19 +375,35 @@ class _SalesScreenState extends State<SalesScreen>
   }
 
   void _viewCommande(Map<String, dynamic> commande) {
+    final items = commande['items'] as List? ?? [];
+    final totalPrice = commande['total_price'] ?? 0.0;
+    final totalWeight = commande['total_weight_consumed'] ?? 0.0;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Details de la commande ${commande["Document_Ref"]}"),
+        title: Text("Détails: ${commande["Document_Ref"]}"),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Client : ${commande["Client"]}"),
-              Text("Date : ${commande["date"]}"),
-              const SizedBox(height: 16),
-              Text("Nombre d articles : ${commande["items"]?.length ?? 0}"),
+              _buildDetailRow(
+                'Type',
+                _getDocTypeLabel(commande['doc_type'] ?? 'BL'),
+              ),
+              _buildDetailRow('Client', commande['Client'] ?? 'N/A'),
+              _buildDetailRow('Date', commande['date'] ?? 'N/A'),
+              const Divider(),
+              _buildDetailRow('Nombre d\'articles', '${items.length}'),
+              _buildDetailRow(
+                'Poids total',
+                '${totalWeight.toStringAsFixed(2)} Kg',
+              ),
+              _buildDetailRow(
+                'Prix total',
+                '${totalPrice.toStringAsFixed(2)} DH',
+              ),
             ],
           ),
         ),
@@ -953,6 +415,35 @@ class _SalesScreenState extends State<SalesScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label : ',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  String _getDocTypeLabel(String docType) {
+    switch (docType.toUpperCase()) {
+      case 'BL':
+        return 'Bon de Livraison';
+      case 'BC':
+        return 'Bon de Commande';
+      case 'DE':
+        return 'Devis';
+      default:
+        return docType;
+    }
   }
 
   Future<void> _editCommande(
@@ -1017,7 +508,6 @@ class _SalesScreenState extends State<SalesScreen>
           _commandes.insert(0, result);
         }
       });
-      await _fetchStats();
       if (!mounted) return;
       await _fetchOrders(useLoader: false);
     }
@@ -1117,7 +607,6 @@ class _SalesScreenState extends State<SalesScreen>
                       backgroundColor: Colors.green,
                     ),
                   );
-                  await _fetchStats();
                 }
               } catch (error, stack) {
                 debugPrint('Failed to delete order: $error\n$stack');

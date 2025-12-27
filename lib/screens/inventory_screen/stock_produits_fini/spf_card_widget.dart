@@ -14,19 +14,24 @@ class SpfCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = (spf['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    // Support both 'items' and 'inventory_spf_operations' keys for operations
+    final items =
+        (spf['items'] as List?)?.cast<Map<String, dynamic>>() ??
+        (spf['inventory_spf_operations'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
 
-    final totalQuantity = spf['total_quantity'] ?? 0;
-    final totalWeight =
-        (spf['total_weight'] as num?)?.toStringAsFixed(2) ??
-        spf['total_weight']?.toString() ??
+    final quantity = spf['quantity'] ?? spf['total_quantity'] ?? 0;
+    final cmup =
+        (spf['CMUP'] as num?)?.toStringAsFixed(2) ??
+        spf['CMUP']?.toString() ??
         '0.00';
-    final totalValue =
-        (spf['total_value'] as num?)?.toStringAsFixed(2) ??
-        spf['total_value']?.toString() ??
+    final totalCost =
+        (spf['total_cost'] as num?)?.toStringAsFixed(2) ??
+        (spf['total_amount'] as num?)?.toStringAsFixed(2) ??
+        spf['total_cost']?.toString() ??
         '0.00';
     final operationsCount = spf['operations_count'] ?? items.length;
-    final status = spf['status']?.toString() ?? 'Disponible';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -57,31 +62,26 @@ class SpfCard extends StatelessWidget {
                   icon: Icons.qr_code_2,
                   color: const Color(0xFF6B21A8),
                   label: 'Réf. Code',
-                  value: spf['ref_code'] ?? 'N/A',
+                  value: spf['ref_code']?.toString() ?? 'N/A',
                 ),
-                _buildStatCard(
-                  icon: Icons.check_circle,
-                  color: _getStatusColor(status),
-                  label: 'Statut',
-                  value: status,
-                ),
+
                 _buildStatCard(
                   icon: Icons.inventory_2,
                   color: const Color(0xFF7C3AED),
-                  label: 'Quantité totale',
-                  value: '$totalQuantity',
+                  label: 'Quantité',
+                  value: '$quantity',
                 ),
                 _buildStatCard(
-                  icon: Icons.scale,
-                  color: const Color(0xFFDB2777),
-                  label: 'Poids total (KG)',
-                  value: totalWeight,
+                  icon: Icons.monetization_on,
+                  color: const Color(0xFF2563EB),
+                  label: 'CMUP (DH)',
+                  value: cmup,
                 ),
                 _buildStatCard(
                   icon: Icons.payments,
                   color: const Color(0xFF059669),
-                  label: 'Valeur totale (DH)',
-                  value: totalValue,
+                  label: 'Montant (DH)',
+                  value: totalCost,
                 ),
                 _buildStatCard(
                   icon: Icons.list_alt,
@@ -168,18 +168,5 @@ class SpfCard extends StatelessWidget {
         child: Icon(icon, size: 20, color: color),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'disponible':
-        return const Color(0xFF16A34A);
-      case 'faible':
-        return const Color(0xFFF59E0B);
-      case 'épuisé':
-        return const Color(0xFFDC2626);
-      default:
-        return const Color(0xFF64748B);
-    }
   }
 }

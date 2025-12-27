@@ -1,0 +1,7 @@
+﻿Analyzing amrts_manager...                                      
+
+warning - The value of the field '_isTogglingStatus' isn't used - lib\screens\production_screen\fonderie_screen\fonderie_edit_screen.dart:25:8 - unused_field
+warning - The value of the field '_togglingIndex' isn't used - lib\screens\production_screen\fonderie_screen\fonderie_edit_screen.dart:26:8 - unused_field
+warning - The declaration '_saveCommande' isn't referenced - lib\screens\sales_screen\sales_screen_edit.dart:491:16 - unused_element
+warning - The value of the local variable 'isExistingOrder' isn't used - lib\screens\sales_screen\sales_screen_edit.dart:793:15 - unused_local_variable
+

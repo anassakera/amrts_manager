@@ -236,7 +236,7 @@ class _SpfScreenState extends State<SpfScreen> {
     // Fetch fresh data from API
     try {
       final freshData = await InventorySpfApiService.getInventorySpfByRef(
-        spf['ref_code'],
+        spf['ref_code'].toString(),
       );
 
       if (!mounted) return;

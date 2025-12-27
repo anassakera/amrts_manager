@@ -1,4 +1,5 @@
-import '../core/imports.dart';
+import '../../core/imports.dart';
+import 'api_services.dart';
 
 class AddDocumentDialog extends StatefulWidget {
   final void Function(String clientName, String invoiceNumber, DateTime date)?
@@ -22,21 +23,15 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
   List<Map<String, dynamic>> clients = [];
   String _documentType = 'BL';
   String? selectedCustomer;
-  String _generateInvoiceNumber() {
-    final now = DateTime.now();
-    final year = now.year.toString().substring(2);
-    final month = now.month.toString().padLeft(2, '0');
-    final day = now.day.toString().padLeft(2, '0');
-    final hour = now.hour.toString().padLeft(2, '0');
-    final minute = now.minute.toString().padLeft(2, '0');
-    final second = now.second.toString().padLeft(2, '0');
-    return '$_documentType$year$month$day$hour$minute$second';
-  }
+
+  String _refCode = '';
+  bool _isLoadingRef = true;
 
   @override
   void initState() {
     super.initState();
     _fetchClients();
+    _fetchNextRefCode();
 
     _invoiceNumberController = TextEditingController();
     _animationController = AnimationController(
@@ -47,6 +42,51 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
       CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
     _animationController.forward();
+  }
+
+  Future<void> _fetchNextRefCode() async {
+    try {
+      final refCode = await SalesApiService.getNextRefCode(
+        docType: _documentType,
+      );
+      if (!mounted) return;
+      setState(() {
+        _refCode = refCode;
+        _isLoadingRef = false;
+      });
+    } catch (e) {
+      debugPrint('Failed to fetch next ref code: $e');
+      if (!mounted) return;
+      setState(() {
+        // Fallback to local generation
+        _refCode = _generateLocalRefCode();
+        _isLoadingRef = false;
+      });
+    }
+  }
+
+  String _generateLocalRefCode() {
+    final now = DateTime.now();
+    final year = now.year.toString().substring(2);
+    final month = now.month.toString().padLeft(2, '0');
+    return '$_documentType-$year-$month-00001';
+  }
+
+  String get _currentRefCode =>
+      _refCode.isNotEmpty ? _refCode : _generateLocalRefCode();
+
+  /// Returns the translation key for the current document type
+  String _getDocumentTranslationKey(String prefix) {
+    switch (_documentType) {
+      case 'BL':
+        return '${prefix}_bl';
+      case 'BC':
+        return '${prefix}_bc';
+      case 'DE':
+        return '${prefix}_de';
+      default:
+        return '${prefix}_invoice';
+    }
   }
 
   @override
@@ -190,7 +230,10 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            AppTranslations.get('add_new_invoice', currentLang),
+                            AppTranslations.get(
+                              _getDocumentTranslationKey('add_new'),
+                              currentLang,
+                            ),
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -227,7 +270,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                         selectedValue: selectedCustomer,
                         onChanged: (value) =>
                             setState(() => selectedCustomer = value),
-                        hintText: "Choix fournisseur......",
+                        hintText: "Sélectionnez un client...",
                         prefixIcon: const Icon(Icons.person_outline_rounded),
                         primaryColor: Colors.blue,
                         enabled: !_isLoading,
@@ -271,8 +314,12 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                                 Expanded(
                                   child: DocumentTypeSelector(
                                     selectedType: _documentType,
-                                    onChanged: (value) =>
-                                        setState(() => _documentType = value),
+                                    onChanged: (value) {
+                                      setState(() => _documentType = value);
+                                      // Fetch new ref code for selected doc type
+                                      _isLoadingRef = true;
+                                      _fetchNextRefCode();
+                                    },
                                     options: const [
                                       DocumentTypeOption(
                                         value: 'BL',
@@ -321,14 +368,23 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                                           ),
                                         ),
                                         const SizedBox(height: 2),
-                                        Text(
-                                          _generateInvoiceNumber(),
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.blue.shade800,
-                                          ),
-                                        ),
+                                        _isLoadingRef
+                                            ? const SizedBox(
+                                                height: 16,
+                                                width: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : Text(
+                                                _currentRefCode,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.blue.shade800,
+                                                ),
+                                              ),
                                       ],
                                     ),
                                   ),
@@ -456,7 +512,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                                   if (widget.onPressed != null) {
                                     widget.onPressed!(
                                       selectedCustomer!,
-                                      _generateInvoiceNumber(),
+                                      _currentRefCode,
                                       _selectedDate,
                                     );
                                   }
@@ -473,7 +529,7 @@ class _AddDocumentDialogState extends State<AddDocumentDialog>
                               ),
                               child: Text(
                                 AppTranslations.get(
-                                  'create_invoice',
+                                  _getDocumentTranslationKey('create'),
                                   currentLang,
                                 ),
                                 style: const TextStyle(

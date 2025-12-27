@@ -560,6 +560,46 @@ class ExtrusionApiService {
   }
 
   // ==========================================
+  // STOCK CHECK API METHODS
+  // ==========================================
+
+  /// Check billette (BI002) stock availability in SMP inventory
+  /// Returns: {'available': true/false, 'current_stock': double, 'required': double}
+  Future<Map<String, dynamic>> checkStockSMP({
+    required double requiredQty,
+  }) async {
+    final baseUrl = await _ensureBaseUrl();
+    try {
+      final uri = Uri.parse('$baseUrl/api/extrusion/check_stock.php');
+
+      final body = {'required_qty': requiredQty};
+
+      final response = await http
+          .post(uri, headers: _headers, body: json.encode(body))
+          .timeout(requestTimeout);
+
+      final result = _handleResponse(response);
+
+      if (result['success'] == true && result['data'] != null) {
+        return Map<String, dynamic>.from(result['data']);
+      } else {
+        // If API fails, assume stock is available to not block the user
+        return {
+          'available': true,
+          'current_stock': 0.0,
+          'required': requiredQty,
+        };
+      }
+    } on TimeoutException {
+      debugPrint('Timeout checking stock');
+      return {'available': true, 'current_stock': 0.0, 'required': requiredQty};
+    } catch (e) {
+      debugPrint('Error in checkStockSMP: $e');
+      return {'available': true, 'current_stock': 0.0, 'required': requiredQty};
+    }
+  }
+
+  // ==========================================
   // HTTP RESPONSE HANDLING
   // ==========================================
 

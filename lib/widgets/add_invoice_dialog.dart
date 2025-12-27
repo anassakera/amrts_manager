@@ -1,5 +1,6 @@
 import '../core/imports.dart';
 import '../screens/purchases/purchase_local/edit_invoice_screen_buy.dart';
+import '../screens/suppliers_curd_screen/suppliers_curd_screen.dart';
 
 class AddInvoiceDialog extends StatefulWidget {
   final bool isLocal;
@@ -14,20 +15,19 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  late TextEditingController _clientNameController;
+  late TextEditingController _supplierNameController;
   late TextEditingController _invoiceNumberController;
   final _formKey = GlobalKey<FormState>();
-  final ApiService _apiService = ApiService();
   final bool _isLoading = false;
-  List<Map<String, dynamic>> clients = [];
-  String? selectedCustomer;
+  List<Map<String, dynamic>> suppliers = [];
+  String? selectedSupplier;
   DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _fetchClients();
-    _clientNameController = TextEditingController();
+    _fetchSuppliers();
+    _supplierNameController = TextEditingController();
     _invoiceNumberController = TextEditingController();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -42,7 +42,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
   @override
   void dispose() {
     _animationController.dispose();
-    _clientNameController.dispose();
+    _supplierNameController.dispose();
     _invoiceNumberController.dispose();
     super.dispose();
   }
@@ -108,14 +108,14 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
     }
   }
 
-  Future<void> _fetchClients() async {
+  Future<void> _fetchSuppliers() async {
     try {
-      final fetchClients = await _apiService.loadAllClients();
+      final fetchedSuppliers = await ApiServices.getAllSuppliers();
 
       if (!mounted) return;
 
       setState(() {
-        clients = fetchClients;
+        suppliers = fetchedSuppliers;
       });
     } catch (e) {
       if (!mounted) return;
@@ -228,19 +228,22 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                   key: _formKey,
                   child: Column(
                     children: [
-                      // حقل اسم العميل
-                      // حقل اسم العميل
+                      // حقل اسم المورد
                       SearchableDropdownT<String>(
-                        items: clients
+                        items: suppliers
                             .where(
-                              (client) => client['IsActive'] == true,
-                            ) // فلترة العملاء النشطين فقط
-                            .map((client) => client['ClientName'] as String)
+                              (supplier) =>
+                                  supplier['is_active'] == true ||
+                                  supplier['is_active'] == 1,
+                            ) // فلترة الموردين النشطين فقط
+                            .map(
+                              (supplier) => supplier['supplier_name'] as String,
+                            )
                             .toList(),
                         displayText: (item) => item,
-                        selectedValue: selectedCustomer,
+                        selectedValue: selectedSupplier,
                         onChanged: (value) =>
-                            setState(() => selectedCustomer = value),
+                            setState(() => selectedSupplier = value),
                         hintText: "Choix fournisseur......",
                         prefixIcon: const Icon(Icons.person_outline_rounded),
                         primaryColor: Colors.blue,
@@ -248,7 +251,7 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                         onPrefixIconTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => const ClientCurdScreen(),
+                              builder: (context) => const SuppliersCurdScreen(),
                             ),
                           );
                         },
@@ -392,7 +395,8 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                           builder: (context) => widget.isLocal
                                               ? SmartDocumentScreenBuy(
                                                   isLocal: widget.isLocal,
-                                                  clientName: selectedCustomer,
+                                                  supplierName:
+                                                      selectedSupplier,
                                                   invoiceNumber:
                                                       _invoiceNumberController
                                                           .text,
@@ -400,7 +404,8 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog>
                                                 )
                                               : SmartDocumentScreen(
                                                   isLocal: widget.isLocal,
-                                                  clientName: selectedCustomer,
+                                                  supplierName:
+                                                      selectedSupplier,
                                                   invoiceNumber:
                                                       _invoiceNumberController
                                                           .text,

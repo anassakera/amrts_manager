@@ -43,109 +43,105 @@ class PrintSalesDocuments {
             margin: const pdf.EdgeInsets.all(20),
             pageFormat: PdfPageFormat.a4,
             build: (context) {
-              return pdf.Container(
-                color: PdfColors.white,
-                child: pdf.Column(
-                  crossAxisAlignment: pdf.CrossAxisAlignment.stretch,
-                  children: [
-                    // Titre BON DE LIVRAISON avec informations
-                    pdf.Row(
-                      children: [
-                        // Titre BON DE LIVRAISON
-                        pdf.Expanded(
-                          flex: 2,
-                          child: pdf.Container(
-                            padding: const pdf.EdgeInsets.symmetric(
-                              vertical: 16,
-                            ),
-                            decoration: pdf.BoxDecoration(
-                              borderRadius: pdf.BorderRadius.circular(12),
-                              color: PdfColor.fromHex('#1E3A8A'),
-                            ),
-                            child: pdf.Center(
-                              child: pdf.Text(
-                                _getDocumentTitle(
-                                  commande['Document_Ref']?.toString() ?? '',
-                                ),
-                                style: pdf.TextStyle(
-                                  font: poppinsBoldFont,
-                                  fontSize: 26,
-                                  color: PdfColors.white,
-                                  letterSpacing: 2,
-                                ),
+              return pdf.Column(
+                crossAxisAlignment: pdf.CrossAxisAlignment.stretch,
+                children: [
+                  // Titre BON DE LIVRAISON avec informations
+                  pdf.Row(
+                    children: [
+                      // Titre BON DE LIVRAISON
+                      pdf.Expanded(
+                        flex: 2,
+                        child: pdf.Container(
+                          padding: const pdf.EdgeInsets.symmetric(vertical: 16),
+                          decoration: pdf.BoxDecoration(
+                            borderRadius: pdf.BorderRadius.circular(12),
+                            color: PdfColor.fromHex('#1E3A8A'),
+                          ),
+                          child: pdf.Center(
+                            child: pdf.Text(
+                              _getDocumentTitle(
+                                commande['Document_Ref']?.toString() ?? '',
+                              ),
+                              style: pdf.TextStyle(
+                                font: poppinsBoldFont,
+                                fontSize: 26,
+                                color: PdfColors.white,
+                                letterSpacing: 2,
                               ),
                             ),
                           ),
                         ),
-                        pdf.SizedBox(width: 5),
-                        // Container des informations
-                        pdf.Expanded(
-                          flex: 1,
-                          child: pdf.Container(
-                            padding: const pdf.EdgeInsets.all(12),
-                            decoration: pdf.BoxDecoration(
-                              borderRadius: pdf.BorderRadius.circular(10),
-                              gradient: pdf.LinearGradient(
-                                colors: [
-                                  PdfColor.fromHex('#F8FAFC'),
-                                  PdfColor.fromHex('#E2E8F0'),
-                                ],
-                              ),
-                              border: pdf.Border.all(
-                                color: PdfColor.fromHex('#CBD5E1'),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                pdf.BoxShadow(
-                                  color: PdfColor.fromHex('#00000008'),
-                                  offset: const PdfPoint(0, 2),
-                                  blurRadius: 4,
-                                ),
+                      ),
+                      pdf.SizedBox(width: 5),
+                      // Container des informations
+                      pdf.Expanded(
+                        flex: 1,
+                        child: pdf.Container(
+                          padding: const pdf.EdgeInsets.all(12),
+                          decoration: pdf.BoxDecoration(
+                            borderRadius: pdf.BorderRadius.circular(10),
+                            gradient: pdf.LinearGradient(
+                              colors: [
+                                PdfColor.fromHex('#F8FAFC'),
+                                PdfColor.fromHex('#E2E8F0'),
                               ],
                             ),
-                            child: pdf.Column(
-                              crossAxisAlignment: pdf.CrossAxisAlignment.start,
-                              children: [
-                                _buildInfoRow(
-                                  'Client:',
-                                  commande['Client'] ?? '',
-                                  poppinsFont,
-                                  poppinsBoldFont,
-                                ),
-                                pdf.SizedBox(height: 4),
-                                _buildInfoRow(
-                                  'Référence:',
-                                  commande['Document_Ref']?.toString() ?? '',
-                                  poppinsFont,
-                                  poppinsBoldFont,
-                                ),
-                                pdf.SizedBox(height: 4),
-                                _buildInfoRow(
-                                  'Statut:',
-                                  commande['status'] ?? '',
-                                  poppinsFont,
-                                  poppinsBoldFont,
-                                ),
-                                pdf.SizedBox(height: 4),
-                                _buildInfoRow(
-                                  'Date:',
-                                  commande['date'] ?? '',
-                                  poppinsFont,
-                                  poppinsBoldFont,
-                                ),
-                              ],
+                            border: pdf.Border.all(
+                              color: PdfColor.fromHex('#CBD5E1'),
+                              width: 1.5,
                             ),
+                            boxShadow: [
+                              pdf.BoxShadow(
+                                color: PdfColor.fromHex('#00000008'),
+                                offset: const PdfPoint(0, 2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: pdf.Column(
+                            crossAxisAlignment: pdf.CrossAxisAlignment.start,
+                            children: [
+                              _buildInfoRow(
+                                'Client:',
+                                commande['Client'] ?? '',
+                                poppinsFont,
+                                poppinsBoldFont,
+                              ),
+                              pdf.SizedBox(height: 4),
+                              _buildInfoRow(
+                                'Référence:',
+                                commande['Document_Ref']?.toString() ?? '',
+                                poppinsFont,
+                                poppinsBoldFont,
+                              ),
+                              pdf.SizedBox(height: 4),
+                              _buildInfoRow(
+                                'Statut:',
+                                commande['status'] ?? '',
+                                poppinsFont,
+                                poppinsBoldFont,
+                              ),
+                              pdf.SizedBox(height: 4),
+                              _buildInfoRow(
+                                'Date:',
+                                commande['date'] ?? '',
+                                poppinsFont,
+                                poppinsBoldFont,
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                    pdf.SizedBox(height: 5),
-                    _buildItemsTable(items, poppinsFont, poppinsBoldFont),
-                    pdf.SizedBox(height: 5),
-                    pdf.Spacer(),
-                    _buildSummaryBox(commande, poppinsFont, poppinsBoldFont),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                  pdf.SizedBox(height: 5),
+                  _buildItemsTable(items, poppinsFont, poppinsBoldFont),
+                  // Spacer to push total to bottom
+                  pdf.Expanded(child: pdf.Container()),
+                  // Total at bottom
+                  _buildTotalRow(items, poppinsFont, poppinsBoldFont),
+                ],
               );
             },
           ),
@@ -158,129 +154,117 @@ class PrintSalesDocuments {
               ? (page + 1) * itemsPerPage
               : totalItems;
           final itemsChunk = items.sublist(start, end);
+          final isLastPage = page == pageCount - 1;
 
           pdfDoc.addPage(
             pdf.Page(
               margin: const pdf.EdgeInsets.all(20),
               pageFormat: PdfPageFormat.a4,
               build: (context) {
-                return pdf.Container(
-                  color: PdfColors.white,
-                  child: pdf.Column(
-                    crossAxisAlignment: pdf.CrossAxisAlignment.stretch,
-                    children: [
-                      if (page == 0) ...[
-                        // Titre BON DE LIVRAISON avec informations (فقط في الصفحة الأولى)
-                        pdf.Row(
-                          children: [
-                            pdf.Expanded(
-                              flex: 2,
-                              child: pdf.Container(
-                                padding: const pdf.EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                decoration: pdf.BoxDecoration(
-                                  borderRadius: pdf.BorderRadius.circular(12),
-                                  color: PdfColor.fromHex('#1E3A8A'),
-                                ),
-                                child: pdf.Center(
-                                  child: pdf.Text(
-                                    _getDocumentTitle(
-                                      commande['Document_Ref']?.toString() ??
-                                          '',
-                                    ),
-                                    style: pdf.TextStyle(
-                                      font: poppinsBoldFont,
-                                      fontSize: 26,
-                                      color: PdfColors.white,
-                                      letterSpacing: 2,
-                                    ),
+                return pdf.Column(
+                  crossAxisAlignment: pdf.CrossAxisAlignment.stretch,
+                  children: [
+                    if (page == 0) ...[
+                      // Titre BON DE LIVRAISON avec informations (فقط في الصفحة الأولى)
+                      pdf.Row(
+                        children: [
+                          pdf.Expanded(
+                            flex: 2,
+                            child: pdf.Container(
+                              padding: const pdf.EdgeInsets.symmetric(
+                                vertical: 16,
+                              ),
+                              decoration: pdf.BoxDecoration(
+                                borderRadius: pdf.BorderRadius.circular(12),
+                                color: PdfColor.fromHex('#1E3A8A'),
+                              ),
+                              child: pdf.Center(
+                                child: pdf.Text(
+                                  _getDocumentTitle(
+                                    commande['Document_Ref']?.toString() ?? '',
+                                  ),
+                                  style: pdf.TextStyle(
+                                    font: poppinsBoldFont,
+                                    fontSize: 26,
+                                    color: PdfColors.white,
+                                    letterSpacing: 2,
                                   ),
                                 ),
                               ),
                             ),
-                            pdf.SizedBox(width: 5),
-                            pdf.Expanded(
-                              flex: 1,
-                              child: pdf.Container(
-                                padding: const pdf.EdgeInsets.all(12),
-                                decoration: pdf.BoxDecoration(
-                                  borderRadius: pdf.BorderRadius.circular(10),
-                                  gradient: pdf.LinearGradient(
-                                    colors: [
-                                      PdfColor.fromHex('#F8FAFC'),
-                                      PdfColor.fromHex('#E2E8F0'),
-                                    ],
-                                  ),
-                                  border: pdf.Border.all(
-                                    color: PdfColor.fromHex('#CBD5E1'),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    pdf.BoxShadow(
-                                      color: PdfColor.fromHex('#00000008'),
-                                      offset: const PdfPoint(0, 2),
-                                      blurRadius: 4,
-                                    ),
+                          ),
+                          pdf.SizedBox(width: 5),
+                          pdf.Expanded(
+                            flex: 1,
+                            child: pdf.Container(
+                              padding: const pdf.EdgeInsets.all(12),
+                              decoration: pdf.BoxDecoration(
+                                borderRadius: pdf.BorderRadius.circular(10),
+                                gradient: pdf.LinearGradient(
+                                  colors: [
+                                    PdfColor.fromHex('#F8FAFC'),
+                                    PdfColor.fromHex('#E2E8F0'),
                                   ],
                                 ),
-                                child: pdf.Column(
-                                  crossAxisAlignment:
-                                      pdf.CrossAxisAlignment.start,
-                                  children: [
-                                    _buildInfoRow(
-                                      'Client:',
-                                      commande['Client'] ?? '',
-                                      poppinsFont,
-                                      poppinsBoldFont,
-                                    ),
-                                    pdf.SizedBox(height: 4),
-                                    _buildInfoRow(
-                                      'Référence:',
-                                      commande['Document_Ref']?.toString() ??
-                                          '',
-                                      poppinsFont,
-                                      poppinsBoldFont,
-                                    ),
-                                    pdf.SizedBox(height: 4),
-                                    _buildInfoRow(
-                                      'Statut:',
-                                      commande['status'] ?? '',
-                                      poppinsFont,
-                                      poppinsBoldFont,
-                                    ),
-                                    pdf.SizedBox(height: 4),
-                                    _buildInfoRow(
-                                      'Date:',
-                                      commande['date'] ?? '',
-                                      poppinsFont,
-                                      poppinsBoldFont,
-                                    ),
-                                  ],
+                                border: pdf.Border.all(
+                                  color: PdfColor.fromHex('#CBD5E1'),
+                                  width: 1.5,
                                 ),
+                                boxShadow: [
+                                  pdf.BoxShadow(
+                                    color: PdfColor.fromHex('#00000008'),
+                                    offset: const PdfPoint(0, 2),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: pdf.Column(
+                                crossAxisAlignment:
+                                    pdf.CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    'Client:',
+                                    commande['Client'] ?? '',
+                                    poppinsFont,
+                                    poppinsBoldFont,
+                                  ),
+                                  pdf.SizedBox(height: 4),
+                                  _buildInfoRow(
+                                    'Référence:',
+                                    commande['Document_Ref']?.toString() ?? '',
+                                    poppinsFont,
+                                    poppinsBoldFont,
+                                  ),
+                                  pdf.SizedBox(height: 4),
+                                  _buildInfoRow(
+                                    'Statut:',
+                                    commande['status'] ?? '',
+                                    poppinsFont,
+                                    poppinsBoldFont,
+                                  ),
+                                  pdf.SizedBox(height: 4),
+                                  _buildInfoRow(
+                                    'Date:',
+                                    commande['date'] ?? '',
+                                    poppinsFont,
+                                    poppinsBoldFont,
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                        pdf.SizedBox(height: 5),
-                      ],
-                      // جدول العناصر لهذه الصفحة فقط
-                      _buildItemsTable(
-                        itemsChunk,
-                        poppinsFont,
-                        poppinsBoldFont,
+                          ),
+                        ],
                       ),
-                      if (page == pageCount - 1) ...[
-                        pdf.SizedBox(height: 5),
-                        pdf.Spacer(),
-                        _buildSummaryBox(
-                          commande,
-                          poppinsFont,
-                          poppinsBoldFont,
-                        ),
-                      ],
+                      pdf.SizedBox(height: 5),
                     ],
-                  ),
+                    // جدول العناصر لهذه الصفحة فقط
+                    _buildItemsTable(itemsChunk, poppinsFont, poppinsBoldFont),
+                    // Show total only on the last page
+                    if (isLastPage) ...[
+                      pdf.Expanded(child: pdf.Container()),
+                      _buildTotalRow(items, poppinsFont, poppinsBoldFont),
+                    ],
+                  ],
                 );
               },
             ),
@@ -325,33 +309,172 @@ class PrintSalesDocuments {
     );
   }
 
+  // Total Row Widget - Separate from table, positioned at bottom
+  static pdf.Widget _buildTotalRow(
+    List? items,
+    pdf.Font font,
+    pdf.Font boldFont,
+  ) {
+    // Largeurs personnalisées pour chaque colonne
+    final columnWidths = [
+      1.0, // Réf
+      2.5, // Désignation
+      0.8, // Couleur
+      0.6, // Qté
+      0.8, // P.U
+      1.0, // Montant
+    ];
+
+    // Calculate totals
+    int totalQuantity = 0;
+    double totalMontant = 0.0;
+    if (items != null && items.isNotEmpty) {
+      for (final item in items) {
+        final price = (item['Price'] as num?)?.toDouble() ?? 0.0;
+        final quantity = (item['Quantité'] as num?)?.toInt() ?? 0;
+        totalQuantity += quantity;
+        totalMontant += price * quantity;
+      }
+    }
+
+    return pdf.Container(
+      decoration: pdf.BoxDecoration(
+        gradient: pdf.LinearGradient(
+          colors: [PdfColor.fromHex('#1E3A8A'), PdfColor.fromHex('#3B82F6')],
+        ),
+        borderRadius: pdf.BorderRadius.circular(12),
+        boxShadow: [
+          pdf.BoxShadow(
+            color: PdfColor.fromHex('#00000015'),
+            offset: const PdfPoint(0, 2),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+      child: pdf.Row(
+        children: [
+          // Empty space for Réf
+          pdf.Expanded(
+            flex: (columnWidths[0] * 10).round(),
+            child: pdf.Container(
+              padding: const pdf.EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 4,
+              ),
+              child: pdf.Text(''),
+            ),
+          ),
+          // "TOTAL" label in Désignation column
+          pdf.Expanded(
+            flex: (columnWidths[1] * 10).round(),
+            child: pdf.Container(
+              padding: const pdf.EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 4,
+              ),
+              child: pdf.Text(
+                'TOTAL',
+                style: pdf.TextStyle(
+                  font: boldFont,
+                  fontSize: 10,
+                  color: PdfColors.white,
+                  letterSpacing: 1.5,
+                ),
+                textAlign: pdf.TextAlign.right,
+              ),
+            ),
+          ),
+          // Empty space for Couleur
+          pdf.Expanded(
+            flex: (columnWidths[2] * 10).round(),
+            child: pdf.Container(
+              padding: const pdf.EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 4,
+              ),
+              child: pdf.Text(''),
+            ),
+          ),
+          // Total Quantity
+          pdf.Expanded(
+            flex: (columnWidths[3] * 10).round(),
+            child: pdf.Container(
+              padding: const pdf.EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 4,
+              ),
+              child: pdf.Text(
+                NumberFormattingService.formatQuantitySafe(totalQuantity),
+                style: pdf.TextStyle(
+                  font: boldFont,
+                  fontSize: 9,
+                  color: PdfColors.white,
+                ),
+                textAlign: pdf.TextAlign.center,
+              ),
+            ),
+          ),
+          // Empty space for P.U
+          pdf.Expanded(
+            flex: (columnWidths[4] * 10).round(),
+            child: pdf.Container(
+              padding: const pdf.EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 4,
+              ),
+              child: pdf.Text(''),
+            ),
+          ),
+          // Total Montant
+          pdf.Expanded(
+            flex: (columnWidths[5] * 10).round(),
+            child: pdf.Container(
+              padding: const pdf.EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 4,
+              ),
+              child: pdf.Text(
+                NumberFormattingService.formatCurrencySafe(totalMontant),
+                style: pdf.TextStyle(
+                  font: boldFont,
+                  fontSize: 9,
+                  color: PdfColors.white,
+                ),
+                textAlign: pdf.TextAlign.right,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   static pdf.Widget _buildItemsTable(
     List? items,
     pdf.Font font,
     pdf.Font boldFont,
   ) {
     // En-têtes du tableau
-    final headers = [
-      'Réf',
-      'Désignation',
-      'Qté',
-      'Couleur',
-      'Poids',
-      'P.Cons',
-      'Peinture',
-      'Gaz',
-    ];
+    final headers = ['Réf', 'Désignation', 'Couleur', 'Qté', 'P.U', 'Montant'];
 
     // Largeurs personnalisées pour chaque colonne
     final columnWidths = [
-      0.8, // Réf
-      1.5, // Désignation
-      0.6, // Qté
+      1.0, // Réf
+      2.5, // Désignation
       0.8, // Couleur
-      0.7, // Poids
-      0.8, // Poids consommé
-      0.8, // Peinture
-      0.8, // Gaz
+      0.6, // Qté
+      0.8, // P.U
+      1.0, // Montant
+    ];
+
+    // Alignements pour chaque colonne (left pour texte, right pour nombres)
+    final alignments = [
+      pdf.TextAlign.left, // Réf
+      pdf.TextAlign.left, // Désignation
+      pdf.TextAlign.center, // Couleur
+      pdf.TextAlign.center, // Qté
+      pdf.TextAlign.right, // P.U
+      pdf.TextAlign.right, // Montant
     ];
 
     return pdf.Container(
@@ -391,16 +514,14 @@ class PrintSalesDocuments {
                       vertical: 12,
                       horizontal: 4,
                     ),
-                    child: pdf.Center(
-                      child: pdf.Text(
-                        headers[index],
-                        style: pdf.TextStyle(
-                          font: boldFont,
-                          fontSize: 8,
-                          color: PdfColors.white,
-                        ),
-                        textAlign: pdf.TextAlign.center,
+                    child: pdf.Text(
+                      headers[index],
+                      style: pdf.TextStyle(
+                        font: boldFont,
+                        fontSize: 8,
+                        color: PdfColors.white,
                       ),
+                      textAlign: alignments[index],
                     ),
                   ),
                 );
@@ -413,7 +534,13 @@ class PrintSalesDocuments {
             pdf.Container(
               height: 60,
               alignment: pdf.Alignment.center,
-              decoration: pdf.BoxDecoration(color: PdfColor.fromHex('#F9FAFB')),
+              decoration: pdf.BoxDecoration(
+                color: PdfColor.fromHex('#F9FAFB'),
+                borderRadius: const pdf.BorderRadius.only(
+                  bottomLeft: pdf.Radius.circular(12),
+                  bottomRight: pdf.Radius.circular(12),
+                ),
+              ),
               child: pdf.Text(
                 'Aucun article disponible.',
                 style: pdf.TextStyle(
@@ -427,17 +554,29 @@ class PrintSalesDocuments {
           else
             ...List.generate(items.length, (i) {
               final item = items[i];
+              // Calculate montant (total price)
+              final price = (item['Price'] as num?)?.toDouble() ?? 0.0;
+              final quantity = (item['Quantité'] as num?)?.toInt() ?? 0;
+              final montant = price * quantity;
+              final isLastItem = i == items.length - 1;
+
               return pdf.Container(
                 decoration: pdf.BoxDecoration(
                   color: i % 2 == 0
                       ? PdfColor.fromHex('#F9FAFB')
                       : PdfColors.white,
-                  border: i < items.length - 1
+                  border: !isLastItem
                       ? pdf.Border(
                           bottom: pdf.BorderSide(
                             color: PdfColor.fromHex('#E5E7EB'),
                             width: 0.5,
                           ),
+                        )
+                      : null,
+                  borderRadius: isLastItem
+                      ? const pdf.BorderRadius.only(
+                          bottomLeft: pdf.Radius.circular(12),
+                          bottomRight: pdf.Radius.circular(12),
                         )
                       : null,
                 ),
@@ -449,9 +588,9 @@ class PrintSalesDocuments {
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
                         child: pdf.Text(
-                          '${item['product_reference'] ?? ''}',
+                          '${item['Référence'] ?? ''}',
                           style: pdf.TextStyle(font: font, fontSize: 7),
-                          textAlign: pdf.TextAlign.center,
+                          textAlign: alignments[0],
                         ),
                       ),
                     ),
@@ -461,94 +600,60 @@ class PrintSalesDocuments {
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
                         child: pdf.Text(
-                          '${item['product_designation'] ?? ''}',
+                          '${item['Désignation'] ?? ''}',
                           style: pdf.TextStyle(font: font, fontSize: 7),
-                          textAlign: pdf.TextAlign.center,
+                          textAlign: alignments[1],
                           maxLines: 2,
-                        ),
-                      ),
-                    ),
-                    // Quantité
-                    pdf.Expanded(
-                      flex: (columnWidths[2] * 10).round(),
-                      child: pdf.Container(
-                        padding: const pdf.EdgeInsets.all(6),
-                        child: pdf.Text(
-                          NumberFormattingService.formatQuantitySafe(
-                            item['quantity'],
-                          ),
-                          style: pdf.TextStyle(font: boldFont, fontSize: 7),
-                          textAlign: pdf.TextAlign.center,
                         ),
                       ),
                     ),
                     // Couleur
                     pdf.Expanded(
+                      flex: (columnWidths[2] * 10).round(),
+                      child: pdf.Container(
+                        padding: const pdf.EdgeInsets.all(6),
+                        child: pdf.Text(
+                          '${item['Couleur'] ?? ''}',
+                          style: pdf.TextStyle(font: font, fontSize: 7),
+                          textAlign: alignments[2],
+                        ),
+                      ),
+                    ),
+                    // Quantité
+                    pdf.Expanded(
                       flex: (columnWidths[3] * 10).round(),
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
                         child: pdf.Text(
-                          '${item['product_color'] ?? ''}',
-                          style: pdf.TextStyle(font: font, fontSize: 7),
-                          textAlign: pdf.TextAlign.center,
+                          NumberFormattingService.formatQuantitySafe(
+                            item['Quantité'],
+                          ),
+                          style: pdf.TextStyle(font: boldFont, fontSize: 7),
+                          textAlign: alignments[3],
                         ),
                       ),
                     ),
-                    // Poids unitaire
+                    // Prix Unitaire
                     pdf.Expanded(
                       flex: (columnWidths[4] * 10).round(),
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
                         child: pdf.Text(
-                          NumberFormattingService.formatWeightSafe(
-                            item['weight_per_unit'],
-                          ),
+                          NumberFormattingService.formatCurrencySafe(price),
                           style: pdf.TextStyle(font: font, fontSize: 7),
-                          textAlign: pdf.TextAlign.center,
+                          textAlign: alignments[4],
                         ),
                       ),
                     ),
-                    // Poids consommé
+                    // Montant (Total)
                     pdf.Expanded(
                       flex: (columnWidths[5] * 10).round(),
                       child: pdf.Container(
                         padding: const pdf.EdgeInsets.all(6),
                         child: pdf.Text(
-                          NumberFormattingService.formatWeightSafe(
-                            item['weight_consumed'],
-                          ),
-                          style: pdf.TextStyle(
-                            font: boldFont,
-                            fontSize: 7,
-                            color: PdfColor.fromHex('#1E3A8A'),
-                          ),
-                          textAlign: pdf.TextAlign.center,
-                        ),
-                      ),
-                    ),
-                    // Peinture
-                    pdf.Expanded(
-                      flex: (columnWidths[6] * 10).round(),
-                      child: pdf.Container(
-                        padding: const pdf.EdgeInsets.all(6),
-                        child: pdf.Text(
-                          NumberFormattingService.formatWeightSafe(
-                            item['peinture'],
-                          ),
-                          style: pdf.TextStyle(font: font, fontSize: 7),
-                          textAlign: pdf.TextAlign.center,
-                        ),
-                      ),
-                    ),
-                    // Gaz
-                    pdf.Expanded(
-                      flex: (columnWidths[7] * 10).round(),
-                      child: pdf.Container(
-                        padding: const pdf.EdgeInsets.all(6),
-                        child: pdf.Text(
-                          NumberFormattingService.formatWeightSafe(item['gaz']),
-                          style: pdf.TextStyle(font: font, fontSize: 7),
-                          textAlign: pdf.TextAlign.center,
+                          NumberFormattingService.formatCurrencySafe(montant),
+                          style: pdf.TextStyle(font: boldFont, fontSize: 7),
+                          textAlign: alignments[5],
                         ),
                       ),
                     ),
@@ -557,183 +662,6 @@ class PrintSalesDocuments {
               );
             }),
         ],
-      ),
-    );
-  }
-
-  static pdf.Widget _buildSummaryBox(
-    Map<String, dynamic> commande,
-    pdf.Font font,
-    pdf.Font boldFont,
-  ) {
-    final summaryFields = [
-      ['Total articles:', '${commande['total_items'] ?? 0}'],
-      [
-        'Poids consommé:',
-        NumberFormattingService.formatWeightSafe(
-          commande['total_weight_consumed'],
-        ),
-      ],
-      [
-        'Total peinture:',
-        NumberFormattingService.formatWeightSafe(commande['total_peinture']),
-      ],
-      [
-        'Total gaz:',
-        NumberFormattingService.formatWeightSafe(commande['total_gaz']),
-      ],
-      [
-        'Total bellet:',
-        NumberFormattingService.formatWeightSafe(commande['total_bellet']),
-      ],
-      [
-        'Total déchet:',
-        NumberFormattingService.formatWeightSafe(commande['total_dechet']),
-      ],
-    ];
-
-    return pdf.Align(
-      alignment: pdf.Alignment.centerRight,
-      child: pdf.Container(
-        width: double.infinity,
-        padding: const pdf.EdgeInsets.all(16),
-        decoration: pdf.BoxDecoration(
-          gradient: pdf.LinearGradient(
-            colors: [PdfColor.fromHex('#F8FAFC'), PdfColor.fromHex('#E2E8F0')],
-            begin: pdf.Alignment.topLeft,
-            end: pdf.Alignment.bottomRight,
-          ),
-          borderRadius: pdf.BorderRadius.circular(12),
-          border: pdf.Border.all(
-            color: PdfColor.fromHex('#CBD5E1'),
-            width: 1.5,
-          ),
-          boxShadow: [
-            pdf.BoxShadow(
-              color: PdfColor.fromHex('#00000010'),
-              offset: const PdfPoint(0, 4),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: pdf.Column(
-          crossAxisAlignment: pdf.CrossAxisAlignment.start,
-          children: [
-            pdf.Container(
-              width: double.infinity,
-              padding: const pdf.EdgeInsets.only(bottom: 8),
-              decoration: pdf.BoxDecoration(
-                border: pdf.Border(
-                  bottom: pdf.BorderSide(
-                    color: PdfColor.fromHex('#1E3A8A'),
-                    width: 2,
-                  ),
-                ),
-              ),
-              child: pdf.Text(
-                'RÉSUMÉ',
-                style: pdf.TextStyle(
-                  font: boldFont,
-                  fontSize: 14,
-                  color: PdfColor.fromHex('#1E3A8A'),
-                ),
-                textAlign: pdf.TextAlign.center,
-              ),
-            ),
-            pdf.SizedBox(height: 8),
-            pdf.Row(
-              mainAxisAlignment: pdf.MainAxisAlignment.spaceBetween,
-              children: [
-                for (var row in summaryFields.take(3))
-                  pdf.Container(
-                    width: 110,
-                    margin: const pdf.EdgeInsets.symmetric(horizontal: 2),
-                    padding: const pdf.EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 6,
-                    ),
-                    decoration: pdf.BoxDecoration(
-                      color: PdfColor.fromHex('#F1F5F9'),
-                      borderRadius: pdf.BorderRadius.circular(8),
-                      border: pdf.Border.all(
-                        color: PdfColor.fromHex('#CBD5E1'),
-                        width: 1,
-                      ),
-                    ),
-                    child: pdf.Column(
-                      crossAxisAlignment: pdf.CrossAxisAlignment.start,
-                      children: [
-                        pdf.Text(
-                          row[0],
-                          style: pdf.TextStyle(
-                            font: font,
-                            fontSize: 9,
-                            color: PdfColor.fromHex('#475569'),
-                          ),
-                        ),
-                        pdf.SizedBox(height: 2),
-                        pdf.Text(
-                          row[1],
-                          style: pdf.TextStyle(
-                            font: boldFont,
-                            fontSize: 10,
-                            color: PdfColor.fromHex('#1E293B'),
-                          ),
-                          textAlign: pdf.TextAlign.right,
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            pdf.SizedBox(height: 8),
-            pdf.Row(
-              mainAxisAlignment: pdf.MainAxisAlignment.spaceEvenly,
-              children: [
-                for (var row in summaryFields.skip(3))
-                  pdf.Container(
-                    width: 110,
-                    margin: const pdf.EdgeInsets.symmetric(horizontal: 2),
-                    padding: const pdf.EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 6,
-                    ),
-                    decoration: pdf.BoxDecoration(
-                      color: PdfColor.fromHex('#F1F5F9'),
-                      borderRadius: pdf.BorderRadius.circular(8),
-                      border: pdf.Border.all(
-                        color: PdfColor.fromHex('#CBD5E1'),
-                        width: 1,
-                      ),
-                    ),
-                    child: pdf.Column(
-                      crossAxisAlignment: pdf.CrossAxisAlignment.start,
-                      children: [
-                        pdf.Text(
-                          row[0],
-                          style: pdf.TextStyle(
-                            font: font,
-                            fontSize: 9,
-                            color: PdfColor.fromHex('#475569'),
-                          ),
-                        ),
-                        pdf.SizedBox(height: 2),
-                        pdf.Text(
-                          row[1],
-                          style: pdf.TextStyle(
-                            font: boldFont,
-                            fontSize: 10,
-                            color: PdfColor.fromHex('#1E293B'),
-                          ),
-                          textAlign: pdf.TextAlign.right,
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -16,62 +16,9 @@ class _SsfEditScreenState extends State<SsfEditScreen> {
   final List<int> _selectedIndices = [];
   bool _isSaving = false;
   int? _editingIndex;
-  bool get _hasSelection => _selectedIndices.isNotEmpty;
   String _currentItemStatus = 'Disponible';
   String _stockStatus = 'Disponible';
 
-  // final List<Map<String, dynamic>> inventorySsf = [
-  //   {
-  //     'id': 1,
-  //     'product_ref': 'TC4040',
-  //     'product_name': 'TUBE CARRE 40X40',
-  //     'product_type': 'BRUT',
-  //     'quantity': 75,
-  //     'CMUP': 100.19,
-  //     'total_cost': 7514.25,
-  //     'inventory_ssf_operations': [
-  //       {
-  //         'id': 1,
-  //         'date': '2025-11-22',
-  //         'doc_ref': 'EX2025-0001',
-  //         'product_ref': 'TC4040',
-  //         'product_name': 'TUBE CARRE 40X40',
-  //         'quantity': 75,
-  //         'weight_per_unit': 2.33,
-  //         'total_weight': 174.75,
-  //         'cost_kg': 43,
-  //         'unit_cost': 100.19,
-  //         'product_type': 'BRUT',
-  //         'source': 'EX2025-0001',
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     'id': 2,
-  //     'product_ref': '8343',
-  //     'product_name': 'DORMANT AVEC COUVRE JOINT',
-  //     'product_type': 'BRUT',
-  //     'quantity': 44,
-  //     'CMUP': 114.81,
-  //     'total_cost': 5051.64,
-  //     'inventory_ssf_operations': [
-  //       {
-  //         'id': 2,
-  //         'date': '2025-11-22',
-  //         'doc_ref': 'EX2025-0001',
-  //         'product_ref': '8343',
-  //         'product_name': 'DORMANT AVEC COUVRE JOINT',
-  //         'quantity': 44,
-  //         'weight_per_unit': 2.67,
-  //         'total_weight': 117.48,
-  //         'cost_kg': 43,
-  //         'unit_cost': 114.81,
-  //         'product_type': 'BRUT',
-  //         'source': 'EX2025-0001',
-  //       },
-  //     ],
-  //   },
-  // ];
   final Map<String, TextEditingController> _itemControllers = {};
 
   String _refCode = '';
@@ -475,60 +422,6 @@ class _SsfEditScreenState extends State<SsfEditScreen> {
                       const SizedBox(width: 5),
                       Expanded(child: _buildStockStatusDropdown()),
                       const SizedBox(width: 5),
-                      SizedBox(
-                        width: 100,
-                        height: 100,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(
-                              color: const Color(0xFFE2E8F0),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(
-                                  0xFF64748B,
-                                ).withValues(alpha: 0.06),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(5),
-                            child: GridView.count(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 6,
-                              crossAxisSpacing: 6,
-                              physics: const NeverScrollableScrollPhysics(),
-                              children: [
-                                _buildTooltipButton(
-                                  tooltip: 'Sélectionner tout',
-                                  onTap: _selectAll,
-                                  icon: Icons.select_all_rounded,
-                                  color: const Color(0xFF8B5CF6),
-                                ),
-                                if (_hasSelection)
-                                  _buildTooltipButton(
-                                    tooltip: 'Supprimer sélection',
-                                    onTap: _deleteSelected,
-                                    icon: Icons.delete_sweep_rounded,
-                                    color: const Color(0xFFEF4444),
-                                  ),
-                                if (_hasSelection)
-                                  _buildTooltipButton(
-                                    tooltip: 'Effacer sélection',
-                                    onTap: _clearSelection,
-                                    icon: Icons.clear_all_rounded,
-                                    color: const Color(0xFF6B7280),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -631,66 +524,6 @@ class _SsfEditScreenState extends State<SsfEditScreen> {
         });
       }
     }
-  }
-
-  void _selectAll() {
-    setState(() {
-      _selectedIndices.clear();
-      for (int i = 0; i < _items.length; i++) {
-        _selectedIndices.add(i);
-      }
-    });
-  }
-
-  void _clearSelection() {
-    setState(() {
-      _selectedIndices.clear();
-    });
-  }
-
-  void _deleteSelected() {
-    if (_selectedIndices.isEmpty) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: Text(
-          'Êtes-vous sûr de vouloir supprimer ${_selectedIndices.length} élément(s) ?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _selectedIndices.sort((a, b) => b.compareTo(a));
-                for (var index in _selectedIndices) {
-                  if (index >= 0 && index < _items.length) {
-                    _items.removeAt(index);
-                  }
-                }
-                _selectedIndices.clear();
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Éléments supprimés avec succès'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              'Supprimer',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _toggleSelection(int index) {
@@ -1188,32 +1021,6 @@ class _SsfEditScreenState extends State<SsfEditScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTooltipButton({
-    required String tooltip,
-    required VoidCallback onTap,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-        ),
       ),
     );
   }

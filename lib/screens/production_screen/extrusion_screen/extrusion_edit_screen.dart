@@ -429,7 +429,6 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
   Map<String, TextEditingController> _culotControllers = {};
 
   bool _isSaving = false;
-  bool _isHeaderExpanded = false;
   bool _isArretsExpanded = false;
   bool _isCulotExpanded = false;
 
@@ -1049,6 +1048,360 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
       return;
     }
 
+    // ✅ Check billette (BI002) stock availability in SMP BEFORE saving
+    final prutKgText = controllers['prut_kg']?.text.trim() ?? '0';
+    final prutKg = double.tryParse(prutKgText) ?? 0.0;
+
+    if (prutKg > 0) {
+      // Show loading indicator
+      setState(() {
+        _savingIndices.add(index);
+      });
+
+      try {
+        final stockCheck = await ExtrusionApiService().checkStockSMP(
+          requiredQty: prutKg,
+        );
+
+        if (!mounted) return;
+
+        final isAvailable = stockCheck['available'] == true;
+        final currentStock = stockCheck['current_stock'] ?? 0.0;
+
+        if (!isAvailable) {
+          setState(() {
+            _savingIndices.remove(index);
+          });
+
+          // Show error dialog with stock info
+          final foundInSMP = stockCheck['found_in_smp'] ?? false;
+          final foundName = stockCheck['found_name']?.toString() ?? 'Billette';
+
+          showDialog(
+            context: context,
+            builder: (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              elevation: 16,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 450),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with gradient
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 24,
+                      ),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.warning_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Stock insuffisant',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Quantité demandée non disponible',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Material Info Card
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF3B82F6,
+                                    ).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.inventory_2_rounded,
+                                    color: Color(0xFF3B82F6),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Matière première',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        foundName,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: foundInSMP
+                                        ? const Color(
+                                            0xFF10B981,
+                                          ).withValues(alpha: 0.1)
+                                        : const Color(
+                                            0xFFEF4444,
+                                          ).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    foundInSMP ? 'Trouvé' : 'Non trouvé',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: foundInSMP
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFFEF4444),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Stock Info Row
+                          Row(
+                            children: [
+                              // Available Stock
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEE2E2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFFFCA5A5),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      const Icon(
+                                        Icons.inventory_rounded,
+                                        color: Color(0xFFDC2626),
+                                        size: 24,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'Disponible',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF991B1B),
+                                        ),
+                                      ),
+                                      Text(
+                                        '${currentStock.toStringAsFixed(2)} Kg',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFFDC2626),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Required Quantity
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFFFCD34D),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      const Icon(
+                                        Icons.shopping_cart_rounded,
+                                        color: Color(0xFFD97706),
+                                        size: 24,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'Requis',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF92400E),
+                                        ),
+                                      ),
+                                      Text(
+                                        '${prutKg.toStringAsFixed(2)} Kg',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFFD97706),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // Info message
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  color: Color(0xFF6B7280),
+                                  size: 18,
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Veuillez vérifier le stock de matières premières (SMP).',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Action Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3B82F6),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.check_circle_rounded, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Compris',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        // If stock check fails, allow save but warn user
+        debugPrint('Stock check failed: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _savingIndices.remove(index);
+        });
+      }
+    }
+
     // تعيين heur_fin تلقائيًا إذا كان فارغًا
     if (controllers['heur_fin']!.text.trim().isEmpty) {
       final now = DateTime.now();
@@ -1360,39 +1713,215 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
     }
   }
 
+  void _showValidationErrorDialog(List<String> missingFields) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 16,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with gradient
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 24,
+                ),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.warning_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Champs requis manquants',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Veuillez remplir les champs suivants',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content - List of missing fields
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...missingFields.map(
+                      (field) => Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFFCA5A5),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFEF4444,
+                                ).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.error_outline_rounded,
+                                color: Color(0xFFDC2626),
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                field,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF991B1B),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF3B82F6),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_circle_rounded, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Compris',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveFiche({bool shouldPop = true}) async {
+    // Collect all missing required fields
+    final List<String> missingFields = [];
+
+    // Check numero
+    final numero = _headerControllers['numero']!.text.trim();
+    if (numero.isEmpty) {
+      missingFields.add('Numéro');
+    }
+
+    // Validate required header fields
+    final requiredHeaderFields = {
+      'date': 'Date',
+      'horaire': 'Horaire',
+      'equipe': 'Équipe',
+      'conducteur': 'Conducteur',
+      'dressage': 'Dressage',
+      'presse': 'Presse',
+    };
+
+    for (final entry in requiredHeaderFields.entries) {
+      final value = _headerControllers[entry.key]?.text.trim() ?? '';
+      if (value.isEmpty) {
+        missingFields.add(entry.value);
+      }
+    }
+
+    // Validate POID_DECHET in culot
+    final poidDechet = _culotControllers['POID_DECHET']?.text.trim() ?? '';
+    if (poidDechet.isEmpty) {
+      missingFields.add('Poids Déchet');
+    }
+
+    // If there are missing fields, show beautiful dialog
+    if (missingFields.isNotEmpty) {
+      _showValidationErrorDialog(missingFields);
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
-      final numero = _headerControllers['numero']!.text.trim();
-      if (numero.isEmpty) {
-        throw Exception('Le numéro est requis');
-      }
-
-      // Validate required header fields
-      final requiredHeaderFields = {
-        'numero': 'Numéro',
-        'date': 'Date',
-        'horaire': 'Horaire',
-        'equipe': 'Équipe',
-        'conducteur': 'Conducteur',
-        'dressage': 'Dressage',
-        'presse': 'Presse',
-      };
-
-      for (final entry in requiredHeaderFields.entries) {
-        final value = _headerControllers[entry.key]?.text.trim() ?? '';
-        if (value.isEmpty) {
-          throw Exception('Le champ "${entry.value}" est requis');
-        }
-      }
-
-      // Validate POID_DECHET in culot
-      final poidDechet = _culotControllers['POID_DECHET']?.text.trim() ?? '';
-      if (poidDechet.isEmpty) {
-        throw Exception('Le champ "Poids Déchet" est requis');
-      }
-
       // Update horaire with end time (format: "HH:mm - HH:mm")
       final now = DateTime.now();
       final endTime =
@@ -1519,8 +2048,6 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
             const SizedBox(height: 10),
             _buildCulotSection(),
             const SizedBox(height: 10),
-            _buildHeaderFieldsSection(),
-            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -1528,383 +2055,430 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
   }
 
   Widget _buildSmartHeader() {
+    // Auto-update total_arrets
+    final totalMinutes = _calculateTotalArretMinutes();
+    _headerControllers['total_arrets']?.text = '$totalMinutes min';
+
     return Container(
-      margin: const EdgeInsets.all(5),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Color(0xFFFAFBFC)],
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
-            blurRadius: 40,
-            offset: const Offset(0, 16),
-            spreadRadius: 0,
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          decoration: const BoxDecoration(color: Colors.white),
-          child: Padding(
-            padding: const EdgeInsets.all(5),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Top Row: Title, Read-only info chips, and Action Buttons
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFFF1F5F9), Color(0xFFE0E7EF)],
-                          ),
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(
-                                0xFF3B82F6,
-                              ).withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: const Color(
-                              0xFF3B82F6,
-                            ).withValues(alpha: 0.10),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.receipt_long_rounded,
-                                  color: Color(0xFF1E3A8A),
-                                  size: 26,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  widget.fiche == null
-                                      ? 'Nouvelle Fiche Extrusion'
-                                      : 'Modifier Fiche Extrusion',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF1E3A8A),
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.confirmation_number_rounded,
-                                  color: Color(0xFF3B82F6),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Numéro: ${_headerControllers['numero']?.text ?? 'N/A'}',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF3B82F6),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.person_pin_rounded,
-                                  color: Color(0xFF10B981),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _headerControllers['conducteur']
-                                              ?.text
-                                              .isEmpty ??
-                                          true
-                                      ? 'Conducteur'
-                                      : _headerControllers['conducteur']!.text,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF10B981),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_month_rounded,
-                                  color: Color(0xFFF59E0B),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _headerControllers['date']?.text ??
-                                      DateTime.now().toString().split(' ')[0],
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFFF59E0B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                // Title Section
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.receipt_long_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.fiche == null
+                            ? 'Nouvelle Fiche'
+                            : 'Modifier Fiche',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    ExtrusionEditWidgets.buildActionButton(
-                      context: context,
-                      onPressed: _hasUnsavedChanges
-                          ? null
-                          : () => Navigator.pop(context),
-                      icon: Icons.cancel_rounded,
-                      label: 'Annuler',
-                      color: const Color(0xFFE57373),
-                    ),
-                    const SizedBox(width: 12),
-                    ExtrusionEditWidgets.buildActionButton(
-                      context: context,
-                      onPressed: _isSaving ? null : _saveFiche,
-                      icon: Icons.save_rounded,
-                      label: _isSaving ? 'Enregistrement...' : 'Enregistrer',
-                      color: const Color(0xFF66BB6A),
-                      isLoading: _isSaving,
-                    ),
-                    const SizedBox(width: 5),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: ExtrusionEditWidgets.buildInfoCard(
-                        icon: Icons.inventory_2,
-                        label: 'Lots traités',
-                        value: '${_productionControllers.length}',
-                        color: const Color(0xFF3B82F6),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: ExtrusionEditWidgets.buildInfoCard(
-                        icon: Icons.scale,
-                        label: 'Total brut (Kg)',
-                        value: _calculateTotalBrut().toStringAsFixed(2),
-                        color: const Color(0xFF6366F1),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: ExtrusionEditWidgets.buildInfoCard(
-                        icon: Icons.calculate,
-                        label: 'Total net (Kg)',
-                        value: _calculateTotalNet().toStringAsFixed(2),
-                        color: const Color(0xFF10B981),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: ExtrusionEditWidgets.buildInfoCard(
-                        icon: Icons.percent,
-                        label: 'Chutes (%)',
-                        value: _calculateAverageChutes().toStringAsFixed(2),
-                        color: const Color(0xFFF59E0B),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: ExtrusionEditWidgets.buildInfoCard(
-                        icon: Icons.timer,
-                        label: 'Total arrêts',
-                        value: '${_calculateTotalArretMinutes()}',
-                        color: const Color(0xFFEF4444),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: ExtrusionEditWidgets.buildInfoCard(
-                        icon: Icons.build,
-                        label: 'Arrêts',
-                        value: '${_arretControllers.length}',
-                        color: const Color(0xFF9C27B0),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                  ],
+                const SizedBox(width: 8),
+                // Read-only Info Chips (Numero, Date, Horaire, Total Arrets)
+                Expanded(
+                  child: _buildCompactInfoChip(
+                    icon: Icons.tag_rounded,
+                    value: _headerControllers['numero']?.text ?? 'N/A',
+                    color: const Color(0xFF3B82F6),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildCompactInfoChip(
+                    icon: Icons.calendar_today_rounded,
+                    value: _headerControllers['date']?.text ?? '',
+                    color: const Color(0xFFF59E0B),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildCompactInfoChip(
+                    icon: Icons.access_time_rounded,
+                    value: _headerControllers['horaire']?.text ?? '',
+                    color: const Color(0xFF6366F1),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildCompactInfoChip(
+                    icon: Icons.timer_off_rounded,
+                    value: _headerControllers['total_arrets']?.text ?? '0 min',
+                    color: const Color(0xFFEF4444),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Editable Fields (Equipe, Conducteur, Dressage, Presse)
+                Expanded(
+                  child: _buildCompactEditableField(
+                    controller: _headerControllers['equipe']!,
+                    icon: Icons.groups_rounded,
+                    hint: 'Équipe',
+                    color: const Color(0xFF8B5CF6),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildCompactEditableField(
+                    controller: _headerControllers['conducteur']!,
+                    icon: Icons.engineering_rounded,
+                    hint: 'Conducteur',
+                    color: const Color(0xFF10B981),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildCompactEditableField(
+                    controller: _headerControllers['dressage']!,
+                    icon: Icons.construction_rounded,
+                    hint: 'Dressage',
+                    color: const Color(0xFFF97316),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildCompactEditableField(
+                    controller: _headerControllers['presse']!,
+                    icon: Icons.precision_manufacturing_rounded,
+                    hint: 'Presse',
+                    color: const Color(0xFFEC4899),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            // Bottom Row: Stats Cards
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMiniStatCard(
+                    icon: Icons.inventory_2_rounded,
+                    label: 'Lots',
+                    value: '${_productionControllers.length}',
+                    gradient: const [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildMiniStatCard(
+                    icon: Icons.scale_rounded,
+                    label: 'Brut (Kg)',
+                    value: _calculateTotalBrut().toStringAsFixed(1),
+                    gradient: const [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildMiniStatCard(
+                    icon: Icons.check_circle_rounded,
+                    label: 'Net (Kg)',
+                    value: _calculateTotalNet().toStringAsFixed(1),
+                    gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildMiniStatCard(
+                    icon: Icons.trending_down_rounded,
+                    label: 'Chutes',
+                    value: '${_calculateAverageChutes().toStringAsFixed(1)}%',
+                    gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildMiniStatCard(
+                    icon: Icons.pause_circle_rounded,
+                    label: 'Arrêts',
+                    value: '${_arretControllers.length}',
+                    gradient: const [Color(0xFFEF4444), Color(0xFFDC2626)],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactInfoChip({
+    required IconData icon,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactEditableField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    required Color color,
+  }) {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(9),
+                bottomLeft: Radius.circular(9),
+              ),
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: (_) => setState(() => _hasUnsavedChanges = true),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: color.withValues(alpha: 0.9),
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: color.withValues(alpha: 0.4),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 0,
+                ),
+                isDense: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required Color textColor,
+    required VoidCallback? onPressed,
+    bool isLoading = false,
+    bool isPrimary = false,
+  }) {
+    final isDisabled = onPressed == null;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: !isDisabled && isPrimary
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [color, color.withValues(alpha: 0.85)],
+                  )
+                : null,
+            color: isDisabled
+                ? Colors.grey.shade400
+                : (!isPrimary ? color : null),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: !isDisabled
+                ? [
+                    BoxShadow(
+                      color: (isPrimary ? color : Colors.black).withValues(
+                        alpha: 0.2,
+                      ),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isLoading)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                  ),
+                )
+              else
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isDisabled ? Colors.grey.shade600 : textColor,
+                ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isDisabled ? Colors.grey.shade600 : textColor,
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeaderFieldsSection() {
+  Widget _buildMiniStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required List<Color> gradient,
+  }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
+            color: gradient[0].withValues(alpha: 0.25),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          InkWell(
-            onTap: () => setState(() => _isHeaderExpanded = !_isHeaderExpanded),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6A1B9A), Color(0xFF8E24AA)],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 18, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
                 ),
-                borderRadius: _isHeaderExpanded
-                    ? const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
-                      )
-                    : BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Informations générales',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    _isHeaderExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
                     color: Colors.white,
-                    size: 20,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          if (_isHeaderExpanded)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _buildHeaderField('numero', 'Numéro', Icons.tag),
-                  _buildHeaderField('date', 'Date', Icons.calendar_today),
-                  _buildHeaderField('horaire', 'Horaire', Icons.access_time),
-                  _buildHeaderField('equipe', 'Équipe', Icons.groups),
-                  _buildHeaderField(
-                    'conducteur',
-                    'Conducteur',
-                    Icons.engineering,
-                  ),
-                  _buildHeaderField('dressage', 'Dressage', Icons.construction),
-                  _buildHeaderField(
-                    'presse',
-                    'Presse',
-                    Icons.precision_manufacturing,
-                  ),
-                  _buildHeaderField(
-                    'total_arrets',
-                    'Total Arrêts',
-                    Icons.timer,
-                  ),
-                ],
-              ),
-            ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderField(String key, String label, IconData icon) {
-    // numero, date, horaire, and total_arrets are read-only
-    final isReadOnly =
-        key == 'numero' ||
-        key == 'date' ||
-        key == 'horaire' ||
-        key == 'total_arrets';
-
-    // Auto-fill total_arrets with calculated value
-    if (key == 'total_arrets') {
-      final totalMinutes = _calculateTotalArretMinutes();
-      _headerControllers[key]?.text = '$totalMinutes min';
-    }
-
-    return SizedBox(
-      width: 200,
-      child: TextFormField(
-        controller: _headerControllers[key],
-        readOnly: isReadOnly,
-        enabled: !isReadOnly,
-        onChanged: isReadOnly
-            ? null
-            : (_) {
-                setState(() {
-                  _hasUnsavedChanges = true;
-                });
-              },
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, size: 18, color: const Color(0xFF8E24AA)),
-          isDense: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF8E24AA), width: 2),
-          ),
-          disabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          filled: true,
-          fillColor: isReadOnly ? Colors.grey.shade200 : Colors.grey.shade50,
-          suffixIcon: isReadOnly
-              ? const Icon(Icons.lock, size: 16, color: Colors.grey)
-              : null,
-        ),
-        style: TextStyle(color: isReadOnly ? Colors.grey.shade700 : null),
       ),
     );
   }
@@ -2082,39 +2656,88 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
+                    horizontal: 5,
+                    vertical: 5,
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.factory, color: Colors.white, size: 18),
-                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.factory_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       const Text(
                         'Données de production',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
                         ),
                       ),
                       const Spacer(),
-                      ElevatedButton.icon(
-                        onPressed: _addProductionEntry,
-                        icon: const Icon(Icons.add, size: 14),
-                        label: const Text(
-                          'Ajouter',
-                          style: TextStyle(fontSize: 12),
+                      // Action Buttons Group
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF1976D2),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            width: 1,
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Add Button
+                            _buildHeaderActionButton(
+                              icon: Icons.add_rounded,
+                              label: 'Ajouter',
+                              color: Colors.white,
+                              textColor: const Color(0xFF1E3A8A),
+                              onPressed: _addProductionEntry,
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 1,
+                              height: 28,
+                              color: Colors.white.withValues(alpha: 0.3),
+                            ),
+                            const SizedBox(width: 8),
+                            // Cancel Button
+                            _buildHeaderActionButton(
+                              icon: Icons.close_rounded,
+                              label: 'Annuler',
+                              color: const Color(0xFFFFCDD2),
+                              textColor: const Color(0xFFC62828),
+                              onPressed: _hasUnsavedChanges
+                                  ? null
+                                  : () => Navigator.pop(context),
+                            ),
+                            const SizedBox(width: 8),
+                            // Save Button
+                            _buildHeaderActionButton(
+                              icon: Icons.save_rounded,
+                              label: _isSaving ? 'Saving...' : 'Enregistrer',
+                              color: const Color(0xFF10B981),
+                              textColor: Colors.white,
+                              onPressed: _isSaving ? null : _saveFiche,
+                              isLoading: _isSaving,
+                              isPrimary: true,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -2180,10 +2803,7 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
                             'Long',
                             width: 90,
                           ),
-                          ExtrusionEditWidgets.buildTableHeaderFixed(
-                            'P.Barre',
-                            width: 90,
-                          ),
+
                           ExtrusionEditWidgets.buildTableHeaderFixed(
                             'Long Éclat',
                             width: 100,
@@ -2211,6 +2831,10 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
                           ),
                           ExtrusionEditWidgets.buildTableHeaderFixed(
                             'H.Fin',
+                            width: 90,
+                          ),
+                          ExtrusionEditWidgets.buildTableHeaderFixed(
+                            'P.Barre',
                             width: 90,
                           ),
                           ExtrusionEditWidgets.buildTableHeaderFixed(
@@ -2346,9 +2970,18 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
                                   // Auto-fill product_name
                                   controllers['product_name']?.text =
                                       selectedArticle['product_name'] ?? '';
+                                  // Auto-fill p_barre_reel from Poids
+                                  final poids = selectedArticle['Poids'];
+                                  controllers['p_barre_reel']?.text =
+                                      poids != null ? poids.toString() : '';
+                                  // Recalculate production values
+                                  _calculateProduction(
+                                    _productionControllers.indexOf(controllers),
+                                  );
                                 } else {
                                   controllers['ref']?.text = '';
                                   controllers['product_name']?.text = '';
+                                  controllers['p_barre_reel']?.text = '';
                                 }
                               });
                             },
@@ -2426,14 +3059,7 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
             isRequired: true,
             isReadOnly: isReadOnly,
           ),
-          _buildTableCellFixed(
-            controllers['p_barre_reel']!,
-            width: 90,
-            isNumber: true,
-            isRequired: true,
-            onChanged: () => _calculateProduction(index),
-            isReadOnly: isReadOnly,
-          ),
+          // anass
           _buildTableCellFixed(
             controllers['Long_eclt']!,
             width: 100,
@@ -2518,6 +3144,14 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
             isRequired: false,
             isCalculated: true,
             isReadOnly: true,
+          ),
+          _buildTableCellFixed(
+            controllers['p_barre_reel']!,
+            width: 90,
+            isNumber: true,
+            isRequired: true,
+            isCalculated: true, // Auto-filled from Poids
+            isReadOnly: true, // Always read-only
           ),
           _buildTableCellFixed(
             controllers['CU_EXTRUSION']!,

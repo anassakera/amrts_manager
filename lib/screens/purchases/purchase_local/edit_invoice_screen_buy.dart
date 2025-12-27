@@ -5,7 +5,7 @@ import 'api_services.dart';
 class SmartDocumentScreenBuy extends StatefulWidget {
   final Map<String, dynamic>? invoice;
   final bool isLocal;
-  final String? clientName;
+  final String? supplierName;
   final String? invoiceNumber;
   final DateTime? date;
 
@@ -13,7 +13,7 @@ class SmartDocumentScreenBuy extends StatefulWidget {
     super.key,
     this.invoice,
     this.isLocal = true,
-    this.clientName,
+    this.supplierName,
     this.invoiceNumber,
     this.date,
   });
@@ -255,7 +255,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> {
       _editingIndex = null;
       _selectedIndices.clear();
 
-      if (model['clientName'] != null && widget.clientName == null) {
+      if (model['supplierName'] != null && widget.supplierName == null) {
         // يمكن إضافة منطق إضافي هنا إذا لزم الأمر
       }
     });
@@ -337,7 +337,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> {
     }
 
     final totalAmount = _calculateTotalAmount(_items);
-    final clientName = _getClientName(_items, widget.clientName);
+    final supplierName = _getSupplierName(_items, widget.supplierName);
     final now = widget.date ?? DateTime.now();
     final formattedDate =
         '${now.day}/${now.month}/${now.year} | ${now.hour}:${now.minute.toString().padLeft(2, '0')}';
@@ -350,16 +350,16 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> {
       resultInvoice['items'] = List<Map<String, dynamic>>.from(_items);
       resultInvoice['summary'] = Map<String, dynamic>.from(_summary);
       resultInvoice['totalAmount'] = totalAmount;
-      if (widget.invoice!['clientName'] != null &&
-          widget.invoice!['clientName'].toString().isNotEmpty) {
-        resultInvoice['clientName'] = widget.invoice!['clientName'];
+      if (widget.invoice!['supplierName'] != null &&
+          widget.invoice!['supplierName'].toString().isNotEmpty) {
+        resultInvoice['supplierName'] = widget.invoice!['supplierName'];
       } else {
-        resultInvoice['clientName'] = clientName;
+        resultInvoice['supplierName'] = supplierName;
       }
     } else {
       // إنشاء فاتورة جديدة
       resultInvoice = {
-        'clientName': clientName,
+        'supplierName': supplierName,
         'invoiceNumber': widget.invoiceNumber ?? _summary['factureNumber'],
         'date': formattedDate,
         'isLocal': widget.isLocal,
@@ -379,29 +379,29 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> {
     _isSaving = false;
   }
 
-  String _getClientName(
+  String _getSupplierName(
     List<Map<String, dynamic>> items,
-    String? fallbackClientName,
+    String? fallbackSupplierName,
   ) {
-    if (widget.invoice != null && widget.invoice!['clientName'] != null) {
-      final originalClientName = widget.invoice!['clientName'];
-      if (originalClientName is String && originalClientName.isNotEmpty) {
-        return originalClientName;
+    if (widget.invoice != null && widget.invoice!['supplierName'] != null) {
+      final originalSupplierName = widget.invoice!['supplierName'];
+      if (originalSupplierName is String && originalSupplierName.isNotEmpty) {
+        return originalSupplierName;
       }
     }
 
-    if (fallbackClientName != null && fallbackClientName.isNotEmpty) {
-      return fallbackClientName;
+    if (fallbackSupplierName != null && fallbackSupplierName.isNotEmpty) {
+      return fallbackSupplierName;
     }
 
     for (var item in items) {
-      final name = item['clientName'];
+      final name = item['supplierName'];
       if (name is String && name.isNotEmpty) {
         return name;
       }
     }
 
-    return 'عميل غير محدد';
+    return 'مورد غير محدد';
   }
 
   double _calculateTotalAmount(List<Map<String, dynamic>> items) {
@@ -943,7 +943,7 @@ class SmartDocumentScreenBuyState extends State<SmartDocumentScreenBuy> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  _getClientName(_items, widget.clientName),
+                                  _getSupplierName(_items, widget.supplierName),
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,

@@ -16,7 +16,6 @@ class _SpfEditScreenState extends State<SpfEditScreen> {
   final List<int> _selectedIndices = [];
   bool _isSaving = false;
   int? _editingIndex;
-  bool get _hasSelection => _selectedIndices.isNotEmpty;
   String _currentItemStatus = 'Disponible';
   String _stockStatus = 'Disponible';
 
@@ -374,60 +373,6 @@ class _SpfEditScreenState extends State<SpfEditScreen> {
                       const SizedBox(width: 5),
                       Expanded(child: _buildStockStatusDropdown()),
                       const SizedBox(width: 5),
-                      SizedBox(
-                        width: 100,
-                        height: 100,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(
-                              color: const Color(0xFFE2E8F0),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(
-                                  0xFF64748B,
-                                ).withValues(alpha: 0.06),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(5),
-                            child: GridView.count(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 6,
-                              crossAxisSpacing: 6,
-                              physics: const NeverScrollableScrollPhysics(),
-                              children: [
-                                _buildTooltipButton(
-                                  tooltip: 'Sélectionner tout',
-                                  onTap: _selectAll,
-                                  icon: Icons.select_all_rounded,
-                                  color: const Color(0xFF7C3AED),
-                                ),
-                                if (_hasSelection)
-                                  _buildTooltipButton(
-                                    tooltip: 'Supprimer sélection',
-                                    onTap: _deleteSelected,
-                                    icon: Icons.delete_sweep_rounded,
-                                    color: const Color(0xFFEF4444),
-                                  ),
-                                if (_hasSelection)
-                                  _buildTooltipButton(
-                                    tooltip: 'Effacer sélection',
-                                    onTap: _clearSelection,
-                                    icon: Icons.clear_all_rounded,
-                                    color: const Color(0xFF6B7280),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -521,66 +466,6 @@ class _SpfEditScreenState extends State<SpfEditScreen> {
         });
       }
     }
-  }
-
-  void _selectAll() {
-    setState(() {
-      _selectedIndices.clear();
-      for (int i = 0; i < _items.length; i++) {
-        _selectedIndices.add(i);
-      }
-    });
-  }
-
-  void _clearSelection() {
-    setState(() {
-      _selectedIndices.clear();
-    });
-  }
-
-  void _deleteSelected() {
-    if (_selectedIndices.isEmpty) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: Text(
-          'Êtes-vous sûr de vouloir supprimer ${_selectedIndices.length} élément(s) ?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _selectedIndices.sort((a, b) => b.compareTo(a));
-                for (var index in _selectedIndices) {
-                  if (index >= 0 && index < _items.length) {
-                    _items.removeAt(index);
-                  }
-                }
-                _selectedIndices.clear();
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Éléments supprimés avec succès'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              'Supprimer',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _toggleSelection(int index) {
@@ -1172,32 +1057,6 @@ class _SpfEditScreenState extends State<SpfEditScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTooltipButton({
-    required String tooltip,
-    required VoidCallback onTap,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-        ),
       ),
     );
   }

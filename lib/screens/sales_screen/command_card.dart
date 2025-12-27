@@ -1,4 +1,4 @@
-import '../core/imports.dart';
+import '../../core/imports.dart';
 
 class CommandeCard extends StatelessWidget {
   final Map<String, dynamic> commande;
@@ -93,8 +93,10 @@ class CommandeCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+                        gradient: LinearGradient(
+                          colors: _getDocTypeColors(
+                            commande['doc_type'] ?? 'BL',
+                          ),
                         ),
                         borderRadius: BorderRadius.circular(6),
                       ),
@@ -342,5 +344,18 @@ class CommandeCard extends StatelessWidget {
         child: Icon(icon, size: 20, color: color),
       ),
     );
+  }
+
+  List<Color> _getDocTypeColors(String docType) {
+    switch (docType.toUpperCase()) {
+      case 'BL':
+        return [const Color(0xFF1E40AF), const Color(0xFF3B82F6)];
+      case 'BC':
+        return [const Color(0xFF065F46), const Color(0xFF10B981)];
+      case 'DE':
+        return [const Color(0xFF92400E), const Color(0xFFF59E0B)];
+      default:
+        return [const Color(0xFF1E40AF), const Color(0xFF3B82F6)];
+    }
   }
 }

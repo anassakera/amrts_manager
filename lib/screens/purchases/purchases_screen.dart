@@ -51,9 +51,10 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               inv['invoiceNumber']?.toString().toLowerCase() ?? '';
           if (invoiceNumber.contains(searchQuery)) return true;
 
-          // البحث في اسم العميل
-          final clientName = inv['clientName']?.toString().toLowerCase() ?? '';
-          if (clientName.contains(searchQuery)) return true;
+          // البحث في اسم المورد
+          final supplierName =
+              inv['supplierName']?.toString().toLowerCase() ?? '';
+          if (supplierName.contains(searchQuery)) return true;
 
           // البحث في التاريخ
           final date = inv['date']?.toString().toLowerCase() ?? '';
@@ -1118,13 +1119,13 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                 // للفواتير المحلية
                 invoice: invoice,
                 isLocal: invoice['isLocal'],
-                clientName: invoice['clientName'],
+                supplierName: invoice['supplierName'],
               )
             : SmartDocumentScreen(
                 // للفواتير غير المحلية
                 invoice: invoice,
                 isLocal: invoice['isLocal'],
-                clientName: invoice['clientName'],
+                supplierName: invoice['supplierName'],
               ),
       ),
     );

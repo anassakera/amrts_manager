@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class InventorySmpApiService {
   static final String baseUrl =
-      ApiServices.baseUrl ?? 'http://localhost/amrts_manager';
+      ApiServices.baseUrl ?? 'http://192.168.1.254/amrts_manager';
 
   /// Get all inventory SMP items (with operations)
   static Future<Map<String, dynamic>> getAllInventorySmp() async {

@@ -32,7 +32,6 @@ class ExtrusionCard extends StatelessWidget {
       (previousValue, element) =>
           previousValue + _parseDouble(element['prut_kg']),
     );
-    // حساب متوسط taux_de_chutes بدلاً من الجمع
     final avgChutes = production.isEmpty
         ? 0.0
         : production.fold<double>(
@@ -42,7 +41,6 @@ class ExtrusionCard extends StatelessWidget {
               ) /
               production.length;
 
-    // total_arrets is stored as int (minutes), display with 'min' suffix
     final totalArretsValue = fiche['total_arrets'];
     final totalArrets = totalArretsValue != null
         ? '$totalArretsValue min'
@@ -50,236 +48,516 @@ class ExtrusionCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.indigo.shade100.withValues(alpha: 0.8),
+          color: Colors.indigo.shade100.withValues(alpha: 0.6),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
+            color: Colors.indigo.shade100.withValues(alpha: 0.3),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Wrap(
-              spacing: 5,
-              runSpacing: 5,
-              children: [
-                _buildInfoChip(
-                  icon: Icons.numbers,
-                  label: '',
-                  value: fiche['numero'],
-                  color: const Color(0xFF2563EB),
-                ),
-                _buildInfoChip(
-                  icon: Icons.schedule,
-                  label: 'Date & Horaire',
-                  value:
-                      '${fiche['horaire']?.toString() ?? ''} ${fiche['date']?.toString() ?? ''}',
-                  color: const Color(0xFF2563EB),
-                ),
-                _buildInfoChip(
-                  icon: Icons.groups_2_outlined,
-                  label: 'Équipe',
-                  value: fiche['equipe'],
-                  color: const Color(0xFF2563EB),
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ═══════════════════════════════════════════════════════════════
+          // COMPACT HEADER
+          // ═══════════════════════════════════════════════════════════════
+          _buildCompactHeader(),
 
-                _buildInfoChip(
-                  icon: Icons.engineering_outlined,
-                  label: 'Conducteur',
-                  value: fiche['conducteur'],
-                  color: const Color(0xFF7C3AED),
-                ),
-                _buildInfoChip(
-                  icon: Icons.cut_outlined,
-                  label: 'Dressage',
-                  value: fiche['dressage'],
-                  color: const Color(0xFF10B981),
-                ),
-                _buildInfoChip(
-                  icon: Icons.precision_manufacturing,
-                  label: 'Presse',
-                  value: fiche['presse'],
-                  color: const Color(0xFF0EA5E9),
-                ),
-              ],
-            ),
-            const SizedBox(height: 5),
-            Wrap(
-              spacing: 5,
-              runSpacing: 5,
+          // ═══════════════════════════════════════════════════════════════
+          // CONTENT SECTION
+          // ═══════════════════════════════════════════════════════════════
+          Padding(
+            padding: const EdgeInsets.all(5),
+            child: Column(
               children: [
-                _buildStatCard(
-                  icon: Icons.assessment_outlined,
-                  label: 'Lots traités',
-                  value: '${production.length}',
-                  color: const Color(0xFF2563EB),
+                // Info + Stats Row
+                _buildMainContent(
+                  production: production,
+                  arrets: arrets,
+                  totalBrut: totalBrut,
+                  totalNet: totalNet,
+                  avgChutes: avgChutes,
+                  totalArrets: totalArrets,
                 ),
-                _buildStatCard(
-                  icon: Icons.scale_outlined,
-                  label: 'Total brut (Kg)',
-                  value: _formatNumber(totalBrut),
-                  color: const Color(0xFF7C3AED),
-                ),
-                _buildStatCard(
-                  icon: Icons.balance_outlined,
-                  label: 'Total net (Kg)',
-                  value: _formatNumber(totalNet),
-                  color: const Color(0xFF16A34A),
-                ),
-                _buildStatCard(
-                  icon: Icons.percent,
-                  label: 'Chutes (%)',
-                  value: _formatNumber(avgChutes),
-                  color: const Color(0xFFF97316),
-                ),
-                _buildStatCard(
-                  icon: Icons.timelapse_outlined,
-                  label: 'Total arrêts',
-                  value: totalArrets,
-                  color: const Color(0xFFEF4444),
-                ),
-                _buildStatCard(
-                  icon: Icons.build_outlined,
-                  label: 'Arrêts',
-                  value: '${arrets.length}',
-                  color: const Color(0xFF8B5CF6),
-                ),
-                _buildGridAction(Icons.print, Colors.blue.shade600, onPrint),
-                _buildGridAction(Icons.delete, Colors.red.shade600, onDelete),
-                _buildGridAction(Icons.edit, Colors.orange.shade600, onEdit),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoChip({
-    required IconData icon,
-    required String label,
-    required Object? value,
-    required Color color,
-  }) {
-    final display = value?.toString();
-    if (display == null || display.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return IntrinsicWidth(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.14)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            if (label.isNotEmpty)
-              Text(
-                '$label: ',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            Text(
-              display,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: Colors.grey.shade800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMPACT HEADER
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildCompactHeader() {
+    final numero = fiche['numero']?.toString() ?? '';
+    final date = fiche['date']?.toString() ?? '';
+    final horaire = fiche['horaire']?.toString() ?? '';
+    final equipe = fiche['equipe']?.toString() ?? '';
+    final conducteur = fiche['conducteur']?.toString() ?? '';
+    final presse = fiche['presse']?.toString() ?? '';
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 150),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1E3A8A), // Deep Navy Blue
+            Color(0xFF3B82F6), // Bright Blue
+            Color(0xFF0EA5E9), // Sky Blue
+          ],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(15),
+          topRight: Radius.circular(15),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Fiche Number - Primary Badge
+          _buildPrimaryBadge(numero),
+          const SizedBox(width: 10),
+
+          // Info Chips Container
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                // Date & Time
+                _buildGlassChip(icon: Icons.calendar_today_rounded, text: date),
+                _buildGlassChip(icon: Icons.access_time_rounded, text: horaire),
+                // Team
+                if (equipe.isNotEmpty)
+                  _buildGlassChip(icon: Icons.groups_2_rounded, text: equipe),
+                // Conducteur
+                if (conducteur.isNotEmpty)
+                  _buildGlassChip(
+                    icon: Icons.engineering_rounded,
+                    text: conducteur,
+                  ),
+                // Presse
+                if (presse.isNotEmpty)
+                  _buildGlassChip(
+                    icon: Icons.precision_manufacturing_rounded,
+                    text: presse,
+                    highlight: true,
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8),
+          // Action Buttons
+          _buildCompactActions(),
+        ],
+      ),
+    );
+  }
+
+  /// Primary badge for fiche number with premium glass effect
+  Widget _buildPrimaryBadge(String numero) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14),
+
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.25),
+            Colors.white.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+          bottomLeft: Radius.circular(0),
+          bottomRight: Radius.circular(12),
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
             ),
-            padding: const EdgeInsets.all(8),
-            child: Icon(icon, color: color, size: 18),
+            child: const Icon(Icons.tag_rounded, color: Colors.white, size: 14),
           ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color.withValues(alpha: 0.85),
-                ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-            ],
+          const SizedBox(width: 8),
+          Text(
+            'N° $numero',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGridAction(IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: color),
+  /// Glass-style info chip with premium design matching _buildPrimaryBadge
+  Widget _buildGlassChip({
+    required IconData icon,
+    required String text,
+    bool highlight = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: highlight ? 0.25 : 0.2),
+            Colors.white.withValues(alpha: highlight ? 0.15 : 0.08),
+          ],
         ),
-        child: Icon(icon, size: 20, color: color),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: highlight ? 0.45 : 0.35),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: highlight ? FontWeight.w800 : FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MAIN CONTENT - SINGLE ROW STATS
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildMainContent({
+    required List<Map<String, dynamic>> production,
+    required List<Map<String, dynamic>> arrets,
+    required double totalBrut,
+    required double totalNet,
+    required double avgChutes,
+    required String totalArrets,
+  }) {
+    final dressage = fiche['dressage']?.toString() ?? '';
+
+    return Row(
+      children: [
+        // Dressage (اختياري)
+        if (dressage.isNotEmpty) ...[
+          Expanded(
+            child: _buildCompactStat(
+              icon: Icons.content_cut_rounded,
+              label: 'Dressage',
+              value: dressage,
+              color: const Color(0xFF059669),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
+        // Lots
+        Expanded(
+          child: _buildCompactStat(
+            icon: Icons.inventory_2_rounded,
+            label: 'Lots',
+            value: '${production.length}',
+            color: const Color(0xFF2563EB),
+          ),
+        ),
+        const SizedBox(width: 6),
+        // Brut
+        Expanded(
+          child: _buildCompactStat(
+            icon: Icons.scale_rounded,
+            label: 'Brut',
+            value: '${_formatNumber(totalBrut)} Kg',
+            color: const Color(0xFF7C3AED),
+          ),
+        ),
+        const SizedBox(width: 6),
+        // Net
+        Expanded(
+          child: _buildCompactStat(
+            icon: Icons.balance_rounded,
+            label: 'Net',
+            value: '${_formatNumber(totalNet)} Kg',
+            color: const Color(0xFF059669),
+          ),
+        ),
+        const SizedBox(width: 6),
+        // Chutes
+        Expanded(
+          child: _buildCompactStat(
+            icon: Icons.trending_down_rounded,
+            label: 'Chutes',
+            value: '${_formatNumber(avgChutes)}%',
+            color: avgChutes > 10
+                ? const Color(0xFFDC2626)
+                : const Color(0xFFF59E0B),
+            highlight: avgChutes > 10,
+          ),
+        ),
+        const SizedBox(width: 6),
+        // Arrêts
+        Expanded(
+          child: _buildCompactStat(
+            icon: Icons.timer_off_rounded,
+            label: 'Arrêts',
+            value: totalArrets,
+            color: const Color(0xFFDC2626),
+          ),
+        ),
+        const SizedBox(width: 6),
+        // Nb Arrêts
+        Expanded(
+          child: _buildCompactStat(
+            icon: Icons.build_circle_rounded,
+            label: 'Nb',
+            value: '${arrets.length}',
+            color: const Color(0xFF8B5CF6),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactStat({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    bool highlight = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withValues(alpha: highlight ? 0.15 : 0.08),
+            color.withValues(alpha: highlight ? 0.08 : 0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: color.withValues(alpha: highlight ? 0.35 : 0.15),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: highlight ? 0.2 : 0.08),
+            blurRadius: highlight ? 10 : 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // أيقونة محسّنة مع خلفية دائرية
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          // النص محسّن
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    letterSpacing: 0.3,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: -0.3,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMPACT ACTION BUTTONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildCompactActions() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(14),
+              bottomRight: Radius.circular(0),
+              topLeft: Radius.circular(4),
+              bottomLeft: Radius.circular(4),
+            ),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF64748B).withValues(alpha: 0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildIconButton(
+                  tooltip: 'Imprimer',
+                  onTap: onPrint,
+                  icon: Icons.print_rounded,
+                  color: const Color(0xFF2563EB),
+                ),
+                const SizedBox(width: 6),
+                _buildIconButton(
+                  tooltip: 'Modifier',
+                  onTap: onEdit,
+                  icon: Icons.edit_rounded,
+                  color: const Color(0xFFF59E0B),
+                ),
+                const SizedBox(width: 6),
+                _buildIconButton(
+                  tooltip: 'Supprimer',
+                  onTap: onDelete,
+                  icon: Icons.delete_rounded,
+                  color: const Color(0xFFDC2626),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIconButton({
+    required String tooltip,
+    required VoidCallback onTap,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UTILITY METHODS
+  // ═══════════════════════════════════════════════════════════════════════════
 
   double _parseDouble(Object? value) {
     if (value == null) return 0;

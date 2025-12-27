@@ -200,24 +200,6 @@ class _CostsMangerScreenState extends State<CostsMangerScreen> {
               children: [
                 Expanded(
                   child: _buildCostCard(
-                    'CU_EXTRUSION',
-                    'Coût Extrusion',
-                    Icons.settings_input_component_rounded,
-                    const Color(0xFF10B981),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildCostCard(
-                    'CU_PEINTURE',
-                    'Coût Peinture',
-                    Icons.brush_rounded,
-                    const Color(0xFF8B5CF6),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildCostCard(
                     'MOIS',
                     'Mois',
                     Icons.calendar_month_rounded,
@@ -231,6 +213,24 @@ class _CostsMangerScreenState extends State<CostsMangerScreen> {
                     'Coût Fonderie',
                     Icons.factory_rounded,
                     const Color(0xFFEF4444),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCostCard(
+                    'CU_EXTRUSION',
+                    'Coût Extrusion',
+                    Icons.settings_input_component_rounded,
+                    const Color(0xFF10B981),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildCostCard(
+                    'CU_PEINTURE',
+                    'Coût Peinture',
+                    Icons.brush_rounded,
+                    const Color(0xFF8B5CF6),
                   ),
                 ),
               ],

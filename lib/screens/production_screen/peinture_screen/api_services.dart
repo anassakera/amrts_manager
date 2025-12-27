@@ -244,6 +244,39 @@ class PeintureApiService {
     }
   }
 
+  /// Check stock availability in SSF inventory
+  /// Returns: {'available': true/false, 'current_stock': int, 'required': int}
+  Future<Map<String, dynamic>> checkStockSSF({
+    required String productRef,
+    required int requiredQty,
+  }) async {
+    final baseUrl = await _ensureBaseUrl();
+    try {
+      final uri = Uri.parse('$baseUrl/api/peinture/check_stock.php');
+
+      final body = {'product_ref': productRef, 'required_qty': requiredQty};
+
+      final response = await http
+          .post(uri, headers: _headers, body: json.encode(body))
+          .timeout(_requestTimeout);
+
+      final result = _handleResponse(response);
+
+      if (result['success'] == true && result['data'] != null) {
+        return Map<String, dynamic>.from(result['data']);
+      } else {
+        // If API fails, assume stock is available to not block the user
+        return {'available': true, 'current_stock': 0, 'required': requiredQty};
+      }
+    } on TimeoutException {
+      debugPrint('Timeout checking stock');
+      return {'available': true, 'current_stock': 0, 'required': requiredQty};
+    } catch (e) {
+      debugPrint('Error in checkStockSSF: $e');
+      return {'available': true, 'current_stock': 0, 'required': requiredQty};
+    }
+  }
+
   /// Get the next numero for a new peinture record
   ///
   /// Format: PE-YY-MM-NNNNN

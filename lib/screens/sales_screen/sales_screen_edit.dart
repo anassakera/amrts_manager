@@ -26,9 +26,22 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
   final List<Map<String, dynamic>> _commandes = [];
   final List<int> _selectedIndices = [];
   bool _isSaving = false;
+  bool _isSavingItem = false; // For item-level saving indicator
+  bool _orderSavedToBackend = false; // Track if order has been saved to backend
+  int? _savedOrderId; // Store the order ID after first save
   late TabController _tabController;
   int? _editingIndex;
   bool get _hasSelection => _selectedIndices.isNotEmpty;
+  bool get _hasItems =>
+      _commandes.isNotEmpty && (_commandes[0]['items'] as List).isNotEmpty;
+
+  /// Check if quantity is valid for saving (not empty and > 0)
+  bool get _canSaveItem {
+    final quantityText =
+        _editControllers['Quantité']?.text.replaceAll(' ', '') ?? '';
+    final quantity = int.tryParse(quantityText) ?? 0;
+    return quantity > 0 && !_isSavingItem;
+  }
 
   final Map<String, TextEditingController> _editControllers = {};
 
@@ -42,81 +55,9 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
     {'Couleur': 'Rouge'},
   ];
 
-  final double peintureVar = 3;
-  final double gazVar = 7;
-  final double belletVar = 0.14;
-  final double dechetVar = 0.84;
-  // final double peintureVar = 3;
-  // final double gazVar = 7;
-  // final double belletVar = 0.18;
-  // final double dechetVar = 0.94;
-
   String _formatNumber(double number) {
     final formatter = NumberFormat('#,##0.00', 'fr_FR');
     return formatter.format(number);
-  }
-
-  void _calculateAndUpdateFields() {
-    final poids =
-        double.tryParse(
-          _editControllers['Poids']?.text.replaceAll(',', '.') ?? '0',
-        ) ??
-        0.0;
-    final quantite =
-        int.tryParse(
-          _editControllers['Quantité']?.text.replaceAll(' ', '') ?? '0',
-        ) ??
-        0;
-
-    final poidsConsomme = poids * quantite;
-    final peinture = poidsConsomme * peintureVar;
-    final gaz = poidsConsomme * gazVar;
-    final bellet = poidsConsomme / (1 - belletVar);
-    final dechet = bellet - poidsConsomme;
-    final dechetInitial = bellet / dechetVar;
-
-    _editControllers['Poids consommé']?.text = _formatNumber(poidsConsomme);
-    _editControllers['Peinture']?.text = _formatNumber(peinture);
-    _editControllers['Gaz']?.text = _formatNumber(gaz);
-    _editControllers['bellet']?.text = _formatNumber(bellet);
-    _editControllers['dechet']?.text = _formatNumber(dechet);
-    _editControllers['dechet initial']?.text = _formatNumber(dechetInitial);
-  }
-
-  double _calculateTotalPoidsConsomme() {
-    final items = _commandes.isNotEmpty ? _commandes[0]['items'] as List : [];
-    double total = 0;
-    for (var item in items) {
-      total += (item['Poids consommé'] as num?)?.toDouble() ?? 0;
-    }
-    return total;
-  }
-
-  double _calculateTotalPeinture() {
-    final items = _commandes.isNotEmpty ? _commandes[0]['items'] as List : [];
-    double total = 0;
-    for (var item in items) {
-      total += (item['Peinture'] as num?)?.toDouble() ?? 0;
-    }
-    return total;
-  }
-
-  double _calculateTotalGaz() {
-    final items = _commandes.isNotEmpty ? _commandes[0]['items'] as List : [];
-    double total = 0;
-    for (var item in items) {
-      total += (item['Gaz'] as num?)?.toDouble() ?? 0;
-    }
-    return total;
-  }
-
-  double _calculateTotalBellet() {
-    final items = _commandes.isNotEmpty ? _commandes[0]['items'] as List : [];
-    double total = 0;
-    for (var item in items) {
-      total += (item['bellet'] as num?)?.toDouble() ?? 0;
-    }
-    return total;
   }
 
   double _calculateTotalPrice() {
@@ -128,6 +69,22 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
       total += price * quantite;
     }
     return total;
+  }
+
+  /// Calculate total for current item being edited
+  double _calculateItemTotal() {
+    final priceText =
+        _editControllers['Price']?.text
+            .replaceAll(',', '.')
+            .replaceAll(' ', '') ??
+        '0';
+    final quantityText =
+        _editControllers['Quantité']?.text.replaceAll(' ', '') ?? '0';
+
+    final price = double.tryParse(priceText) ?? 0.0;
+    final quantity = int.tryParse(quantityText) ?? 0;
+
+    return price * quantity;
   }
 
   @override
@@ -142,11 +99,22 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
   void _initializeCommandes() {
     _commandes.clear();
     _commandes.add({
+      'id': widget.commande['id'],
       'Document_Ref': widget.commande['Document_Ref'] ?? 'N/A',
+      'doc_type': widget.commande['doc_type'] ?? 'BL',
       'Client': widget.commande['Client'] ?? 'N/A',
       'date': widget.commande['date'] ?? 'N/A',
-      'items': List<Map<String, dynamic>>.from(widget.items),
+      'status': widget.commande['status'] ?? 'pending',
+      'items': List<Map<String, dynamic>>.from(
+        (widget.items).map((item) => Map<String, dynamic>.from(item as Map)),
+      ),
     });
+
+    // If this is an existing order (not new), mark it as already saved to backend
+    if (!widget.isNewInvoice && widget.commande['id'] != null) {
+      _orderSavedToBackend = true;
+      _savedOrderId = widget.commande['id'] as int?;
+    }
   }
 
   void _initializeControllers() {
@@ -155,12 +123,6 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
     _editControllers['Poids'] = TextEditingController();
     _editControllers['Quantité'] = TextEditingController();
     _editControllers['Couleur'] = TextEditingController();
-    _editControllers['Poids consommé'] = TextEditingController();
-    _editControllers['Peinture'] = TextEditingController();
-    _editControllers['Gaz'] = TextEditingController();
-    _editControllers['bellet'] = TextEditingController();
-    _editControllers['dechet'] = TextEditingController();
-    _editControllers['dechet initial'] = TextEditingController();
     _editControllers['date'] = TextEditingController();
     _editControllers['Price'] = TextEditingController();
   }
@@ -191,23 +153,30 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
     });
   }
 
-  void _loadItemToControllers(Map<String, dynamic> item) {
-    _editControllers['Référence']?.text = item['Référence']?.toString() ?? '';
-    _editControllers['Désignation']?.text =
-        item['Désignation']?.toString() ?? '';
-    _editControllers['Poids']?.text = item['Poids']?.toString() ?? '';
-    _editControllers['Quantité']?.text = item['Quantité']?.toString() ?? '';
-    _editControllers['Couleur']?.text = item['Couleur']?.toString() ?? '';
-    _editControllers['Poids consommé']?.text =
-        item['Poids consommé']?.toString() ?? '';
-    _editControllers['Peinture']?.text = item['Peinture']?.toString() ?? '';
-    _editControllers['Gaz']?.text = item['Gaz']?.toString() ?? '';
-    _editControllers['bellet']?.text = item['bellet']?.toString() ?? '';
-    _editControllers['dechet']?.text = item['dechet']?.toString() ?? '';
-    _editControllers['dechet initial']?.text =
-        item['dechet initial']?.toString() ?? '';
-    _editControllers['date']?.text = item['date']?.toString() ?? '';
-    _editControllers['Price']?.text = item['Price']?.toString() ?? '';
+  /// Helper method to get selected article without type issues
+  Map<String, dynamic>? _getSelectedArticle() {
+    final searchText = _editControllers['Désignation']?.text ?? '';
+    if (searchText.isEmpty) return null;
+
+    try {
+      return _articles.firstWhere(
+        (a) => a['Désignation'].toString() == searchText,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Helper method to get selected color without type issues
+  Map<String, dynamic>? _getSelectedColor() {
+    final searchText = _editControllers['Couleur']?.text ?? '';
+    if (searchText.isEmpty) return null;
+
+    try {
+      return colors.firstWhere((c) => c['Couleur'].toString() == searchText);
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
@@ -382,9 +351,12 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                     ),
                     const SizedBox(width: 12),
                     _buildActionButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed:
+                          (_hasItems || _orderSavedToBackend || _isSavingItem)
+                          ? null // Disable when items exist or order is saved
+                          : () {
+                              Navigator.pop(context);
+                            },
                       icon: Icons.cancel_rounded,
                       label: 'Annuler',
                       color: const Color(0xFFE57373),
@@ -393,13 +365,23 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                     ),
                     const SizedBox(width: 12),
                     _buildActionButton(
-                      onPressed: _isSaving ? null : _saveCommande,
-                      icon: Icons.save_rounded,
-                      label: _isSaving ? 'Enregistrement...' : 'Enregistrer',
+                      onPressed: (_isSaving || _isSavingItem)
+                          ? null
+                          : () {
+                              // Since order is already saved, just close and return
+                              if (_orderSavedToBackend &&
+                                  _commandes.isNotEmpty) {
+                                Navigator.pop(context, _commandes.first);
+                              } else {
+                                Navigator.pop(context);
+                              }
+                            },
+                      icon: Icons.check_circle_rounded,
+                      label: _isSavingItem ? 'Enregistrement...' : 'Terminer',
                       color: const Color(0xFF66BB6A),
                       hoverColor: const Color(0xFF4CAF50),
                       pressedColor: const Color(0xFF81C784),
-                      isLoading: _isSaving,
+                      isLoading: _isSavingItem,
                     ),
                     const SizedBox(width: 5),
                   ],
@@ -423,43 +405,6 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                           label: 'Nombre d\'articles',
                           value: itemsCount.toString(),
                           color: const Color(0xFF3B82F6),
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: _buildInfoCard(
-                          icon: Icons.scale,
-                          label: 'Poids consommé',
-                          value:
-                              '${_formatNumber(_calculateTotalPoidsConsomme())} Kg',
-                          color: const Color(0xFF10B981),
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: _buildInfoCard(
-                          icon: Icons.format_paint,
-                          label: 'Peinture',
-                          value: _formatNumber(_calculateTotalPeinture()),
-                          color: const Color(0xFF8B5CF6),
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: _buildInfoCard(
-                          icon: Icons.fire_extinguisher,
-                          label: 'Gaz',
-                          value: _formatNumber(_calculateTotalGaz()),
-                          color: const Color(0xFFF59E0B),
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: _buildInfoCard(
-                          icon: Icons.science,
-                          label: 'Bellet',
-                          value: _formatNumber(_calculateTotalBellet()),
-                          color: const Color(0xFF06B6D4),
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -502,7 +447,7 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                               physics: const NeverScrollableScrollPhysics(),
                               children: [
                                 _buildTooltipButton(
-                                  tooltip: 'SÃƒÆ’Ã‚Â©lectionner tout',
+                                  tooltip: 'Selectionner tout',
                                   onTap: _selectAll,
                                   icon: Icons.select_all_rounded,
                                   color: const Color(0xFF8B5CF6),
@@ -515,14 +460,14 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                                 ),
                                 if (_hasSelection)
                                   _buildTooltipButton(
-                                    tooltip: 'Supprimer sÃƒÆ’Ã‚Â©lection',
+                                    tooltip: 'Supprimer ',
                                     onTap: _deleteSelected,
                                     icon: Icons.delete_sweep_rounded,
                                     color: const Color(0xFFEF4444),
                                   ),
                                 if (_hasSelection)
                                   _buildTooltipButton(
-                                    tooltip: 'Effacer sÃƒÆ’Ã‚Â©lection',
+                                    tooltip: 'Effacer',
                                     onTap: _clearSelection,
                                     icon: Icons.clear_all_rounded,
                                     color: const Color(0xFF6B7280),
@@ -576,14 +521,53 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
 
       Navigator.pop(context, savedOrder);
     } catch (error, stack) {
-      debugPrint('Failed to save order: $error`n$stack');
+      debugPrint('Failed to save order: $error\n$stack');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la sauvegarde: $error'),
-            backgroundColor: Colors.red.shade400,
-          ),
-        );
+        final errorMessage = error.toString();
+
+        // Check if it's a stock error
+        if (errorMessage.contains('Stock insuffisant')) {
+          // Extract the error message from the exception
+          final regex = RegExp(
+            r"Stock insuffisant pour '(.+)' \((.+)\)\. Disponible: (\d+), Demandé: (\d+)",
+          );
+          final match = regex.firstMatch(errorMessage);
+
+          if (match != null) {
+            final productName = match.group(1) ?? 'Produit';
+            final color = match.group(2) ?? '';
+            final available = int.tryParse(match.group(3) ?? '0') ?? 0;
+            final required = int.tryParse(match.group(4) ?? '0') ?? 0;
+
+            await _showStockWarningDialog(
+              title: 'Stock insuffisant',
+              icon: Icons.inventory_2_outlined,
+              iconColor: Colors.red,
+              message: 'La quantité demandée dépasse le stock disponible.',
+              details: 'Produit: $productName\nCouleur: $color',
+              showStockInfo: true,
+              availableStock: available,
+              requiredStock: required,
+            );
+          } else {
+            // Fallback if regex doesn't match
+            await _showStockWarningDialog(
+              title: 'Stock insuffisant',
+              icon: Icons.inventory_2_outlined,
+              iconColor: Colors.red,
+              message: 'La quantité demandée dépasse le stock disponible.',
+              details: errorMessage.replaceAll('Exception: ', ''),
+            );
+          }
+        } else {
+          // General error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur lors de la sauvegarde: $error'),
+              backgroundColor: Colors.red.shade400,
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -678,15 +662,7 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
     });
   }
 
-  void _editItem(int index) {
-    final items = _commandes[0]['items'] as List;
-    setState(() {
-      _editingIndex = index;
-      _loadItemToControllers(items[index]);
-    });
-  }
-
-  void _saveItem() {
+  Future<void> _saveItem() async {
     if (_formKey.currentState?.validate() ?? false) {
       final items = _commandes[0]['items'] as List<Map<String, dynamic>>;
 
@@ -703,54 +679,422 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
             _editControllers['Quantité']?.text.replaceAll(' ', '') ?? '0',
           ) ??
           0;
+      final price =
+          double.tryParse(
+            _editControllers['Price']?.text
+                    .replaceAll(',', '.')
+                    .replaceAll(' ', '') ??
+                '0',
+          ) ??
+          0.0;
 
-      final poidsConsomme = poids * quantite;
-      final peinture = poidsConsomme * peintureVar;
-      final gaz = poidsConsomme * gazVar;
-      final bellet = poidsConsomme / (1 - belletVar);
-      final dechet = bellet - poidsConsomme;
-      final dechetInitial = bellet / dechetVar;
+      final productRef = _editControllers['Référence']?.text ?? '';
+      final productName = _editControllers['Désignation']?.text ?? '';
+      final color = _editControllers['Couleur']?.text ?? '';
+
+      // Get document type
+      final docType =
+          (_commandes.isNotEmpty ? _commandes[0]['doc_type'] : null) ?? 'BL';
+
+      // Only BL affects inventory - skip stock check for BC and DE
+      if (docType == 'BL') {
+        // Check stock availability before saving
+        try {
+          final stockResult = await SalesApiService.checkStockSPF(
+            productRef: productRef,
+            requiredQty: quantite,
+            color: color.isNotEmpty ? color : null,
+          );
+
+          debugPrint('Stock check result: $stockResult');
+
+          final foundInSpf = stockResult['found_in_spf'] as bool? ?? false;
+          final currentStock = stockResult['current_stock'] ?? 0;
+          final calculatedStock = stockResult['calculated_stock'] ?? 0;
+          final isAvailable = stockResult['available'] as bool? ?? false;
+
+          // Check if stock is available (either from inventory_spf or calculated from operations)
+          if (!isAvailable) {
+            if (!mounted) return;
+
+            // If product not found in SPF and no calculated stock
+            if (!foundInSpf && calculatedStock <= 0) {
+              await _showStockWarningDialog(
+                title: 'Produit non trouvé',
+                icon: Icons.search_off_rounded,
+                iconColor: Colors.orange,
+                message:
+                    'Le produit "$productName" (Ref: $productRef) n\'existe pas dans le stock SPF.',
+                details:
+                    'Veuillez d\'abord ajouter ce produit au stock des produits finis.',
+              );
+              return;
+            }
+
+            // Stock insufficient
+            await _showStockWarningDialog(
+              title: 'Stock insuffisant',
+              icon: Icons.inventory_2_outlined,
+              iconColor: Colors.red,
+              message: 'La quantité demandée dépasse le stock disponible.',
+              details:
+                  'Produit: $productName\nDisponible: $currentStock unités\nDemandé: $quantite unités',
+              showStockInfo: true,
+              availableStock: currentStock,
+              requiredStock: quantite,
+            );
+            return;
+          }
+        } catch (e) {
+          debugPrint('Stock check failed: $e');
+          // Continue without stock check if API fails
+        }
+      }
+
+      // Preserve item id if editing existing item
+      final existingItem =
+          (_editingIndex != null && _editingIndex! < items.length)
+          ? items[_editingIndex!]
+          : null;
 
       final newItem = {
-        'Référence': _editControllers['Référence']?.text ?? '',
-        'Désignation': _editControllers['Désignation']?.text ?? '',
-        'Poids': double.parse(poids.toStringAsFixed(2)),
+        'id': existingItem?['id'],
+        'Référence': productRef,
+        'Désignation': productName,
+        'Poids': double.parse(poids.toStringAsFixed(4)),
         'Quantité': quantite,
-        'Couleur': _editControllers['Couleur']?.text ?? '',
-        'Poids consommé': double.parse(poidsConsomme.toStringAsFixed(2)),
-        'Peinture': double.parse(peinture.toStringAsFixed(2)),
-        'Gaz': double.parse(gaz.toStringAsFixed(2)),
-        'bellet': double.parse(bellet.toStringAsFixed(2)),
-        'dechet': double.parse(dechet.toStringAsFixed(2)),
-        'dechet initial': double.parse(dechetInitial.toStringAsFixed(2)),
-        'Price': _editControllers['Price'] != null
-            ? double.tryParse(
-                    _editControllers['Price']?.text.replaceAll(',', '.') ?? '0',
-                  ) ??
-                  0.0
-            : 0.0,
-        'date':
-            _editControllers['date']?.text ??
-            DateTime.now().toString().split(' ')[0],
+        'Couleur': color,
+        'Price': price,
+        'total_price': quantite * price,
+        'date': DateTime.now().toString().split(' ')[0],
       };
 
+      // Add/update item in local list first
       setState(() {
         if (_editingIndex != null && _editingIndex! < items.length) {
           items[_editingIndex!] = newItem;
         } else {
           items.add(newItem);
         }
-        _editingIndex = null;
-        _clearControllers();
+        _isSavingItem = true;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Article enregistré avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // === SAVE TO BACKEND IMMEDIATELY ===
+      try {
+        final commande = Map<String, dynamic>.from(_commandes.first);
+        final currentItems =
+            (commande['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final payload = {...commande, 'items': currentItems};
+
+        Map<String, dynamic> savedOrder;
+
+        // Determine if this is a new order or updating existing
+        final existingOrderId = commande['id'];
+        final isExistingOrder = existingOrderId != null && !widget.isNewInvoice;
+        final shouldCreate = widget.isNewInvoice && !_orderSavedToBackend;
+
+        if (shouldCreate) {
+          // First save for new order: create order
+          savedOrder = await SalesApiService.createOrder(payload);
+          _savedOrderId = savedOrder['id'] as int?;
+          _orderSavedToBackend = true;
+
+          // Update local commande with saved ID
+          setState(() {
+            _commandes[0]['id'] = _savedOrderId;
+            // Update items with their IDs from the response
+            final savedItems =
+                savedOrder['items'] as List? ??
+                savedOrder['sales_operations'] as List? ??
+                [];
+            if (savedItems.isNotEmpty) {
+              for (int i = 0; i < items.length && i < savedItems.length; i++) {
+                items[i]['id'] = savedItems[i]['id'];
+              }
+            }
+          });
+        } else {
+          // Update existing order (or subsequent saves for new order)
+          savedOrder = await SalesApiService.updateOrder(payload);
+          _orderSavedToBackend = true;
+
+          // Update items with their IDs from the response
+          final savedItems =
+              savedOrder['items'] as List? ??
+              savedOrder['sales_operations'] as List? ??
+              [];
+          if (savedItems.isNotEmpty) {
+            setState(() {
+              for (int i = 0; i < items.length && i < savedItems.length; i++) {
+                items[i]['id'] = savedItems[i]['id'];
+              }
+            });
+          }
+        }
+
+        setState(() {
+          _editingIndex = null;
+          _clearControllers();
+          _isSavingItem = false;
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Article enregistré et stock mis à jour'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        debugPrint('Failed to save item to backend: $e');
+
+        // Remove the item we just added since save failed
+        setState(() {
+          if (_editingIndex == null) {
+            items.removeLast();
+          }
+          _isSavingItem = false;
+        });
+
+        if (!mounted) return;
+
+        final errorMessage = e.toString();
+        if (errorMessage.contains('Stock insuffisant')) {
+          final regex = RegExp(
+            r"Stock insuffisant pour '(.+)' \((.+)\)\. Disponible: (\d+), Demandé: (\d+)",
+          );
+          final match = regex.firstMatch(errorMessage);
+
+          if (match != null) {
+            final prodName = match.group(1) ?? 'Produit';
+            final prodColor = match.group(2) ?? '';
+            final available = int.tryParse(match.group(3) ?? '0') ?? 0;
+            final required = int.tryParse(match.group(4) ?? '0') ?? 0;
+
+            await _showStockWarningDialog(
+              title: 'Stock insuffisant',
+              icon: Icons.inventory_2_outlined,
+              iconColor: Colors.red,
+              message: 'La quantité demandée dépasse le stock disponible.',
+              details: 'Produit: $prodName\nCouleur: $prodColor',
+              showStockInfo: true,
+              availableStock: available,
+              requiredStock: required,
+            );
+          } else {
+            await _showStockWarningDialog(
+              title: 'Stock insuffisant',
+              icon: Icons.inventory_2_outlined,
+              iconColor: Colors.red,
+              message: 'La quantité demandée dépasse le stock disponible.',
+              details: errorMessage.replaceAll('Exception: ', ''),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: $e'),
+              backgroundColor: Colors.red.shade400,
+            ),
+          );
+        }
+      }
     }
+  }
+
+  /// Show a beautiful stock warning dialog
+  Future<void> _showStockWarningDialog({
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required String message,
+    required String details,
+    bool showStockInfo = false,
+    int availableStock = 0,
+    int requiredStock = 0,
+  }) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 16,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.white, iconColor.withValues(alpha: 0.05)],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon with animated container
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: 0.3),
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: iconColor.withValues(alpha: 0.2),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, size: 40, color: iconColor),
+                ),
+                const SizedBox(height: 20),
+
+                // Title
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor.withValues(alpha: 0.9),
+                    letterSpacing: -0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade700,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+
+                // Details card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: showStockInfo
+                      ? Column(
+                          children: [
+                            _buildStockRow(
+                              'Disponible',
+                              '$availableStock unités',
+                              Colors.green.shade600,
+                              Icons.check_circle_outline,
+                            ),
+                            const SizedBox(height: 8),
+                            _buildStockRow(
+                              'Demandé',
+                              '$requiredStock unités',
+                              Colors.red.shade600,
+                              Icons.remove_circle_outline,
+                            ),
+                            const Divider(height: 20),
+                            _buildStockRow(
+                              'Manquant',
+                              '${requiredStock - availableStock} unités',
+                              Colors.orange.shade700,
+                              Icons.warning_amber_outlined,
+                            ),
+                          ],
+                        )
+                      : Text(
+                          details,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                ),
+                const SizedBox(height: 24),
+
+                // Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: iconColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                      shadowColor: iconColor.withValues(alpha: 0.4),
+                    ),
+                    child: const Text(
+                      'Compris',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStockRow(
+    String label,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
   }
 
   void _cancelEdit() {
@@ -763,27 +1107,82 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
   void _deleteItem(int index) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Confirmer la suppression'),
         content: const Text('Voulez-vous supprimer cet article ?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Annuler'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+
+              if (!mounted) return;
+
+              final items =
+                  _commandes[0]['items'] as List<Map<String, dynamic>>;
+              final itemToDelete = items[index];
+
+              debugPrint('Delete item: index=$index, item=$itemToDelete');
+              debugPrint('_orderSavedToBackend=$_orderSavedToBackend');
+
+              // Remove item locally first
               setState(() {
-                final items = _commandes[0]['items'] as List;
                 items.removeAt(index);
               });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Article supprimé avec succès'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+
+              debugPrint('Items after removal: ${items.length} items');
+
+              // If order is saved to backend, update it to sync deletion
+              if (_orderSavedToBackend && _commandes.isNotEmpty) {
+                try {
+                  final commande = Map<String, dynamic>.from(_commandes.first);
+                  final currentItems =
+                      (commande['items'] as List?)
+                          ?.cast<Map<String, dynamic>>() ??
+                      [];
+                  final payload = {...commande, 'items': currentItems};
+
+                  debugPrint(
+                    'Sending delete update with ${currentItems.length} items',
+                  );
+
+                  await SalesApiService.updateOrder(payload);
+
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Article supprimé et stock restauré'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  debugPrint('Failed to sync deletion: $e');
+
+                  // Restore item locally if backend update failed
+                  if (mounted) {
+                    setState(() {
+                      items.insert(index, itemToDelete);
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erreur lors de la suppression: $e'),
+                        backgroundColor: Colors.red.shade400,
+                      ),
+                    );
+                  }
+                }
+              } else {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Article supprimé'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text(
@@ -897,17 +1296,9 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
           _verticalDivider(height: 28),
           _buildHeaderCell('Couleur', flex: 1),
           _verticalDivider(height: 28),
-          _buildHeaderCell('Poids consommé', flex: 1),
+          _buildHeaderCell('Prix U.', flex: 1),
           _verticalDivider(height: 28),
-          _buildHeaderCell('Peinture', flex: 1),
-          _verticalDivider(height: 28),
-          _buildHeaderCell('Gaz', flex: 1),
-          _verticalDivider(height: 28),
-          _buildHeaderCell('Bellet', flex: 1),
-          _verticalDivider(height: 28),
-          _buildHeaderCell('dechet', flex: 1),
-          _verticalDivider(height: 28),
-          _buildHeaderCell('dechet initial', flex: 1),
+          _buildHeaderCell('Total', flex: 1),
           _verticalDivider(height: 28),
           _buildHeaderCell('Date', flex: 1),
           _verticalDivider(height: 28),
@@ -966,52 +1357,49 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                 ),
               ),
               const SizedBox(width: 10),
-              _buildDataCell(item['Référence']?.toString() ?? '', flex: 1),
+              _buildDataCell(
+                item['Référence']?.toString() ?? '',
+                flex: 1,
+                isText: true,
+              ),
               _verticalDivider(height: 28),
-              _buildDataCell(item['Désignation']?.toString() ?? '', flex: 2),
+              _buildDataCell(
+                item['Désignation']?.toString() ?? '',
+                flex: 2,
+                isText: true,
+              ),
               _verticalDivider(height: 28),
               _buildDataCell('${item['Poids']?.toString() ?? '0'} Kg', flex: 1),
               _verticalDivider(height: 28),
-              _buildDataCell(item['Quantité']?.toString() ?? '0', flex: 1),
-              _verticalDivider(height: 28),
-              _buildDataCell(item['Couleur']?.toString() ?? '', flex: 1),
-              _verticalDivider(height: 28),
               _buildDataCell(
-                '${item['Poids consommé']?.toString() ?? '0'} Kg',
+                '${(item['Quantité'] as num?)?.toInt() ?? 0}',
                 flex: 1,
               ),
               _verticalDivider(height: 28),
-              _buildDataCell(item['Peinture']?.toString() ?? '', flex: 1),
-              _verticalDivider(height: 28),
-              _buildDataCell(item['Gaz']?.toString() ?? '', flex: 1),
-              _verticalDivider(height: 28),
-              _buildDataCell(item['bellet']?.toString() ?? '', flex: 1),
-              _verticalDivider(height: 28),
-              _buildDataCell(item['dechet']?.toString() ?? '0', flex: 1),
+              _buildDataCell(
+                item['Couleur']?.toString() ?? '',
+                flex: 1,
+                isText: true,
+              ),
               _verticalDivider(height: 28),
               _buildDataCell(
-                item['dechet initial']?.toString() ?? '0',
+                '${_formatNumber((item['Price'] as num?)?.toDouble() ?? 0.0)} DH',
+                flex: 1,
+              ),
+              _verticalDivider(height: 28),
+              _buildDataCell(
+                '${_formatNumber((item['total_price'] as num?)?.toDouble() ?? ((item['Price'] as num?)?.toDouble() ?? 0.0) * ((item['Quantité'] as num?)?.toInt() ?? 0))} DH',
                 flex: 1,
               ),
               _verticalDivider(height: 28),
               _buildDataCell(item['date']?.toString() ?? '', flex: 1),
               const SizedBox(width: 45),
               SizedBox(
-                width: 60,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _buildActionIconButton(
-                      icon: Icons.edit,
-                      onPressed: () => _editItem(index),
-                      color: const Color(0xFF3B82F6),
-                    ),
-                    _buildActionIconButton(
-                      icon: Icons.delete_outline,
-                      onPressed: () => _deleteItem(index),
-                      color: Colors.red.shade400,
-                    ),
-                  ],
+                width: 40,
+                child: _buildActionIconButton(
+                  icon: Icons.delete_outline,
+                  onPressed: () => _deleteItem(index),
+                  color: Colors.red.shade400,
                 ),
               ),
               const SizedBox(width: 20),
@@ -1040,6 +1428,7 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
             _buildEditFieldOrDropdown(
               'Référence',
               'Référence',
+              isDecimal: false,
               flex: 1,
               isReadOnly: true,
             ),
@@ -1052,21 +1441,7 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                 child: SearchableDropdownT<Map<String, dynamic>>(
                   items: _articles,
                   displayText: (item) => item['Désignation'].toString(),
-                  selectedValue:
-                      _articles
-                          .firstWhere(
-                            (a) =>
-                                a['Désignation'].toString() ==
-                                _editControllers['Désignation']?.text,
-                            orElse: () => {},
-                          )
-                          .isEmpty
-                      ? null
-                      : _articles.firstWhere(
-                          (a) =>
-                              a['Désignation'].toString() ==
-                              _editControllers['Désignation']?.text,
-                        ),
+                  selectedValue: _getSelectedArticle(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() {
@@ -1080,7 +1455,6 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                         final price =
                             (value['Price'] as num?)?.toDouble() ?? 0.0;
                         _editControllers['Price']?.text = _formatNumber(price);
-                        _calculateAndUpdateFields();
                       });
                     }
                   },
@@ -1109,9 +1483,8 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
               isNumber: true,
               isDecimal: false,
               onChanged: (value) {
-                setState(() {
-                  _calculateAndUpdateFields();
-                });
+                // Trigger rebuild to update total calculation
+                setState(() {});
               },
             ),
             _verticalDivider(height: 28),
@@ -1123,21 +1496,7 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                 child: SearchableDropdownT<Map<String, dynamic>>(
                   items: colors,
                   displayText: (item) => item['Couleur'].toString(),
-                  selectedValue:
-                      colors
-                          .firstWhere(
-                            (c) =>
-                                c['Couleur'].toString() ==
-                                _editControllers['Couleur']?.text,
-                            orElse: () => {},
-                          )
-                          .isEmpty
-                      ? null
-                      : colors.firstWhere(
-                          (c) =>
-                              c['Couleur'].toString() ==
-                              _editControllers['Couleur']?.text,
-                        ),
+                  selectedValue: _getSelectedColor(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() {
@@ -1155,59 +1514,44 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
             _verticalDivider(height: 28),
 
             _buildEditFieldOrDropdown(
-              'Poids consommé',
-              'Poids consommé',
+              'Price',
+              'Prix U.',
               flex: 1,
               isNumber: true,
               isDecimal: true,
               isReadOnly: true,
             ),
             _verticalDivider(height: 28),
-            _buildEditFieldOrDropdown(
-              'Peinture',
-              'Peinture',
+
+            // Total (calculated, read-only)
+            Expanded(
               flex: 1,
-              isNumber: true,
-              isDecimal: true,
-              isReadOnly: true,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Text(
+                    '${_formatNumber(_calculateItemTotal())} DH',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
             ),
             _verticalDivider(height: 28),
-            _buildEditFieldOrDropdown(
-              'Gaz',
-              'Gaz',
-              flex: 1,
-              isNumber: true,
-              isDecimal: true,
-              isReadOnly: true,
-            ),
-            _verticalDivider(height: 28),
-            _buildEditFieldOrDropdown(
-              'bellet',
-              'Bellet',
-              flex: 1,
-              isNumber: true,
-              isDecimal: true,
-              isReadOnly: true,
-            ),
-            _verticalDivider(height: 28),
-            _buildEditFieldOrDropdown(
-              'dechet',
-              'dechet',
-              flex: 1,
-              isNumber: true,
-              isDecimal: true,
-              isReadOnly: true,
-            ),
-            _verticalDivider(height: 28),
-            _buildEditFieldOrDropdown(
-              'dechet initial',
-              'dechet initial',
-              flex: 1,
-              isNumber: true,
-              isDecimal: true,
-              isReadOnly: true,
-            ),
-            _verticalDivider(height: 28),
+
             _buildEditFieldOrDropdown(
               'date',
               'Date',
@@ -1221,8 +1565,14 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                 children: [
                   _buildActionIconButton(
                     icon: Icons.save,
-                    onPressed: _saveItem,
-                    color: const Color(0xFF1E3A8A),
+                    onPressed: _canSaveItem
+                        ? () {
+                            _saveItem();
+                          }
+                        : null,
+                    color: _canSaveItem
+                        ? const Color(0xFF1E3A8A)
+                        : Colors.grey.shade400,
                   ),
                   _buildActionIconButton(
                     icon: Icons.close,
@@ -1404,15 +1754,31 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
     );
   }
 
-  Widget _buildDataCell(String text, {int flex = 1}) {
+  Widget _buildDataCell(String text, {int flex = 1, bool isText = false}) {
     String displayText = text;
-    final number = double.tryParse(
-      text.replaceAll(' Kg', '').replaceAll(',', '.'),
-    );
-    if (number != null) {
-      displayText = _formatNumber(number);
-      if (text.contains('Kg')) {
-        displayText += ' Kg';
+
+    // Only format as number if it's not marked as text and looks like a pure number
+    if (!isText) {
+      // Remove units before parsing
+      final cleanText = text
+          .replaceAll(' Kg', '')
+          .replaceAll(' DH', '')
+          .replaceAll(',', '.')
+          .trim();
+
+      // Check if it's a pure numeric value (not alphanumeric like REF001)
+      final isPureNumber = RegExp(r'^-?[0-9]*\.?[0-9]+$').hasMatch(cleanText);
+
+      if (isPureNumber) {
+        final number = double.tryParse(cleanText);
+        if (number != null) {
+          displayText = _formatNumber(number);
+          if (text.contains('Kg')) {
+            displayText += ' Kg';
+          } else if (text.contains('DH')) {
+            displayText += ' DH';
+          }
+        }
       }
     }
 
@@ -1437,7 +1803,7 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
 
   Widget _buildActionIconButton({
     required IconData icon,
-    required VoidCallback onPressed,
+    VoidCallback? onPressed,
     required Color color,
   }) {
     return IconButton(

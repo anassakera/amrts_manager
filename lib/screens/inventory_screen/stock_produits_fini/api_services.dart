@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class InventorySpfApiService {
   static final String baseUrl =
-      ApiServices.baseUrl ?? 'http://localhost/amrts_manager';
+      ApiServices.baseUrl ?? 'http://192.168.1.254/amrts_manager';
 
   /// Get all inventory SPF items with their operations
   static Future<Map<String, dynamic>> getAllInventorySpf() async {
@@ -32,7 +32,7 @@ class InventorySpfApiService {
   ) async {
     try {
       final url = Uri.parse(
-        '$baseUrl/api/inventory_spf/get_by_ref.php?ref=$refCode',
+        '$baseUrl/api/inventory_spf/get_by_ref.php?ref_code=$refCode',
       );
       final response = await http.get(url);
 

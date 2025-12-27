@@ -90,26 +90,43 @@ class _PeintureScreenState extends State<PeintureScreen> {
     return bestRef;
   }
 
+  /// Get next ref_peinture locally (fallback)
+  /// Format: PE-YY-MM-NNNNN
+  /// - PE: Operation prefix
+  /// - YY: Current year (2 digits)
+  /// - MM: Current month (2 digits)
+  /// - NNNNN: Sequential number (5 digits, resets each month)
   String _computeNextRefPeinture() {
     final now = DateTime.now();
-    final yy = (now.year % 100).toString().padLeft(2, '0');
-    final mm = now.month.toString().padLeft(2, '0');
+    final year = now.year.toString().substring(2); // "25" for 2025
+    final month = now.month.toString().padLeft(2, '0'); // "01" for January
 
-    int nextSeq = 1;
-    final lastRef = _getLastRefPeinture();
-    if (lastRef != null) {
-      final reg = RegExp(r'^PE-(\d{2})-(\d{2})-(\d{5})$');
-      final m = reg.firstMatch(lastRef);
-      if (m != null) {
-        final lastYY = m.group(1)!;
-        final lastMM = m.group(2)!;
-        if (lastYY == yy && lastMM == mm) {
-          nextSeq = (int.tryParse(m.group(3)!) ?? 0) + 1;
+    // Build prefix for current year-month: PE-YY-MM-
+    final currentPrefix = 'PE-$year-$month-';
+
+    if (peintures.isEmpty) {
+      return '${currentPrefix}00001';
+    }
+
+    final reg = RegExp(r'^PE-\d{2}-\d{2}-(\d{5})$');
+    int bestSeq = 0;
+
+    for (final p in peintures) {
+      final ref = p['ref_peinture']?.toString() ?? '';
+      // Only count refs that match the current year-month prefix
+      if (ref.startsWith(currentPrefix)) {
+        final m = reg.firstMatch(ref);
+        if (m != null) {
+          final seq = int.tryParse(m.group(1)!) ?? 0;
+          if (seq > bestSeq) {
+            bestSeq = seq;
+          }
         }
       }
     }
 
-    return 'PE-$yy-$mm-${nextSeq.toString().padLeft(5, '0')}';
+    final nextSeq = (bestSeq + 1).toString().padLeft(5, '0');
+    return '$currentPrefix$nextSeq';
   }
 
   @override

@@ -16,10 +16,19 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
   final List<Map<String, dynamic>> _items = [];
   final List<int> _selectedIndices = [];
   bool _isSaving = false;
+  bool _hasUnsavedChanges = false; // Track if user has made changes
   bool _isTogglingStatus = false;
   int? _togglingIndex;
   int? _editingIndex;
   bool get _hasSelection => _selectedIndices.isNotEmpty;
+
+  /// Check if all items in the list have 'completed' status
+  /// Returns true if list is empty OR all items are completed
+  bool get _allItemsCompleted {
+    if (_items.isEmpty) return true;
+    return _items.every((item) => item['status']?.toString() == 'completed');
+  }
+
   String _currentItemStatus = 'in_progress';
   bool _isLocallyCreated = false;
   final PeintureApiService _apiService = PeintureApiService();
@@ -85,10 +94,9 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
     _items.clear();
 
     if (widget.production != null) {
+      // Editing existing production - use its ref_peinture
       final production = Map<String, dynamic>.from(widget.production!);
-      _refPeinture =
-          production['ref_peinture']?.toString() ??
-          _computeNextRef(widget.lastRefPeinture, now);
+      _refPeinture = production['ref_peinture']?.toString() ?? '';
 
       final incomingItems =
           (production['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -105,24 +113,17 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
         _time = formattedTime;
       }
     } else {
-      _refPeinture = _computeNextRef(widget.lastRefPeinture, now);
+      // New production - use the pre-calculated ref from peinture_screen
+      // lastRefPeinture is already the NEXT ref to use (from API or fallback)
+      _refPeinture = widget.lastRefPeinture ?? _generateDefaultRef(now);
       _date = formattedDate;
       _time = formattedTime;
     }
   }
 
-  String _computeNextRef(String? lastRef, DateTime now) {
-    final reg = RegExp(r'^PE-(\d{2})-(\d{2})-(\d{5})$');
-    if (lastRef != null) {
-      final m = reg.firstMatch(lastRef);
-      if (m != null) {
-        final lastYY = m.group(1)!;
-        final lastMM = m.group(2)!;
-        final lastSeq = int.tryParse(m.group(3)!) ?? 0;
-        final next = (lastSeq + 1).toString().padLeft(5, '0');
-        return 'PE-$lastYY-$lastMM-$next';
-      }
-    }
+  /// Generate default ref when no lastRefPeinture is provided
+  /// Format: PE-YY-MM-00001
+  String _generateDefaultRef(DateTime now) {
     final yy = now.year.toString().substring(2);
     final mm = now.month.toString().padLeft(2, '0');
     return 'PE-$yy-$mm-00001';
@@ -153,8 +154,8 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
     final qte = double.tryParse(qteText) ?? 0.0;
     final poidBarre = double.tryParse(poidBarreText) ?? 0.0;
 
-    // Calculate dichet = 5% of (qte * poid_barre)
-    final dichet = (qte * poidBarre) * 0.05;
+    // Calculate dichet = 1.5% of (qte * poid_barre)
+    final dichet = (qte * poidBarre) * 0.015;
 
     // Update the controller
     _itemControllers['dichet']?.text = dichet.toStringAsFixed(2);
@@ -382,12 +383,14 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
                     ),
                     const SizedBox(width: 12),
                     _buildActionButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: _hasUnsavedChanges
+                          ? _showUnsavedChangesWarning
+                          : () => Navigator.pop(context),
                       icon: Icons.cancel_rounded,
                       label: 'Annuler',
-                      color: const Color(0xFFE57373),
+                      color: _hasUnsavedChanges
+                          ? const Color(0xFF9CA3AF) // Gray when disabled
+                          : const Color(0xFFE57373),
                     ),
                     const SizedBox(width: 12),
                     _buildActionButton(
@@ -485,10 +488,16 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
                                   color: const Color(0xFF8B5CF6),
                                 ),
                                 _buildTooltipButton(
-                                  tooltip: 'Ajouter nouveau',
-                                  onTap: _addNewItem,
+                                  tooltip: _allItemsCompleted
+                                      ? 'Ajouter nouveau'
+                                      : 'Terminez tous les éléments avant d\'ajouter',
+                                  onTap: _allItemsCompleted
+                                      ? _addNewItem
+                                      : _showIncompleteItemsWarning,
                                   icon: Icons.add_circle_outline_rounded,
-                                  color: const Color(0xFF10B981),
+                                  color: _allItemsCompleted
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFF9CA3AF),
                                 ),
                                 if (_hasSelection)
                                   _buildTooltipButton(
@@ -612,17 +621,113 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
       _editingIndex = _items.length;
       _clearControllers();
       _itemControllers['date']?.text = DateTime.now().toString().split(' ')[0];
-      _currentItemStatus = 'completed';
+      _currentItemStatus = 'in_progress';
     });
   }
 
+  /// Show warning dialog when user tries to add new item
+  /// but not all existing items are completed
+  void _showIncompleteItemsWarning() {
+    // Count incomplete items
+    final incompleteCount = _items
+        .where((item) => item['status']?.toString() != 'completed')
+        .length;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_rounded, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('Action non autorisée'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vous avez $incompleteCount élément(s) non terminé(s).',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Veuillez terminer tous les éléments existants avant d\'ajouter un nouveau.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Compris'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show warning dialog when user tries to cancel with unsaved changes
+  void _showUnsavedChangesWarning() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_rounded, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('Modifications non enregistrées'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vous avez des modifications non enregistrées.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Veuillez enregistrer vos modifications avant de quitter.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Compris'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Select all items that are NOT completed
+  /// Completed items are ignored and cannot be selected
   void _selectAll() {
     setState(() {
       _selectedIndices.clear();
       for (int i = 0; i < _items.length; i++) {
-        _selectedIndices.add(i);
+        // Only select items that are not completed
+        final status = _items[i]['status']?.toString() ?? 'in_progress';
+        if (status != 'completed') {
+          _selectedIndices.add(i);
+        }
       }
     });
+
+    // Show message if no items to select
+    if (_selectedIndices.isEmpty && _items.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tous les éléments sont déjà terminés'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
   void _clearSelection() {
@@ -631,15 +736,50 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
     });
   }
 
+  /// Delete selected items - only non-completed items can be deleted
+  /// Completed items are filtered out and remain in the list
   void _deleteSelected() {
     if (_selectedIndices.isEmpty) return;
+
+    // Filter out completed items from selection
+    final deletableIndices = _selectedIndices.where((index) {
+      if (index < 0 || index >= _items.length) return false;
+      final status = _items[index]['status']?.toString() ?? 'in_progress';
+      return status != 'completed';
+    }).toList();
+
+    if (deletableIndices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Les éléments terminés ne peuvent pas être supprimés'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Count completed items that will be skipped
+    final skippedCount = _selectedIndices.length - deletableIndices.length;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmer la suppression'),
-        content: Text(
-          'Êtes-vous sûr de vouloir supprimer ${_selectedIndices.length} élément(s) ?',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Êtes-vous sûr de vouloir supprimer ${deletableIndices.length} élément(s) ?',
+            ),
+            if (skippedCount > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Note: $skippedCount élément(s) terminé(s) seront ignorés.',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
@@ -649,13 +789,15 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
           ElevatedButton(
             onPressed: () {
               setState(() {
-                _selectedIndices.sort((a, b) => b.compareTo(a));
-                for (var index in _selectedIndices) {
+                // Sort in descending order to avoid index shifting issues
+                deletableIndices.sort((a, b) => b.compareTo(a));
+                for (var index in deletableIndices) {
                   if (index >= 0 && index < _items.length) {
                     _items.removeAt(index);
                   }
                 }
                 _selectedIndices.clear();
+                _hasUnsavedChanges = true; // Mark as having unsaved changes
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -710,7 +852,7 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
     });
   }
 
-  void _saveItem() {
+  Future<void> _saveItem() async {
     if (_formKey.currentState?.validate() ?? false) {
       // Get field values
       final ref = _itemControllers['ref']?.text.trim() ?? '';
@@ -718,6 +860,85 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
       final qte =
           int.tryParse(_itemControllers['qte']?.text.trim() ?? '0') ?? 0;
       final couleur = _itemControllers['couleur']?.text.trim() ?? '';
+
+      // ✅ Check stock availability in SSF BEFORE saving
+      if (ref.isNotEmpty && qte > 0) {
+        // Show loading indicator
+        setState(() {
+          _isSaving = true;
+        });
+
+        try {
+          final stockCheck = await _apiService.checkStockSSF(
+            productRef: ref,
+            requiredQty: qte,
+          );
+
+          if (!mounted) return;
+
+          final isAvailable = stockCheck['available'] == true;
+          final currentStock = stockCheck['current_stock'] ?? 0;
+
+          if (!isAvailable) {
+            setState(() {
+              _isSaving = false;
+            });
+
+            // Show error dialog with stock info
+            final foundInSSF = stockCheck['found_in_ssf'] ?? false;
+            final foundRef = stockCheck['found_ref']?.toString() ?? 'N/A';
+
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.warning_rounded, color: Colors.orange.shade700),
+                    const SizedBox(width: 8),
+                    const Text('Stock insuffisant'),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Produit recherché: $ref',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Trouvé dans SSF: ${foundInSSF ? "Oui" : "Non"}'),
+                    if (foundInSSF) Text('Ref trouvé: $foundRef'),
+                    Text('Stock disponible: $currentStock'),
+                    Text('Quantité requise: $qte'),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Veuillez vérifier que le produit existe dans le stock SSF.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          // If stock check fails, allow save but warn user
+          debugPrint('Stock check failed: $e');
+        }
+
+        if (mounted) {
+          setState(() {
+            _isSaving = false;
+          });
+        }
+      }
 
       final isEditing = _editingIndex != null && _editingIndex! < _items.length;
       int? existingId;
@@ -771,6 +992,7 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
         _currentItemStatus = 'in_progress';
         _date = newItem['date']?.toString() ?? _date;
         _time = newItem['time']?.toString() ?? _time;
+        _hasUnsavedChanges = true; // Mark as having unsaved changes
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -886,15 +1108,101 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
         ? 'in_progress'
         : 'completed';
 
+    // ✅ Check stock availability BEFORE changing to completed
+    if (newStatus == 'completed') {
+      final ref = item['ref']?.toString() ?? '';
+      final qte = item['qte'] is int
+          ? item['qte'] as int
+          : int.tryParse(item['qte']?.toString() ?? '0') ?? 0;
+
+      if (ref.isNotEmpty && qte > 0) {
+        setState(() {
+          _isTogglingStatus = true;
+          _togglingIndex = index;
+        });
+
+        try {
+          final stockCheck = await _apiService.checkStockSSF(
+            productRef: ref,
+            requiredQty: qte,
+          );
+
+          if (!mounted) return;
+
+          final isAvailable = stockCheck['available'] == true;
+          final currentStock = stockCheck['current_stock'] ?? 0;
+
+          if (!isAvailable) {
+            setState(() {
+              _isTogglingStatus = false;
+              _togglingIndex = null;
+            });
+
+            // Show error dialog with stock info
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.warning_rounded, color: Colors.orange.shade700),
+                    const SizedBox(width: 8),
+                    const Text('Stock insuffisant'),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Produit: $ref',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Stock disponible (SSF): $currentStock'),
+                    Text('Quantité requise: $qte'),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Veuillez réduire la quantité ou vérifier le stock SSF.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          // If stock check fails, allow the operation but log the error
+          debugPrint('Stock check failed: $e');
+        }
+
+        if (mounted) {
+          setState(() {
+            _isTogglingStatus = false;
+            _togglingIndex = null;
+          });
+        }
+      }
+    }
+
     // If new production, create it first
     if (widget.production == null && !_isLocallyCreated) {
       final created = await _createProductionInitial(item);
       if (!created) return;
     }
 
+    // Re-read item from _items to get updated ID after _createProductionInitial
+    final updatedItem = _items[index];
+
     // Safely extract itemId as int (handle String or null cases)
     int? itemId;
-    final rawId = item['id'];
+    final rawId = updatedItem['id'];
     if (rawId is int) {
       itemId = rawId;
     } else if (rawId is String) {
@@ -907,14 +1215,16 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
       setState(() {
         _items[index]['status'] = newStatus;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Statut mis à jour localement. Enregistrez la fiche pour synchroniser.',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Statut mis à jour localement. Enregistrez la fiche pour synchroniser.',
+            ),
+            backgroundColor: Colors.orange,
           ),
-          backgroundColor: Colors.orange,
-        ),
-      );
+        );
+      }
       return;
     }
 
@@ -929,15 +1239,15 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
         oldStatus: currentStatus,
         newStatus: newStatus,
         itemData: {
-          'ref': item['ref']
+          'ref': updatedItem['ref']
               ?.toString(), // Must be string for SQL NVARCHAR comparison
-          'designations': item['designations'],
-          'qte': item['qte'],
-          'poid_barre': item['poid_barre'],
-          'dichet': item['dichet'],
-          'couleur': item['couleur'],
-          'cout_production_unitaire': item['cout_production_unitaire'],
-          'prix_vente': item['prix_vente'],
+          'designations': updatedItem['designations'],
+          'qte': updatedItem['qte'],
+          'poid_barre': updatedItem['poid_barre'],
+          'dichet': updatedItem['dichet'],
+          'couleur': updatedItem['couleur'],
+          'cout_production_unitaire': updatedItem['cout_production_unitaire'],
+          'prix_vente': updatedItem['prix_vente'],
         },
       );
 
@@ -1284,6 +1594,12 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
                   prefixIcon: const Icon(Icons.inventory_2_outlined),
                   primaryColor: Colors.blue,
                   enabled: true,
+                  validator: (value) {
+                    if (_selectedArticle == null) {
+                      return 'Article requis';
+                    }
+                    return null;
+                  },
                 ),
               ),
             ),
@@ -1341,11 +1657,23 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
               width: 60,
               child: Row(
                 children: [
-                  _buildActionIconButton(
-                    icon: Icons.save,
-                    onPressed: _saveItem,
-                    color: const Color(0xFF1E3A8A),
-                  ),
+                  _isSaving
+                      ? const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Padding(
+                            padding: EdgeInsets.all(4),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF1E3A8A),
+                            ),
+                          ),
+                        )
+                      : _buildActionIconButton(
+                          icon: Icons.save,
+                          onPressed: _saveItem,
+                          color: const Color(0xFF1E3A8A),
+                        ),
                   _buildActionIconButton(
                     icon: Icons.close,
                     onPressed: _cancelEdit,
@@ -1661,6 +1989,12 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
                     ? null
                     : _itemControllers['couleur']?.text,
                 isExpanded: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Couleur requise';
+                  }
+                  return null;
+                },
                 decoration: InputDecoration(
                   hintText: 'Couleur',
                   hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -1670,6 +2004,10 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red),
                   ),
                   filled: true,
                   fillColor: Colors.white,

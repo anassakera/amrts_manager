@@ -1,50 +1,35 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:network_info_plus/network_info_plus.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 class ApiServices {
   static String? baseUrl;
 
-  static Future<String> _getLocalIp() async {
-    // تجنّب البلجن على الويب وويندوز/لينكس، واستخدم البلجن فقط على الموبايل
-    if (kIsWeb) {
-      return 'localhost';
-    }
-
+  /// قراءة عنوان IP السيرفر من ملف الإعدادات
+  static Future<String> _getServerIp() async {
     try {
-      if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-        final info = NetworkInfo();
-        final ip = await info.getWifiIP();
-        if (ip != null && ip.isNotEmpty) return ip;
-      }
-    } catch (_) {
-      // تجاهل أي استثناء من البلجن، سنعتمد على البديل أدناه
-    }
-
-    try {
-      final interfaces = await NetworkInterface.list(
-        includeLoopback: false,
-        type: InternetAddressType.IPv4,
+      // قراءة ملف الإعدادات من assets
+      final configString = await rootBundle.loadString(
+        'lib/api_amrts_manager/config/connectivity.config',
       );
-      for (final interface in interfaces) {
-        for (final addr in interface.addresses) {
-          if (!addr.isLoopback && addr.type == InternetAddressType.IPv4) {
-            return addr.address;
-          }
-        }
+      final config = json.decode(configString);
+      final serverIP = config['serverIP'] as String?;
+      if (serverIP != null && serverIP.isNotEmpty) {
+        return serverIP;
       }
-    } catch (_) {}
-
-    return '127.0.0.1';
+    } catch (e) {
+      // ignore: avoid_print
+      print('خطأ في قراءة ملف الإعدادات: $e');
+    }
+    // قيمة افتراضية في حالة فشل القراءة
+    return '192.168.1.254';
   }
 
   static Future<void> initBaseUrl() async {
-    final ip = await _getLocalIp();
+    final ip = await _getServerIp();
     baseUrl = 'http://$ip/amrts_manager';
     // ignore: avoid_print
-    print(baseUrl);
+    print('Base URL initialized: $baseUrl');
   }
 
   static Future<Map<String, dynamic>> signIn(
@@ -563,6 +548,219 @@ class ApiServices {
         throw Exception(
           'فشل في إرسال الفاتورة للمخزون (${response.statusCode})',
         );
+      }
+    } catch (e) {
+      if (e is FormatException) {
+        throw Exception('خطأ في تنسيق البيانات المستلمة');
+      } else if (e is Exception) {
+        rethrow;
+      } else {
+        throw Exception('حدث خطأ غير متوقع: $e');
+      }
+    }
+  }
+
+  // ==========================================
+  // خدمات الموردين (Suppliers)
+  // ==========================================
+
+  /// جلب جميع الموردين النشطين مع الترقيم
+  static Future<List<Map<String, dynamic>>> getAllSuppliers({
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    if (baseUrl == null) {
+      await initBaseUrl();
+    }
+    try {
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl/api/suppliers/suppliers_read_all.php?page=$page&page_size=$pageSize',
+        ),
+        headers: {'Accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        } else {
+          throw Exception(data['error'] ?? 'فشل في تحميل الموردين');
+        }
+      } else {
+        throw Exception('فشل في تحميل الموردين (${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is FormatException) {
+        throw Exception('خطأ في تنسيق البيانات المستلمة');
+      } else if (e is Exception) {
+        rethrow;
+      } else {
+        throw Exception('حدث خطأ غير متوقع: $e');
+      }
+    }
+  }
+
+  /// جلب مورد محدد بواسطة المعرف
+  static Future<Map<String, dynamic>> getSupplierById(String id) async {
+    if (baseUrl == null) {
+      await initBaseUrl();
+    }
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/suppliers/suppliers_read_filtered.php'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({'supplier_id': int.parse(id)}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final List suppliers = data['data'];
+          if (suppliers.isNotEmpty) {
+            return Map<String, dynamic>.from(suppliers.first);
+          }
+          throw Exception('المورد غير موجود');
+        } else {
+          throw Exception(data['error'] ?? 'فشل في تحميل المورد');
+        }
+      } else if (response.statusCode == 404) {
+        throw Exception('المورد غير موجود');
+      } else {
+        throw Exception('فشل في تحميل المورد (${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is FormatException) {
+        throw Exception('خطأ في تنسيق البيانات المستلمة');
+      } else if (e is Exception) {
+        rethrow;
+      } else {
+        throw Exception('حدث خطأ غير متوقع: $e');
+      }
+    }
+  }
+
+  /// إنشاء مورد جديد
+  static Future<Map<String, dynamic>> createSupplier(
+    Map<String, dynamic> supplier,
+  ) async {
+    if (baseUrl == null) {
+      await initBaseUrl();
+    }
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/suppliers/suppliers_create.php'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode(supplier),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return Map<String, dynamic>.from(data['data'] ?? {});
+        } else {
+          throw Exception(data['error'] ?? 'فشل في إنشاء المورد');
+        }
+      } else if (response.statusCode == 400) {
+        final data = json.decode(response.body);
+        throw Exception(data['error'] ?? 'بيانات غير صحيحة');
+      } else {
+        throw Exception('فشل في إنشاء المورد (${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is FormatException) {
+        throw Exception('خطأ في تنسيق البيانات المستلمة');
+      } else if (e is Exception) {
+        rethrow;
+      } else {
+        throw Exception('حدث خطأ غير متوقع: $e');
+      }
+    }
+  }
+
+  /// تحديث مورد موجود
+  static Future<Map<String, dynamic>> updateSupplier(
+    String id,
+    Map<String, dynamic> supplier,
+  ) async {
+    if (baseUrl == null) {
+      await initBaseUrl();
+    }
+    try {
+      final payload = Map<String, dynamic>.from(supplier);
+      payload['supplier_id'] = int.parse(id);
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/suppliers/suppliers_update.php'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode(payload),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return Map<String, dynamic>.from(data['data'] ?? {});
+        } else {
+          throw Exception(data['error'] ?? 'فشل في تحديث المورد');
+        }
+      } else if (response.statusCode == 400) {
+        final data = json.decode(response.body);
+        throw Exception(data['error'] ?? 'بيانات غير صحيحة');
+      } else if (response.statusCode == 404) {
+        throw Exception('المورد غير موجود');
+      } else {
+        throw Exception('فشل في تحديث المورد (${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is FormatException) {
+        throw Exception('خطأ في تنسيق البيانات المستلمة');
+      } else if (e is Exception) {
+        rethrow;
+      } else {
+        throw Exception('حدث خطأ غير متوقع: $e');
+      }
+    }
+  }
+
+  /// حذف مورد (soft أو hard)
+  static Future<void> deleteSupplier(
+    String id, {
+    String deleteMode = 'soft',
+  }) async {
+    if (baseUrl == null) {
+      await initBaseUrl();
+    }
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/suppliers/suppliers_delete.php'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'supplier_id': int.parse(id),
+          'delete_mode': deleteMode,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['error'] ?? 'فشل في حذف المورد');
+        }
+      } else if (response.statusCode == 404) {
+        throw Exception('المورد غير موجود');
+      } else {
+        throw Exception('فشل في حذف المورد (${response.statusCode})');
       }
     } catch (e) {
       if (e is FormatException) {

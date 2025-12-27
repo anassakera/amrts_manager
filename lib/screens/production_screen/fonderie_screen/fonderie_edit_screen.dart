@@ -22,6 +22,8 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   bool _isSaving = false;
   int? _editingIndex;
   String _currentItemStatus = 'in_progress';
+  bool _isTogglingStatus = false;
+  int? _togglingIndex;
 
   final Map<String, TextEditingController> _itemControllers = {};
   final Map<String, TextEditingController> _costsControllers = {};
@@ -389,26 +391,26 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
                     ),
                     const SizedBox(width: 12),
                     _buildActionButton(
-                      onPressed: () {
-                        final hasCompletedItems = _items.any(
-                          (item) => item['status'] == 'completed',
-                        );
-                        if (hasCompletedItems) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "Il n'est pas possible de supprimer les éléments complets.",
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                        Navigator.pop(context);
-                      },
+                      onPressed:
+                          _items.any((item) => item['status'] == 'completed')
+                          ? () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Veuillez enregistrer les modifications avant de quitter.",
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                            }
+                          : () {
+                              Navigator.pop(context);
+                            },
                       icon: Icons.cancel_rounded,
                       label: 'Annuler',
-                      color: const Color(0xFFE57373),
+                      color: _items.any((item) => item['status'] == 'completed')
+                          ? const Color(0xFFBDBDBD) // Grey when disabled
+                          : const Color(0xFFE57373),
                     ),
                     const SizedBox(width: 12),
                     _buildActionButton(
@@ -709,7 +711,7 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
     });
   }
 
-  void _saveItem() {
+  Future<void> _saveItem() async {
     if (_formKey.currentState?.validate() ?? false) {
       // التحقق من أن ref_dechet غير فارغ
       final refDechet = _itemControllers['ref_dechet']?.text.trim() ?? '';
@@ -726,6 +728,90 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         return;
       }
 
+      final quantity =
+          double.tryParse(_itemControllers['quantity']?.text.trim() ?? '0') ??
+          0;
+
+      // ✅ Check stock availability in SMP BEFORE saving
+      if (refDechet.isNotEmpty && quantity > 0) {
+        setState(() {
+          _isSaving = true;
+        });
+
+        try {
+          final stockCheck = await _fonderieApiService.checkStockSMP(
+            refCode: refDechet,
+            requiredQty: quantity,
+          );
+
+          if (!mounted) return;
+
+          final isAvailable = stockCheck['available'] == true;
+          final currentStock = stockCheck['current_stock'] ?? 0.0;
+
+          if (!isAvailable) {
+            setState(() {
+              _isSaving = false;
+            });
+
+            // Show error dialog with stock info
+            final foundInSMP = stockCheck['found_in_smp'] ?? false;
+            final foundName = stockCheck['found_name']?.toString() ?? 'N/A';
+
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.warning_rounded, color: Colors.orange.shade700),
+                    const SizedBox(width: 8),
+                    const Text('Stock insuffisant'),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Déchet recherché: $refDechet',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Trouvé dans SMP: ${foundInSMP ? "Oui" : "Non"}'),
+                    if (foundInSMP) Text('Nom: $foundName'),
+                    Text(
+                      'Stock disponible: ${currentStock.toStringAsFixed(2)} KG',
+                    ),
+                    Text('Quantité requise: ${quantity.toStringAsFixed(2)} KG'),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Veuillez vérifier que le déchet existe dans le stock SMP.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          // If stock check fails, allow save but warn user
+          debugPrint('Stock check failed: $e');
+        }
+
+        if (mounted) {
+          setState(() {
+            _isSaving = false;
+          });
+        }
+      }
+
       final isEditing = _editingIndex != null && _editingIndex! < _items.length;
       final existingId = isEditing
           ? _items[_editingIndex!]['id'] as int?
@@ -735,8 +821,7 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         'id': existingId ?? _getLocalNextItemId(),
         'ref_article': _itemControllers['ref_article']?.text.trim() ?? '',
         'articleName': _itemControllers['articleName']?.text.trim() ?? '',
-        'quantity':
-            int.tryParse(_itemControllers['quantity']?.text.trim() ?? '0') ?? 0,
+        'quantity': quantity.toInt(),
         'dechet_fondrie':
             double.tryParse(
               _itemControllers['dechet_fondrie']?.text.replaceAll(',', '.') ??
@@ -748,7 +833,7 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
               _itemControllers['billete']?.text.replaceAll(',', '.') ?? '0',
             ) ??
             0.0,
-        'ref_dechet': _itemControllers['ref_dechet']?.text.trim() ?? '',
+        'ref_dechet': refDechet,
         'cout': _cuFondrie,
         'date': _itemControllers['date']?.text.isNotEmpty == true
             ? _itemControllers['date']!.text
@@ -874,6 +959,91 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         ? 'in_progress'
         : 'completed';
 
+    // ✅ Check stock availability BEFORE changing to completed
+    if (newStatus == 'completed') {
+      final refDechet = item['ref_dechet']?.toString() ?? '';
+      final quantity = item['quantity'] is int
+          ? (item['quantity'] as int).toDouble()
+          : double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+
+      if (refDechet.isNotEmpty && quantity > 0) {
+        setState(() {
+          _isTogglingStatus = true;
+          _togglingIndex = index;
+        });
+
+        try {
+          final stockCheck = await _fonderieApiService.checkStockSMP(
+            refCode: refDechet,
+            requiredQty: quantity,
+          );
+
+          if (!mounted) return;
+
+          final isAvailable = stockCheck['available'] == true;
+          final currentStock = stockCheck['current_stock'] ?? 0.0;
+
+          if (!isAvailable) {
+            setState(() {
+              _isTogglingStatus = false;
+              _togglingIndex = null;
+            });
+
+            // Show error dialog with stock info
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.warning_rounded, color: Colors.orange.shade700),
+                    const SizedBox(width: 8),
+                    const Text('Stock insuffisant'),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Déchet: $refDechet',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Stock disponible (SMP): ${currentStock is double ? currentStock.toStringAsFixed(2) : currentStock} KG',
+                    ),
+                    Text('Quantité requise: ${quantity.toStringAsFixed(2)} KG'),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Veuillez réduire la quantité ou vérifier le stock SMP.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          // If stock check fails, allow the operation but log the error
+          debugPrint('Stock check failed: $e');
+        }
+
+        if (mounted) {
+          setState(() {
+            _isTogglingStatus = false;
+            _togglingIndex = null;
+          });
+        }
+      }
+    }
+
     // If new production, create it first
     if (widget.production == null && !_isLocallyCreated) {
       final created = await _createProductionInitial(item);
@@ -890,12 +1060,10 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
 
     // Existing production (or locally created). Try to update via API.
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mise à jour du statut...'),
-          duration: Duration(seconds: 1),
-        ),
-      );
+      setState(() {
+        _isTogglingStatus = true;
+        _togglingIndex = index;
+      });
 
       try {
         await _fonderieApiService.updateFoundryItemStatus(
@@ -910,6 +1078,8 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
 
         setState(() {
           item['status'] = newStatus;
+          _isTogglingStatus = false;
+          _togglingIndex = null;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -924,6 +1094,11 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         );
       } catch (e) {
         if (!mounted) return;
+
+        setState(() {
+          _isTogglingStatus = false;
+          _togglingIndex = null;
+        });
 
         // If error is "Inventory is empty", do not update status locally
         if (e.toString().contains('المخزن فارغ')) {
