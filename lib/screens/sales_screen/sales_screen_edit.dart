@@ -25,7 +25,7 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final List<Map<String, dynamic>> _commandes = [];
   final List<int> _selectedIndices = [];
-  bool _isSaving = false;
+  final bool _isSaving = false;
   bool _isSavingItem = false; // For item-level saving indicator
   bool _orderSavedToBackend = false; // Track if order has been saved to backend
   int? _savedOrderId; // Store the order ID after first save
@@ -352,8 +352,12 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
                     const SizedBox(width: 12),
                     _buildActionButton(
                       onPressed:
-                          (_hasItems || _orderSavedToBackend || _isSavingItem)
-                          ? null // Disable when items exist or order is saved
+                          (_hasItems ||
+                              _orderSavedToBackend ||
+                              _isSavingItem ||
+                              _isSaving ||
+                              _editingIndex != null)
+                          ? null // Disable when items exist, order is saved, or user is editing
                           : () {
                               Navigator.pop(context);
                             },
@@ -486,96 +490,6 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
         ),
       ),
     );
-  }
-
-  Future<void> _saveCommande() async {
-    if (_commandes.isEmpty) return;
-
-    final commande = Map<String, dynamic>.from(_commandes.first);
-    final items =
-        (commande['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      final payload = {...commande, 'items': items};
-
-      final savedOrder = widget.isNewInvoice
-          ? await SalesApiService.createOrder(payload)
-          : await SalesApiService.updateOrder(payload);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.isNewInvoice
-                ? 'Commande créer avec succès'
-                : 'Commande mise à jour avec succès',
-          ),
-          backgroundColor: Colors.green.shade600,
-        ),
-      );
-
-      Navigator.pop(context, savedOrder);
-    } catch (error, stack) {
-      debugPrint('Failed to save order: $error\n$stack');
-      if (mounted) {
-        final errorMessage = error.toString();
-
-        // Check if it's a stock error
-        if (errorMessage.contains('Stock insuffisant')) {
-          // Extract the error message from the exception
-          final regex = RegExp(
-            r"Stock insuffisant pour '(.+)' \((.+)\)\. Disponible: (\d+), Demandé: (\d+)",
-          );
-          final match = regex.firstMatch(errorMessage);
-
-          if (match != null) {
-            final productName = match.group(1) ?? 'Produit';
-            final color = match.group(2) ?? '';
-            final available = int.tryParse(match.group(3) ?? '0') ?? 0;
-            final required = int.tryParse(match.group(4) ?? '0') ?? 0;
-
-            await _showStockWarningDialog(
-              title: 'Stock insuffisant',
-              icon: Icons.inventory_2_outlined,
-              iconColor: Colors.red,
-              message: 'La quantité demandée dépasse le stock disponible.',
-              details: 'Produit: $productName\nCouleur: $color',
-              showStockInfo: true,
-              availableStock: available,
-              requiredStock: required,
-            );
-          } else {
-            // Fallback if regex doesn't match
-            await _showStockWarningDialog(
-              title: 'Stock insuffisant',
-              icon: Icons.inventory_2_outlined,
-              iconColor: Colors.red,
-              message: 'La quantité demandée dépasse le stock disponible.',
-              details: errorMessage.replaceAll('Exception: ', ''),
-            );
-          }
-        } else {
-          // General error
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur lors de la sauvegarde: $error'),
-              backgroundColor: Colors.red.shade400,
-            ),
-          );
-        }
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
   }
 
   void _addNewItem() {
@@ -789,8 +703,6 @@ class _SalesScreenEditState extends State<SalesScreenEdit>
         Map<String, dynamic> savedOrder;
 
         // Determine if this is a new order or updating existing
-        final existingOrderId = commande['id'];
-        final isExistingOrder = existingOrderId != null && !widget.isNewInvoice;
         final shouldCreate = widget.isNewInvoice && !_orderSavedToBackend;
 
         if (shouldCreate) {

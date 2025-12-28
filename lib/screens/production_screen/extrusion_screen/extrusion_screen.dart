@@ -4,7 +4,9 @@ import 'extrusion_edit_screen.dart';
 import 'api_services.dart';
 
 class ExtrusionScreen extends StatefulWidget {
-  const ExtrusionScreen({super.key});
+  final String searchQuery;
+
+  const ExtrusionScreen({super.key, this.searchQuery = ''});
 
   @override
   State<ExtrusionScreen> createState() => _ExtrusionScreenState();
@@ -14,6 +16,27 @@ class _ExtrusionScreenState extends State<ExtrusionScreen> {
   List<Map<String, dynamic>> _extrusions = [];
   bool _isLoading = true;
   String? _errorMessage;
+
+  /// Filter extrusions based on search query
+  List<Map<String, dynamic>> get filteredExtrusions {
+    if (widget.searchQuery.isEmpty) {
+      return _extrusions;
+    }
+
+    final query = widget.searchQuery.toLowerCase();
+    return _extrusions.where((extrusion) {
+      return (extrusion['numero']?.toString().toLowerCase().contains(query) ??
+              false) ||
+          (extrusion['date']?.toString().toLowerCase().contains(query) ??
+              false) ||
+          (extrusion['conducteur']?.toString().toLowerCase().contains(query) ??
+              false) ||
+          (extrusion['dressage']?.toString().toLowerCase().contains(query) ??
+              false) ||
+          (extrusion['equipe']?.toString().contains(query) ?? false) ||
+          (extrusion['presse']?.toString().contains(query) ?? false);
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -77,35 +100,46 @@ class _ExtrusionScreenState extends State<ExtrusionScreen> {
     }
 
     return Scaffold(
-      body: _extrusions.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: RefreshIndicator(
+        onRefresh: _loadExtrusions,
+        child: filteredExtrusions.isEmpty
+            ? ListView(
                 children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 66,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucune fiche d\'extrusion disponible',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            widget.searchQuery.isEmpty
+                                ? Icons.inbox_outlined
+                                : Icons.search_off,
+                            size: 66,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            widget.searchQuery.isEmpty
+                                ? 'Aucune fiche d\'extrusion disponible'
+                                : 'Aucun résultat trouvé',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _loadExtrusions,
-              child: ListView.builder(
+              )
+            : ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                itemCount: _extrusions.length,
+                itemCount: filteredExtrusions.length,
                 itemBuilder: (context, index) {
-                  final fiche = _extrusions[index];
+                  final fiche = filteredExtrusions[index];
                   return ExtrusionCard(
                     fiche: fiche,
                     onEdit: () => _handleEditFiche(context, fiche),
@@ -114,7 +148,7 @@ class _ExtrusionScreenState extends State<ExtrusionScreen> {
                   );
                 },
               ),
-            ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           // Try to get next numero from API, fallback to local calculation

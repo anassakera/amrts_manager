@@ -932,12 +932,13 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
           // If stock check fails, allow save but warn user
           debugPrint('Stock check failed: $e');
         }
+      }
 
-        if (mounted) {
-          setState(() {
-            _isSaving = false;
-          });
-        }
+      // Keep _isSaving = true for database operation
+      if (!_isSaving) {
+        setState(() {
+          _isSaving = true;
+        });
       }
 
       final isEditing = _editingIndex != null && _editingIndex! < _items.length;
@@ -952,7 +953,6 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
       }
 
       final newItem = <String, dynamic>{
-        'id': existingId ?? _getLocalNextItemId(),
         'ref': ref,
         'designations': designations,
         'qte': qte,
@@ -981,26 +981,131 @@ class _PeintureEditScreenState extends State<PeintureEditScreen> {
         'status': _currentItemStatus,
       };
 
-      setState(() {
-        if (isEditing) {
-          _items[_editingIndex!] = newItem;
-        } else {
-          _items.add(newItem);
-        }
-        _editingIndex = null;
-        _clearControllers();
-        _currentItemStatus = 'in_progress';
-        _date = newItem['date']?.toString() ?? _date;
-        _time = newItem['time']?.toString() ?? _time;
-        _hasUnsavedChanges = true; // Mark as having unsaved changes
-      });
+      // ✅ إدراج البيانات مباشرة في قاعدة البيانات
+      try {
+        if (isEditing && existingId != null && existingId > 0) {
+          // تحديث عنصر موجود - نحتاج لإضافة ID للتحديث
+          newItem['id'] = existingId;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Article enregistré avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
+          final peintureData = {
+            'ref_peinture': _refPeinture,
+            'date': _date,
+            'items': [newItem],
+          };
+
+          await _apiService.updatePeinture(peintureData);
+
+          if (!mounted) return;
+
+          // تحديث القائمة المحلية
+          setState(() {
+            _items[_editingIndex!] = newItem;
+            _editingIndex = null;
+            _clearControllers();
+            _currentItemStatus = 'in_progress';
+            _date = newItem['date']?.toString() ?? _date;
+            _time = newItem['time']?.toString() ?? _time;
+            _hasUnsavedChanges = false;
+            _isSaving = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Article mis à jour avec succès dans la base de données',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // إنشاء أو تحديث - التحقق مما إذا كانت peinture موجودة بالفعل
+          final peintureData = {
+            'ref_peinture': _refPeinture,
+            'date': _date,
+            'items': [newItem],
+          };
+
+          Map<String, dynamic> result;
+
+          // إذا كان قد تم إنشاء peinture مسبقاً، نستخدم update بدلاً من create
+          if (_isLocallyCreated || widget.production != null) {
+            // إضافة جميع العناصر الموجودة + العنصر الجديد
+            final allItems = _items.map((item) {
+              final itemCopy = Map<String, dynamic>.from(item);
+              final id = itemCopy['id'];
+              if (id == null || (id is int && id <= 0)) {
+                itemCopy.remove('id');
+              }
+              return itemCopy;
+            }).toList();
+            allItems.add(newItem);
+
+            final updateData = {
+              'ref_peinture': _refPeinture,
+              'date': _date,
+              'items': allItems,
+            };
+
+            result = await _apiService.updatePeinture(updateData);
+          } else {
+            result = await _apiService.createPeinture(peintureData);
+            _isLocallyCreated = true;
+          }
+
+          if (!mounted) return;
+
+          // تحديث القائمة المحلية مع البيانات المرتجعة
+          setState(() {
+            // استخراج ID من العناصر المُرجعة
+            // create.php يُرجع 'inserted_items'، update.php يُرجع 'items'
+            List? returnedItems = result['data']?['inserted_items'] as List?;
+            returnedItems ??= result['data']?['items'] as List?;
+
+            if (returnedItems != null && returnedItems.isNotEmpty) {
+              // للـ update، نبحث عن العنصر المُدرج (action = 'inserted')
+              final insertedItem =
+                  returnedItems.lastWhere(
+                        (item) => item['action'] == 'inserted',
+                        orElse: () => returnedItems!.last,
+                      )
+                      as Map<String, dynamic>;
+              newItem['id'] = insertedItem['id'] ?? _getLocalNextItemId();
+            } else {
+              newItem['id'] = _getLocalNextItemId();
+            }
+            _items.add(newItem);
+            _editingIndex = null;
+            _clearControllers();
+            _currentItemStatus = 'in_progress';
+            _date = newItem['date']?.toString() ?? _date;
+            _time = newItem['time']?.toString() ?? _time;
+            _hasUnsavedChanges = false;
+            _isSaving = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Article enregistré avec succès dans la base de données',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isSaving = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'enregistrement: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

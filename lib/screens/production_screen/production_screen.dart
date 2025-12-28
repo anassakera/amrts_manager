@@ -45,11 +45,10 @@ class _ProductionScreenState extends State<ProductionScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: const [
-                // FonderieScreen(searchQuery: _searchQuery),
-                FonderieScreen(),
-                ExtrusionScreen(),
-                PeintureScreen(),
+              children: [
+                FonderieScreen(searchQuery: _searchQuery),
+                ExtrusionScreen(searchQuery: _searchQuery),
+                PeintureScreen(searchQuery: _searchQuery),
               ],
             ),
           ),
@@ -187,8 +186,8 @@ class _ProductionScreenState extends State<ProductionScreen>
                       Icons.filter_list_rounded,
                       color: Color(0xFF1E40AF),
                     ),
-                    tooltip: 'فلتر متقدم',
-                    onPressed: () {},
+                    tooltip: 'Filtre avancé',
+                    onPressed: () => _showFilterDialog(),
                   ),
                 ),
               ],
@@ -210,5 +209,249 @@ class _ProductionScreenState extends State<ProductionScreen>
       default:
         return 'Recherche...';
     }
+  }
+
+  void _showFilterDialog() {
+    DateTimeRange? selectedDateRange;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.filter_list_rounded,
+                  color: Color(0xFF3B82F6),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Filtre avancé',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Période',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final picked = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: now,
+                      initialDateRange:
+                          selectedDateRange ??
+                          DateTimeRange(
+                            start: now.subtract(const Duration(days: 30)),
+                            end: now,
+                          ),
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: Color(0xFF3B82F6),
+                              onPrimary: Colors.white,
+                              surface: Colors.white,
+                              onSurface: Color(0xFF1E293B),
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (picked != null) {
+                      setDialogState(() {
+                        selectedDateRange = picked;
+                      });
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          color: Colors.grey.shade600,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            selectedDateRange != null
+                                ? '${_formatDate(selectedDateRange!.start)} - ${_formatDate(selectedDateRange!.end)}'
+                                : 'Sélectionner une période...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: selectedDateRange != null
+                                  ? Colors.black87
+                                  : Colors.grey.shade500,
+                            ),
+                          ),
+                        ),
+                        if (selectedDateRange != null)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedDateRange = null;
+                              });
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Quick filters
+                const Text(
+                  'Filtres rapides',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildQuickFilterChip('Aujourd\'hui', () {
+                      final now = DateTime.now();
+                      setDialogState(() {
+                        selectedDateRange = DateTimeRange(
+                          start: DateTime(now.year, now.month, now.day),
+                          end: now,
+                        );
+                      });
+                    }),
+                    _buildQuickFilterChip('7 jours', () {
+                      final now = DateTime.now();
+                      setDialogState(() {
+                        selectedDateRange = DateTimeRange(
+                          start: now.subtract(const Duration(days: 7)),
+                          end: now,
+                        );
+                      });
+                    }),
+                    _buildQuickFilterChip('30 jours', () {
+                      final now = DateTime.now();
+                      setDialogState(() {
+                        selectedDateRange = DateTimeRange(
+                          start: now.subtract(const Duration(days: 30)),
+                          end: now,
+                        );
+                      });
+                    }),
+                    _buildQuickFilterChip('Ce mois', () {
+                      final now = DateTime.now();
+                      setDialogState(() {
+                        selectedDateRange = DateTimeRange(
+                          start: DateTime(now.year, now.month, 1),
+                          end: now,
+                        );
+                      });
+                    }),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (selectedDateRange != null) {
+                  // Apply filter - for now just show a snackbar
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Filtre appliqué: ${_formatDate(selectedDateRange!.start)} - ${_formatDate(selectedDateRange!.end)}',
+                      ),
+                      backgroundColor: const Color(0xFF3B82F6),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Appliquer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickFilterChip(String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF3B82F6),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }

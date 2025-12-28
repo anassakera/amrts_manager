@@ -22,7 +22,9 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
   bool _isSaving = false;
   int? _editingIndex;
   String _currentItemStatus = 'in_progress';
+  // ignore: unused_field
   bool _isTogglingStatus = false;
+  // ignore: unused_field
   int? _togglingIndex;
 
   final Map<String, TextEditingController> _itemControllers = {};
@@ -804,12 +806,13 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
           // If stock check fails, allow save but warn user
           debugPrint('Stock check failed: $e');
         }
+      }
 
-        if (mounted) {
-          setState(() {
-            _isSaving = false;
-          });
-        }
+      // Keep _isSaving = true for database operation
+      if (!_isSaving) {
+        setState(() {
+          _isSaving = true;
+        });
       }
 
       final isEditing = _editingIndex != null && _editingIndex! < _items.length;
@@ -818,7 +821,6 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
           : null;
 
       final newItem = <String, dynamic>{
-        'id': existingId ?? _getLocalNextItemId(),
         'ref_article': _itemControllers['ref_article']?.text.trim() ?? '',
         'articleName': _itemControllers['articleName']?.text.trim() ?? '',
         'quantity': quantity.toInt(),
@@ -842,24 +844,95 @@ class _FonderieEditScreenState extends State<FonderieEditScreen> {
         'status': _currentItemStatus,
       };
 
-      setState(() {
-        if (isEditing) {
-          _items[_editingIndex!] = newItem;
-        } else {
-          _items.add(newItem);
-        }
-        _editingIndex = null;
-        _clearControllers();
-        _date = newItem['date']?.toString() ?? _date;
-        _time = newItem['time']?.toString() ?? _time;
-      });
+      // ✅ إدراج البيانات مباشرة في قاعدة البيانات
+      try {
+        if (isEditing && existingId != null) {
+          // تحديث عنصر موجود - نحتاج لإضافة ID للتحديث
+          newItem['id'] = existingId;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Article enregistré avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
+          final fondrieData = {
+            'ref_fondrie': _refFonderie,
+            'items': [newItem],
+          };
+
+          await _fonderieApiService.updateFondrie(fondrieData);
+
+          if (!mounted) return;
+
+          // تحديث القائمة المحلية
+          setState(() {
+            _items[_editingIndex!] = newItem;
+            _editingIndex = null;
+            _clearControllers();
+            _date = newItem['date']?.toString() ?? _date;
+            _time = newItem['time']?.toString() ?? _time;
+            _isSaving = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Article mis à jour avec succès dans la base de données',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // إنشاء عنصر جديد - إدراج مباشر في قاعدة البيانات
+          final fondrieData = {
+            'ref_fondrie': _refFonderie,
+            'items': [newItem],
+          };
+
+          final result = await _fonderieApiService.createFondrie(fondrieData);
+
+          if (!mounted) return;
+
+          // الحصول على ID الحقيقي من قاعدة البيانات
+          // تعيين العلامة بأن الإنتاج تم إنشاؤه
+          _isLocallyCreated = true;
+
+          // تحديث القائمة المحلية مع البيانات المرتجعة
+          setState(() {
+            // استخراج ID من العناصر المُرجعة (أول عنصر لأننا أضفنا واحد فقط)
+            final returnedItems = result['items'] as List?;
+            if (returnedItems != null && returnedItems.isNotEmpty) {
+              final returnedItem = returnedItems.first as Map<String, dynamic>;
+              newItem['id'] = returnedItem['id'] ?? _getLocalNextItemId();
+            } else {
+              newItem['id'] = _getLocalNextItemId();
+            }
+            _items.add(newItem);
+            _editingIndex = null;
+            _clearControllers();
+            _date = newItem['date']?.toString() ?? _date;
+            _time = newItem['time']?.toString() ?? _time;
+            _isSaving = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Article enregistré avec succès dans la base de données',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isSaving = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'enregistrement: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

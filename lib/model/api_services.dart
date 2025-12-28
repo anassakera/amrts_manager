@@ -1,35 +1,111 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart' show rootBundle;
 
 class ApiServices {
   static String? baseUrl;
 
+  // IP for default server
+  // static const String _defaultServerIP = '192.168.1.254';
+  // IP for Development server
+  static const String _defaultServerIP = '192.168.1.10';
+
   /// قراءة عنوان IP السيرفر من ملف الإعدادات
   static Future<String> _getServerIp() async {
+    debugPrint('=== API Services - جاري تحميل إعدادات الخادم ===');
+
+    // 1. محاولة قراءة التكوين من الخادم عبر HTTP
     try {
-      // قراءة ملف الإعدادات من assets
+      debugPrint('📡 محاولة قراءة التكوين من الخادم...');
+      const configUrl =
+          'http://$_defaultServerIP/amrts_manager/config/connectivity.config';
+      debugPrint('URL: $configUrl');
+
+      final response = await http
+          .get(Uri.parse(configUrl), headers: {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ تم استلام الاستجابة من الخادم');
+        final config = json.decode(response.body);
+        final serverIP = config['serverIP'] as String?;
+        if (serverIP != null && serverIP.isNotEmpty) {
+          debugPrint('✅ serverIP من الخادم: $serverIP');
+          return serverIP;
+        }
+      } else {
+        debugPrint('⚠️ فشل الاتصال بالخادم: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في قراءة التكوين من الخادم: $e');
+    }
+
+    // 2. محاولة القراءة من ملف خارجي بجانب الملف التنفيذي (لنسخة الويندوز المبنية)
+    try {
+      if (!kIsWeb &&
+          (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+        final exePath = Platform.resolvedExecutable;
+        final exeDir = File(exePath).parent;
+
+        final separator = Platform.pathSeparator;
+        final configFile = File(
+          '${exeDir.path}${separator}connectivity.config',
+        );
+
+        debugPrint('📂 البحث عن ملف خارجي: ${configFile.path}');
+
+        if (await configFile.exists()) {
+          final configString = await configFile.readAsString();
+          debugPrint('محتوى الملف الخارجي: $configString');
+
+          final config = json.decode(configString);
+          final serverIP = config['serverIP'] as String?;
+          if (serverIP != null && serverIP.isNotEmpty) {
+            debugPrint('✅ serverIP من الملف الخارجي: $serverIP');
+            return serverIP;
+          }
+        } else {
+          debugPrint('⚠️ الملف الخارجي غير موجود');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في قراءة الملف الخارجي: $e');
+    }
+
+    // 3. قراءة من assets المحلية
+    try {
+      debugPrint('📦 محاولة القراءة من assets...');
       final configString = await rootBundle.loadString(
         'lib/api_amrts_manager/config/connectivity.config',
       );
+      debugPrint('محتوى ملف assets: $configString');
+
       final config = json.decode(configString);
       final serverIP = config['serverIP'] as String?;
       if (serverIP != null && serverIP.isNotEmpty) {
+        debugPrint('✅ serverIP من assets: $serverIP');
         return serverIP;
       }
     } catch (e) {
-      // ignore: avoid_print
-      print('خطأ في قراءة ملف الإعدادات: $e');
+      debugPrint('❌ خطأ في قراءة ملف assets: $e');
     }
-    // قيمة افتراضية في حالة فشل القراءة
-    return '192.168.1.254';
+
+    // 4. استخدام القيمة الافتراضية
+    debugPrint('⚠️ استخدام IP الافتراضي: $_defaultServerIP');
+    return _defaultServerIP;
   }
 
   static Future<void> initBaseUrl() async {
+    if (baseUrl != null) {
+      debugPrint('Base URL already initialized: $baseUrl');
+      return;
+    }
+
     final ip = await _getServerIp();
     baseUrl = 'http://$ip/amrts_manager';
-    // ignore: avoid_print
-    print('Base URL initialized: $baseUrl');
+    debugPrint('🌐 Base URL initialized: $baseUrl');
   }
 
   static Future<Map<String, dynamic>> signIn(

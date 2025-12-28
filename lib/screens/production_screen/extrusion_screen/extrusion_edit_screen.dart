@@ -56,12 +56,7 @@ class _ExtrusionConstants {
     'total',
   ];
 
-  static const intFields = {
-    'nbr_eclt',
-    'nbr_blocs',
-    'nbr_barres',
-    'nbr_barres_chutes',
-  };
+  static const intFields = {'nbr_blocs', 'nbr_barres', 'nbr_barres_chutes'};
 
   static const doubleFields = {
     'Lg_blocs',
@@ -748,26 +743,29 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
       return;
     }
 
-    // Check if last entry is valid and saved
+    // Check if last entry is valid and saved (only for new entries without ID)
     if (_productionControllers.isNotEmpty) {
       final lastIndex = _productionControllers.length - 1;
+      final lastEntryHasId = _isProductionEntrySaved(lastIndex);
 
-      // Check if all required fields are filled
-      if (!_isProductionEntryValid(lastIndex)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Veuillez remplir tous les champs requis de la ligne actuelle avant d\'ajouter une nouvelle ligne',
+      // Only validate if the last entry is a NEW entry (no ID yet)
+      // Existing entries with IDs don't block adding new rows
+      if (!lastEntryHasId) {
+        // Check if all required fields are filled
+        if (!_isProductionEntryValid(lastIndex)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Veuillez remplir tous les champs requis de la ligne actuelle avant d\'ajouter une nouvelle ligne',
+              ),
+              backgroundColor: Color(0xFFF44336),
+              duration: Duration(seconds: 3),
             ),
-            backgroundColor: Color(0xFFF44336),
-            duration: Duration(seconds: 3),
-          ),
-        );
-        return;
-      }
+          );
+          return;
+        }
 
-      // Check if last entry is saved (has ID)
-      if (!_isProductionEntrySaved(lastIndex)) {
+        // New entry must be saved before adding another
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -1029,6 +1027,83 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
         _editingIndices.add(index);
       }
     });
+  }
+
+  /// Handle back button - return without saving (for viewing only)
+  void _handleBack() {
+    Navigator.pop(context);
+  }
+
+  /// Handle cancel button - show confirmation if there are unsaved changes
+  Future<void> _handleCancel() async {
+    if (_hasUnsavedChanges) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.warning_rounded,
+                  color: Color(0xFFF59E0B),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Modifications non enregistrées',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter sans enregistrer?',
+            style: TextStyle(fontSize: 15),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                'Non, continuer',
+                style: TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Oui, quitter',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        if (!mounted) return;
+        Navigator.pop(context);
+      }
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   Future<void> _saveProductionRow(int index) async {
@@ -1907,11 +1982,7 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
       }
     }
 
-    // Validate POID_DECHET in culot
-    final poidDechet = _culotControllers['POID_DECHET']?.text.trim() ?? '';
-    if (poidDechet.isEmpty) {
-      missingFields.add('Poids Déchet');
-    }
+    // POID_DECHET is optional - removed from required validation
 
     // If there are missing fields, show beautiful dialog
     if (missingFields.isNotEmpty) {
@@ -2566,7 +2637,6 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
 
   Widget _buildCulotField(String key, String label) {
     final isTotal = key == 'total';
-    final isRequired = key == 'POID_DECHET';
 
     return SizedBox(
       width: 150,
@@ -2584,16 +2654,11 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
                 _calculateCulotTotal();
               },
         decoration: InputDecoration(
-          labelText: isRequired ? '$label *' : label,
+          labelText: label,
           isDense: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(
-              color:
-                  isRequired && (_culotControllers[key]?.text.isEmpty ?? true)
-                  ? Colors.red.shade300
-                  : Colors.grey.shade300,
-            ),
+            borderSide: BorderSide(color: Colors.grey.shade300),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -2716,15 +2781,22 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
                               color: Colors.white.withValues(alpha: 0.3),
                             ),
                             const SizedBox(width: 8),
+                            // Return Button (Back without modifications)
+                            _buildHeaderActionButton(
+                              icon: Icons.arrow_back_rounded,
+                              label: 'Retour',
+                              color: const Color(0xFFE3F2FD),
+                              textColor: const Color(0xFF1565C0),
+                              onPressed: () => _handleBack(),
+                            ),
+                            const SizedBox(width: 8),
                             // Cancel Button
                             _buildHeaderActionButton(
                               icon: Icons.close_rounded,
                               label: 'Annuler',
                               color: const Color(0xFFFFCDD2),
                               textColor: const Color(0xFFC62828),
-                              onPressed: _hasUnsavedChanges
-                                  ? null
-                                  : () => Navigator.pop(context),
+                              onPressed: () => _handleCancel(),
                             ),
                             const SizedBox(width: 8),
                             // Save Button
@@ -2933,7 +3005,7 @@ class _ExtrusionEditScreenState extends State<ExtrusionEditScreen> {
           _buildTableCellFixed(
             controllers['nbr_eclt']!,
             width: 100,
-            isNumber: true,
+            isNumber: false, // Text field, not number
             isRequired: true,
             isReadOnly: isReadOnly,
           ),
